@@ -77,12 +77,185 @@
             if (submenu) submenu.classList.toggle('is-open');
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('[data-target-id]').forEach(btn => {
-                btn.addEventListener('click', () => openFlyoutPanel(btn.dataset.targetId, btn.dataset.title || btn.title));
-            });
-            closeFlyoutPanel();
+        function setupVttTooltips() {
+    let tooltip = document.getElementById('vtt-custom-tooltip');
+
+    if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.id = 'vtt-custom-tooltip';
+        tooltip.innerHTML = `
+            <div class="vtt-tooltip-kicker">Painel</div>
+            <div class="vtt-tooltip-title"></div>
+            <div class="vtt-tooltip-desc"></div>
+        `;
+        document.body.appendChild(tooltip);
+    }
+
+    const tooltipTitle = tooltip.querySelector('.vtt-tooltip-title');
+    const tooltipDesc = tooltip.querySelector('.vtt-tooltip-desc');
+    const tooltipKicker = tooltip.querySelector('.vtt-tooltip-kicker');
+
+    document.querySelectorAll('.tool-btn, .tab-btn, .master-tool-btn').forEach(btn => {
+        const nativeTitle = btn.getAttribute('title');
+        const dataTitle = btn.dataset.title;
+        const label = btn.dataset.vttTooltip || dataTitle || nativeTitle || btn.getAttribute('aria-label');
+
+        if (!label) return;
+
+        btn.dataset.vttTooltip = label;
+        btn.setAttribute('aria-label', label);
+        btn.removeAttribute('title');
+
+        if (!btn.dataset.vttDesc) {
+            btn.dataset.vttDesc = getVttTooltipDescription(label);
+        }
+
+        btn.addEventListener('mouseenter', () => {
+            tooltipTitle.textContent = btn.dataset.vttTooltip || '';
+            tooltipDesc.textContent = btn.dataset.vttDesc || '';
+            tooltipKicker.textContent = btn.closest('.tool-submenu') ? 'Ferramenta' : 'Painel';
+
+            tooltip.classList.add('is-visible');
+
+            const rect = btn.getBoundingClientRect();
+            const top = rect.top + rect.height / 2;
+
+            tooltip.style.left = `${rect.right + 14}px`;
+            tooltip.style.top = `${top}px`;
         });
+
+        btn.addEventListener('mouseleave', () => {
+            tooltip.classList.remove('is-visible');
+        });
+    });
+}
+
+function getVttTooltipDescription(label) {
+    const descriptions = {
+        'Ferramenta atual': 'Clique para abrir as ferramentas de interação do mapa.',
+        'Diretor de Cena': 'Prepare cenas completas com mapa, música, clima, handout e notas.',
+        'Mapas': 'Carregue cenários, mapas de batalha e ambientes da campanha.',
+        'Atores e Tokens': 'Gerencie personagens, NPCs, criaturas e tokens da mesa.',
+        'Chat': 'Registro da mesa, rolagens, mensagens e eventos importantes.',
+        'Notas': 'Diário, pistas, lore, segredos e anotações da campanha.',
+        'Compendio': 'Itens, armas, regras rápidas e conteúdos reutilizáveis.',
+        'Handouts': 'Imagens, pistas visuais e materiais para mostrar aos jogadores.',
+        'Videos': 'Cenas, animações e recursos visuais da campanha.',
+        'Audio': 'Músicas, efeitos e ambientações sonoras.',
+        'Configuracoes': 'Tema, áudio, dados, neblina e preferências da mesa.',
+        'Mover Tokens (S)': 'Selecione, arraste e organize tokens no mapa.',
+        'Mover Mapas (M)': 'Ajuste posição e escala dos mapas carregados.',
+        'Lapis (D)': 'Desenhe marcações táticas diretamente na cena.',
+        'Borracha (E)': 'Remova desenhos e marcações do mapa.',
+        'Regua (R)': 'Meça distância entre pontos da cena.',
+        'Area de Efeito (A)': 'Desenhe círculos, cones e áreas táticas.',
+        'Neblina (N)': 'Revele ou esconda áreas com neblina de guerra.',
+        'Clima (W)': 'Controle chuva, cinzas, sol e vento.',
+        'Rolar Dados (G)': 'Abra o painel de rolagem de dados.',
+        'Limpar Desenhos (C)': 'Remove todas as marcações táticas do mapa.'
+    };
+
+    return descriptions[label] || 'Acesse rapidamente esta área da mesa.';
+}
+
+function setupFlyoutItemEnhancer() {
+    const body = document.getElementById('vtt-flyout-body');
+    if (!body) return;
+
+    const enhance = () => {
+        document.querySelectorAll('.vtt-flyout .list-item:not(.vtt-library-card)').forEach(item => {
+            enhanceFlyoutItem(item);
+        });
+    };
+
+    const observer = new MutationObserver(() => enhance());
+    observer.observe(body, { childList: true, subtree: true });
+
+    enhance();
+}
+
+function enhanceFlyoutItem(item) {
+    if (!item || item.classList.contains('vtt-library-card')) return;
+
+    item.classList.add('vtt-library-card');
+
+    const currentPanel = item.closest('.content-area');
+    const panelId = currentPanel ? currentPanel.id : '';
+
+    let iconClass = 'fa-solid fa-diamond';
+    let typeLabel = 'Recurso da mesa';
+
+    if (panelId === 'maps-content') {
+        iconClass = 'fa-solid fa-map-location-dot';
+        typeLabel = 'Mapa / Cenário';
+    } else if (panelId === 'images-content') {
+        iconClass = 'fa-solid fa-image';
+        typeLabel = 'Handout visual';
+    } else if (panelId === 'videos-content') {
+        iconClass = 'fa-solid fa-film';
+        typeLabel = 'Cena / Vídeo';
+    } else if (panelId === 'playlists-content') {
+        iconClass = 'fa-solid fa-music';
+        typeLabel = 'Áudio / Ambiente';
+    } else if (panelId === 'items-content') {
+        iconClass = 'fa-solid fa-book-open';
+        typeLabel = 'Compêndio';
+    }
+
+    const existingIcon = item.querySelector('i');
+    if (existingIcon) {
+        iconClass = existingIcon.className;
+    }
+
+    const actionButtons = Array.from(item.querySelectorAll('button'));
+    const textParts = Array.from(item.childNodes)
+        .filter(node => {
+            if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'BUTTON') return false;
+            return true;
+        });
+
+    const rawText = item.innerText.replace(/\s+/g, ' ').trim() || 'Item sem nome';
+
+    item.innerHTML = '';
+
+    const icon = document.createElement('div');
+    icon.className = 'vtt-library-card__icon';
+    icon.innerHTML = `<i class="${iconClass}"></i>`;
+
+    const main = document.createElement('div');
+    main.className = 'vtt-library-card__main';
+
+    const title = document.createElement('strong');
+    title.textContent = rawText;
+
+    const subtitle = document.createElement('small');
+    subtitle.textContent = typeLabel;
+
+    main.appendChild(title);
+    main.appendChild(subtitle);
+
+    const actions = document.createElement('div');
+    actions.className = 'vtt-library-card__actions';
+
+    actionButtons.forEach(button => actions.appendChild(button));
+
+    item.appendChild(icon);
+    item.appendChild(main);
+
+    if (actions.children.length > 0) {
+        item.appendChild(actions);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-target-id]').forEach(btn => {
+        btn.addEventListener('click', () => openFlyoutPanel(btn.dataset.targetId, btn.dataset.title || btn.dataset.vttTooltip || btn.getAttribute('aria-label')));
+    });
+
+    setupVttTooltips();
+    setupFlyoutItemEnhancer();
+    closeFlyoutPanel();
+});
 
        // Estado Global das Ferramentas
         window.toolConfig = { color: 0xcc0000, thickness: 3, shape: 'circle', fogMode: 'reveal' };

@@ -1,6 +1,97 @@
 const PIXELS_POR_UNIDADE = 70;
 const METROS_POR_QUADRADO = 2;
 
+function normalizarCaminhoVtt(path) {
+    return String(path || '').replace(/\\/g, '/');
+}
+
+function limparExtensaoVtt(nome) {
+    return String(nome || '').replace(/\.[^/.]+$/, '');
+}
+
+function escaparHtmlVtt(valor) {
+    return String(valor || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function renderVttLibraryCard({
+    icon = 'fa-solid fa-diamond',
+    title = 'Item sem nome',
+    fileName = '',
+    subtitle = 'Recurso da mesa',
+    meta = '',
+    path = '',
+    preview = '',
+    previewType = 'icon',
+    onClick = '',
+    actions = '',
+    variant = ''
+}) {
+    const safeTitle = escaparHtmlVtt(title);
+    const safeFileName = escaparHtmlVtt(fileName || title);
+    const safeSubtitle = escaparHtmlVtt(subtitle);
+    const safeMeta = escaparHtmlVtt(meta);
+    const safePath = escaparHtmlVtt(path);
+
+    let previewHtml = `
+        <span class="vtt-library-preview vtt-library-preview--icon">
+            <i class="${icon}"></i>
+        </span>
+    `;
+
+    if (preview && previewType === 'image') {
+        previewHtml = `
+            <span class="vtt-library-preview vtt-library-preview--image">
+                <img src="file://${preview}" alt="${safeTitle}" loading="lazy">
+            </span>
+        `;
+    }
+
+    if (preview && previewType === 'video') {
+        previewHtml = `
+            <span class="vtt-library-preview vtt-library-preview--video">
+                <video src="file://${preview}" muted preload="metadata"></video>
+                <i class="fas fa-play"></i>
+            </span>
+        `;
+    }
+
+    return `
+        <article class="vtt-library-card ${variant ? `vtt-library-card--${variant}` : ''}">
+            <button class="vtt-library-card__main-action" type="button" onclick="${onClick}">
+                ${previewHtml}
+
+                <span class="vtt-library-card__content">
+                    <strong>${safeFileName}</strong>
+                    <small>${safeSubtitle}</small>
+                    ${safeMeta ? `<em>${safeMeta}</em>` : ''}
+                    ${safePath ? `<code>${safePath}</code>` : ''}
+                </span>
+            </button>
+
+            ${actions ? `<div class="vtt-library-card__actions">${actions}</div>` : ''}
+        </article>
+    `;
+}
+
+function renderVttCategoryHeader(title, count = null) {
+    const safeTitle = escaparHtmlVtt(title);
+    const counter = Number.isFinite(count) ? `<span>${count}</span>` : '';
+
+    return `
+        <div class="vtt-category-header">
+            <strong>${safeTitle}</strong>
+            ${counter}
+        </div>
+    `;
+}
+
+
+
 class MainScene extends Phaser.Scene {
     constructor() { super({ key: 'MainScene' }); }
 
@@ -585,51 +676,115 @@ class MainScene extends Phaser.Scene {
 
         // Renderizar Vídeos Dinâmicos
         if (videoList && window.api.getVideos) {
-            const videos = await window.api.getVideos();
-            videoList.innerHTML = videos.map(v => `
-                <div class="list-item handout-list-item">
-                    <span onclick="mostrarVideo('${v.path.replace(/\\/g, '/')}')">
-                        <i class="fas fa-film" style="color: var(--accent); margin-right: 8px;"></i>
-                        ${v.name.replace(/\.[^/.]+$/, "")}
-                    </span>
-                    <button class="ui-icon-btn" onclick="showHandoutPathToPlayers('${v.path.replace(/\\/g, '/')}', 'video', '${v.name}')" title="Mostrar aos jogadores"><i class="fas fa-users"></i></button>
-                </div>
-            `).join('');
-        }
+    const videos = await window.api.getVideos();
+
+    videoList.innerHTML = `
+        ${renderVttCategoryHeader('Cenas e vídeos', videos.length)}
+        <div class="vtt-library-stack">
+            ${videos.map(v => {
+                const path = normalizarCaminhoVtt(v.path);
+                const name = limparExtensaoVtt(v.name);
+
+                return renderVttLibraryCard({
+    icon: 'fa-solid fa-film',
+    title: name,
+    fileName: v.name,
+    subtitle: 'Vídeo / Cena cinematográfica',
+    meta: 'Clique para pré-visualizar',
+    path: path,
+    preview: path,
+    previewType: 'video',
+    variant: 'video',
+    onClick: `mostrarVideo('${path}')`,
+    actions: `
+        <button class="ui-icon-btn" type="button" onclick="showHandoutPathToPlayers('${path}', 'video', '${escaparHtmlVtt(v.name)}')" data-vtt-tooltip="Mostrar aos jogadores">
+            <i class="fas fa-users"></i>
+        </button>
+    `
+});
+            }).join('')}
+        </div>
+    `;
+}
 
         // Renderizar Imagens Dinâmicas
         if (imgList && window.api.getImages) {
-            const imagens = await window.api.getImages();
-            imgList.innerHTML = imagens.map(i => `
-                <div class="list-item handout-list-item">
-                    <span onclick="mostrarImagem('${i.path.replace(/\\/g, '/')}')">
-                        <i class="fas fa-eye" style="color: var(--accent); margin-right: 8px;"></i>
-                        ${i.name.replace(/\.[^/.]+$/, "")}
-                    </span>
-                    <button class="ui-icon-btn" onclick="showHandoutPathToPlayers('${i.path.replace(/\\/g, '/')}', 'image', '${i.name}')" title="Mostrar aos jogadores"><i class="fas fa-users"></i></button>
-                </div>
-            `).join('');
-        }
+    const imagens = await window.api.getImages();
+
+    imgList.innerHTML = `
+        ${renderVttCategoryHeader('Handouts visuais', imagens.length)}
+        <div class="vtt-library-stack">
+            ${imagens.map(i => {
+                const path = normalizarCaminhoVtt(i.path);
+                const name = limparExtensaoVtt(i.name);
+
+                return renderVttLibraryCard({
+    icon: 'fa-solid fa-image',
+    title: name,
+    fileName: i.name,
+    subtitle: 'Imagem / Handout',
+    meta: 'Material visual da campanha',
+    path: path,
+    preview: path,
+    previewType: 'image',
+    variant: 'image',
+    onClick: `mostrarImagem('${path}')`,
+    actions: `
+        <button class="ui-icon-btn" type="button" onclick="showHandoutPathToPlayers('${path}', 'image', '${escaparHtmlVtt(i.name)}')" data-vtt-tooltip="Mostrar aos jogadores">
+            <i class="fas fa-users"></i>
+        </button>
+    `
+});
+            }).join('')}
+        </div>
+    `;
+}
 
        // Renderizar Áudios Dinâmicos Agrupados por Pasta
-        if (audioList && audios) {
-            const agruparPorCategoria = (itens) => {
-                return itens.reduce((acc, item) => {
-                    (acc[item.category] = acc[item.category] || []).push(item); return acc;
-                }, {});
-            };
-            const audiosByCat = agruparPorCategoria(audios);
-            
-            audioList.innerHTML = Object.keys(audiosByCat).sort().map(cat => `
-                <div class="category-header">${cat}</div>
-                ${audiosByCat[cat].map(a => `
-                    <div class="list-item" style="display: flex; justify-content: space-between; align-items: center; padding: 8px;">
-                        <span style="flex:1" onclick="playMusic('${a.path.replace(/\\/g, '/')}', '${a.name}')"><i class="fas fa-music" style="color: var(--accent); margin-right: 8px;"></i> ${a.name.replace(/\.[^/.]+$/, "")}</span>
-                        <button onclick="tocarJunto('${a.path.replace(/\\/g, '/')}', '${a.name}')" class="glass-btn primary" style="padding: 4px 8px; font-size: 10px;" title="Tocar por cima (Efeito/Ambiente)"><i class="fas fa-layer-group"></i> +</button>
-                    </div>
-                `).join('')}
-            `).join('');
-        }
+if (audioList && audios) {
+    const agruparPorCategoria = (itens) => {
+        return itens.reduce((acc, item) => {
+            const categoria = item.category || 'Raiz';
+            (acc[categoria] = acc[categoria] || []).push(item);
+            return acc;
+        }, {});
+    };
+
+    const audiosByCat = agruparPorCategoria(audios);
+
+    audioList.innerHTML = Object.keys(audiosByCat).sort().map(cat => {
+        const itensDaCategoria = audiosByCat[cat].sort((a, b) => {
+            return String(a.name || '').localeCompare(String(b.name || ''));
+        });
+
+        return `
+            ${renderVttCategoryHeader(cat, itensDaCategoria.length)}
+            <div class="vtt-library-stack">
+                ${itensDaCategoria.map(a => {
+                    const path = normalizarCaminhoVtt(a.path);
+                    const name = limparExtensaoVtt(a.name);
+
+                    return renderVttLibraryCard({
+    icon: 'fa-solid fa-music',
+    title: name,
+    fileName: a.name,
+    subtitle: 'Áudio / Ambiente',
+    meta: cat === 'Raiz' ? 'Arquivo de áudio da mesa' : `Pasta: ${cat}`,
+    path: path,
+    previewType: 'icon',
+    variant: 'audio',
+    onClick: `playMusic('${path}', '${escaparHtmlVtt(a.name)}')`,
+    actions: `
+        <button class="ui-icon-btn" type="button" onclick="tocarJunto('${path}', '${escaparHtmlVtt(a.name)}')" data-vtt-tooltip="Tocar junto">
+            <i class="fas fa-plus"></i>
+        </button>
+    `
+});
+                }).join('')}
+            </div>
+        `;
+    }).join('');
+}
         
         const agruparPorCategoria = (itens) => {
             return itens.reduce((acc, item) => {
