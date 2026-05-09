@@ -14,25 +14,61 @@
   pointer-events: auto;
 }
 
-.vtt-dock.tools-bar {
+.vtt-dock.tools-bar,
+.glass-dock {
   position: relative;
   width: 58px;
   max-height: calc(100vh - 32px);
   display: flex;
   flex-direction: column;
   gap: 8px;
-  overflow-y: auto;
+  overflow: visible;
   padding: 8px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-soft);
   background: rgba(2, 6, 23, 0.72);
   backdrop-filter: blur(18px);
   box-shadow: var(--shadow-md);
-  scrollbar-width: none;
 }
 
-.vtt-dock.tools-bar::-webkit-scrollbar {
-  display: none;
+.tool-group-wrapper {
+  position: relative;
+}
+
+.master-tool-btn {
+  position: relative;
+  z-index: 2;
+}
+
+.tool-submenu {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 12px);
+  z-index: 40;
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-soft);
+  background: rgba(2, 6, 23, 0.78);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-15px) scale(0.95);
+  transform-origin: left center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tool-group-wrapper:hover .tool-submenu,
+.tool-submenu.is-open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0) scale(1);
+}
+
+.tool-submenu .tool-btn {
+  flex: 0 0 auto;
 }
 
 .dock-section {
@@ -164,6 +200,25 @@
 }
 
 body.player-view .vtt-dock-shell {
+  display: none !important;
+}
+
+#global-actions {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 42;
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-soft);
+  background: rgba(2, 6, 23, 0.72);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow-md);
+}
+
+body.player-view #global-actions {
   display: none !important;
 }
 

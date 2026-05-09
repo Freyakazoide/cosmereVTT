@@ -26,19 +26,32 @@
     <!-- Camada invisível onde a gravidade atua -->
     <div id="dice-box-container" class="dice-box-layer"></div>
     
+<aside id="global-actions" aria-label="Acoes globais da mesa">
+    <button class="tool-btn tool-btn--accent" onclick="saveBoard()" title="Salvar Cena (Banco)"><i class="fas fa-save"></i></button>
+    <button class="tool-btn" onclick="loadBoard()" title="Gerenciar Cenas Salvas"><i class="fas fa-folder-open"></i></button>
+    <button class="tool-btn tool-btn--success" onclick="exportBoard()" title="Exportar Mesa (Download)"><i class="fas fa-download"></i></button>
+    <button class="tool-btn tool-btn--info" onclick="importBoard()" title="Importar Mesa (Upload)"><i class="fas fa-upload"></i></button>
+    <button class="tool-btn tool-btn--purple" onclick="openPlayerScreen()" title="Lancar Tela do Jogador"><i class="fas fa-desktop"></i></button>
+    <button class="tool-btn tool-btn--pink" onclick="forceSyncToPlayer()" title="Sincronizar Visao"><i class="fas fa-sync-alt"></i></button>
+    <button class="tool-btn tool-btn--accent" onclick="abrirPuzzle1()" title="Puzzle: O Primeiro Ideal"><i class="fas fa-puzzle-piece"></i></button>
+</aside>
+
 <aside id="vtt-dock-shell" class="vtt-dock-shell">
-    <nav id="vtt-dock" class="tools-bar vtt-dock" aria-label="Ferramentas e paineis">
-        <div class="dock-section" aria-label="Ferramentas de canvas">
-            <button class="tool-btn active" onclick="setTool('select', this)" title="Mover Tokens (S)"><i class="fas fa-hand-pointer"></i></button>
-            <button class="tool-btn" onclick="setTool('map-edit', this)" title="Mover Mapas (M)"><i class="fas fa-map"></i></button>
-            <button class="tool-btn" onclick="setTool('draw', this)" title="Lapis (D)"><i class="fas fa-pen-nib"></i></button>
-            <button class="tool-btn" onclick="setTool('eraser', this)" title="Borracha (E)"><i class="fas fa-eraser"></i></button>
-            <button class="tool-btn" onclick="setTool('ruler', this)" title="Regua (R)"><i class="fas fa-ruler-combined"></i></button>
-            <button class="tool-btn" onclick="setTool('aoe', this)" title="Area de Efeito (A)"><i class="fas fa-bullseye"></i></button>
-            <button class="tool-btn" onclick="setTool('fog', this)" title="Neblina (N)"><i class="fas fa-cloud-moon"></i></button>
-            <button class="tool-btn tool-btn--info" onclick="setTool('weather', this)" title="Clima (W)"><i class="fas fa-cloud-showers-heavy"></i></button>
-            <button class="tool-btn tool-btn--purple" onclick="setTool('dice', this)" title="Rolar Dados (G)"><i class="fas fa-dice-d20"></i></button>
-            <button class="tool-btn tool-btn--danger" onclick="clearDraw()" title="Limpar Desenhos (C)"><i class="fas fa-trash-alt"></i></button>
+    <nav id="vtt-dock" class="tools-bar vtt-dock glass-dock" aria-label="Ferramentas e paineis">
+        <div class="tool-group-wrapper">
+            <button id="master-tool-btn" class="tool-btn master-tool-btn active" type="button" onclick="toggleToolSubmenu()" title="Ferramenta atual"><i class="fas fa-hand-pointer"></i></button>
+            <div class="tool-submenu" aria-label="Ferramentas de canvas">
+                <button class="tool-btn active" onclick="setTool('select', this)" title="Mover Tokens (S)"><i class="fas fa-hand-pointer"></i></button>
+                <button class="tool-btn" onclick="setTool('map-edit', this)" title="Mover Mapas (M)"><i class="fas fa-map"></i></button>
+                <button class="tool-btn" onclick="setTool('draw', this)" title="Lapis (D)"><i class="fas fa-pen-nib"></i></button>
+                <button class="tool-btn" onclick="setTool('eraser', this)" title="Borracha (E)"><i class="fas fa-eraser"></i></button>
+                <button class="tool-btn" onclick="setTool('ruler', this)" title="Regua (R)"><i class="fas fa-ruler-combined"></i></button>
+                <button class="tool-btn" onclick="setTool('aoe', this)" title="Area de Efeito (A)"><i class="fas fa-bullseye"></i></button>
+                <button class="tool-btn" onclick="setTool('fog', this)" title="Neblina (N)"><i class="fas fa-cloud-moon"></i></button>
+                <button class="tool-btn tool-btn--info" onclick="setTool('weather', this)" title="Clima (W)"><i class="fas fa-cloud-showers-heavy"></i></button>
+                <button class="tool-btn tool-btn--purple" onclick="setTool('dice', this)" title="Rolar Dados (G)"><i class="fas fa-dice-d20"></i></button>
+                <button class="tool-btn tool-btn--danger" onclick="clearDraw()" title="Limpar Desenhos (C)"><i class="fas fa-trash-alt"></i></button>
+            </div>
         </div>
 
         <div class="tool-separator"></div>
@@ -57,14 +70,7 @@
 
         <div class="tool-separator"></div>
 
-        <div class="dock-section" aria-label="Acoes globais">
-            <button class="tool-btn tool-btn--accent" onclick="saveBoard()" title="Salvar Cena (Banco)"><i class="fas fa-save"></i></button>
-            <button class="tool-btn" onclick="loadBoard()" title="Gerenciar Cenas Salvas"><i class="fas fa-folder-open"></i></button>
-            <button class="tool-btn tool-btn--success" onclick="exportBoard()" title="Exportar Mesa (Download)"><i class="fas fa-download"></i></button>
-            <button class="tool-btn tool-btn--info" onclick="importBoard()" title="Importar Mesa (Upload)"><i class="fas fa-upload"></i></button>
-            <button class="tool-btn tool-btn--purple" onclick="openPlayerScreen()" title="Lancar Tela do Jogador"><i class="fas fa-desktop"></i></button>
-            <button class="tool-btn tool-btn--pink" onclick="forceSyncToPlayer()" title="Sincronizar Visao"><i class="fas fa-sync-alt"></i></button>
-            <button class="tool-btn tool-btn--accent" onclick="abrirPuzzle1()" title="Puzzle: O Primeiro Ideal"><i class="fas fa-puzzle-piece"></i></button>
+        <div class="dock-section" aria-label="Configuracoes">
             <button class="tool-btn tab-btn" data-target-id="settings-content" data-title="Configuracoes" title="Configuracoes"><i class="fas fa-cog"></i></button>
         </div>
     </nav>

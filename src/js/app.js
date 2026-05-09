@@ -72,6 +72,11 @@
             openFlyoutPanel(targetId, btn?.dataset.title || btn?.title || tab);
         }
 
+        function toggleToolSubmenu() {
+            const submenu = document.querySelector('.tool-group-wrapper .tool-submenu');
+            if (submenu) submenu.classList.toggle('is-open');
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('[data-target-id]').forEach(btn => {
                 btn.addEventListener('click', () => openFlyoutPanel(btn.dataset.targetId, btn.dataset.title || btn.title));
@@ -104,8 +109,18 @@
 
         function setTool(toolName, btnElement) {
             closeFlyoutPanel();
-            document.querySelectorAll('.dock-section:first-child .tool-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tool-submenu .tool-btn').forEach(b => b.classList.remove('active'));
             if (btnElement) btnElement.classList.add('active');
+            const masterToolBtn = document.getElementById('master-tool-btn');
+            if (masterToolBtn && btnElement) {
+                const label = btnElement.dataset.tooltip || btnElement.getAttribute('aria-label') || btnElement.title || 'Ferramenta atual';
+                masterToolBtn.innerHTML = btnElement.innerHTML;
+                masterToolBtn.dataset.tooltip = label;
+                masterToolBtn.setAttribute('aria-label', label);
+                masterToolBtn.removeAttribute('title');
+            }
+            const submenu = btnElement?.closest('.tool-submenu');
+            if (submenu) submenu.classList.remove('is-open');
             
             const optionsPanel = document.getElementById('tool-options');
             optionsPanel.innerHTML = '';
@@ -281,7 +296,7 @@
             };
 
             if (tools[key]) {
-                const btnArray = document.querySelectorAll('.dock-section:first-child .tool-btn');
+                const btnArray = document.querySelectorAll('.tool-submenu .tool-btn');
                 if (btnArray[tools[key].index]) {
                     setTool(tools[key].name, btnArray[tools[key].index]);
                 }
