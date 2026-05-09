@@ -4,32 +4,54 @@
             window.open('puzzle1.html', 'PuzzleRadiante', 'width=900,height=700,webPreferences=nodeIntegration=no');
         }
 
-        function toggleMenu() {
-            const sidebar = document.getElementById('sidebar');
-            const btnToggle = document.getElementById('btn-toggle-menu');
-            
-            sidebar.classList.toggle('open');
-            
-            // Garante que o menu abra inteiro e esconde o botão de 3 listras para não poluir
-            if (sidebar.classList.contains('open')) {
-                sidebar.classList.remove('collapsed');
-                btnToggle.style.opacity = '0';
-                btnToggle.style.pointerEvents = 'none';
-            } else {
-                btnToggle.style.opacity = '1';
-                btnToggle.style.pointerEvents = 'auto';
+        let currentActivePanel = null;
+
+        function closeFlyoutPanel() {
+            const panel = document.getElementById('sidebar');
+            if (panel) panel.classList.add('is-closed');
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.content-area').forEach(c => {
+                c.classList.remove('active');
+                c.classList.add('hidden');
+            });
+            currentActivePanel = null;
+        }
+
+        function openFlyoutPanel(targetId, title) {
+            const panel = document.getElementById('sidebar');
+            const titleEl = document.getElementById('vtt-flyout-title');
+            const target = document.getElementById(targetId);
+            const optionsPanel = document.getElementById('tool-options');
+            if (!panel || !target) return;
+
+            if (currentActivePanel === targetId && !panel.classList.contains('is-closed')) {
+                closeFlyoutPanel();
+                return;
             }
+
+            document.querySelectorAll('.content-area').forEach(c => {
+                c.classList.remove('active');
+                c.classList.add('hidden');
+            });
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            if (optionsPanel) optionsPanel.classList.add('hidden');
+
+            target.classList.remove('hidden');
+            target.classList.add('active');
+            panel.classList.remove('is-closed');
+            if (titleEl) titleEl.textContent = title || targetId.replace('-content', '');
+
+            document.querySelectorAll(`[data-target-id="${targetId}"]`).forEach(btn => btn.classList.add('active'));
+            currentActivePanel = targetId;
+        }
+
+        function toggleMenu() {
+            if (currentActivePanel) closeFlyoutPanel();
+            else switchTab('maps');
         }
 
         function toggleSidebarCollapse() {
-            const sidebar = document.getElementById('sidebar');
-            sidebar.classList.toggle('collapsed');
-            const btn = document.getElementById('btn-collapse-sidebar');
-            if (sidebar.classList.contains('collapsed')) {
-                btn.innerHTML = '<i class="fas fa-chevron-right"></i>';
-            } else {
-                btn.innerHTML = '<i class="fas fa-chevron-left"></i>';
-            }
+            closeFlyoutPanel();
         }
 
        function toggleRosterCardTouch(card) {
@@ -45,11 +67,17 @@
         });
 
         function switchTab(tab) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.content-area').forEach(c => c.classList.add('hidden'));
-            document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
-            document.getElementById(`${tab}-content`).classList.remove('hidden');
+            const targetId = tab.endsWith('-content') ? tab : `${tab}-content`;
+            const btn = document.querySelector(`[data-target-id="${targetId}"]`);
+            openFlyoutPanel(targetId, btn?.dataset.title || btn?.title || tab);
         }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('[data-target-id]').forEach(btn => {
+                btn.addEventListener('click', () => openFlyoutPanel(btn.dataset.targetId, btn.dataset.title || btn.title));
+            });
+            closeFlyoutPanel();
+        });
 
        // Estado Global das Ferramentas
         window.toolConfig = { color: 0xcc0000, thickness: 3, shape: 'circle', fogMode: 'reveal' };
@@ -75,8 +103,9 @@
         }
 
         function setTool(toolName, btnElement) {
-            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-            btnElement.classList.add('active');
+            closeFlyoutPanel();
+            document.querySelectorAll('.dock-section:first-child .tool-btn').forEach(b => b.classList.remove('active'));
+            if (btnElement) btnElement.classList.add('active');
             
             const optionsPanel = document.getElementById('tool-options');
             optionsPanel.innerHTML = '';
@@ -244,15 +273,15 @@
             const tools = {
                 's': { name: 'select', index: 0 },
                 'm': { name: 'map-edit', index: 1 },
-                'r': { name: 'ruler', index: 2 },
-                'd': { name: 'draw', index: 3 },
-                'a': { name: 'aoe', index: 4 },
-                'e': { name: 'eraser', index: 5 },
+                'd': { name: 'draw', index: 2 },
+                'e': { name: 'eraser', index: 3 },
+                'r': { name: 'ruler', index: 4 },
+                'a': { name: 'aoe', index: 5 },
                 'n': { name: 'fog', index: 6 }
             };
 
             if (tools[key]) {
-                const btnArray = document.querySelectorAll('.tools-bar .tool-btn');
+                const btnArray = document.querySelectorAll('.dock-section:first-child .tool-btn');
                 if (btnArray[tools[key].index]) {
                     setTool(tools[key].name, btnArray[tools[key].index]);
                 }

@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="css/09-notes.css">
     <link rel="stylesheet" href="css/13-scene-director.css">
     <link rel="stylesheet" href="css/11-player-view.css">
+    <link rel="stylesheet" href="css/14-dock-flyout.css">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://unpkg.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com data:; img-src 'self' file: data: blob: https://unpkg.com; worker-src blob: 'self';">
 </head>
 <body>
@@ -25,53 +26,60 @@
     <!-- Camada invisível onde a gravidade atua -->
     <div id="dice-box-container" class="dice-box-layer"></div>
     
-<button id="btn-toggle-menu" class="toolbar-toggle" onclick="toggleMenu()"></button>
+<aside id="vtt-dock-shell" class="vtt-dock-shell">
+    <nav id="vtt-dock" class="tools-bar vtt-dock" aria-label="Ferramentas e paineis">
+        <div class="dock-section" aria-label="Ferramentas de canvas">
+            <button class="tool-btn active" onclick="setTool('select', this)" title="Mover Tokens (S)"><i class="fas fa-hand-pointer"></i></button>
+            <button class="tool-btn" onclick="setTool('map-edit', this)" title="Mover Mapas (M)"><i class="fas fa-map"></i></button>
+            <button class="tool-btn" onclick="setTool('draw', this)" title="Lapis (D)"><i class="fas fa-pen-nib"></i></button>
+            <button class="tool-btn" onclick="setTool('eraser', this)" title="Borracha (E)"><i class="fas fa-eraser"></i></button>
+            <button class="tool-btn" onclick="setTool('ruler', this)" title="Regua (R)"><i class="fas fa-ruler-combined"></i></button>
+            <button class="tool-btn" onclick="setTool('aoe', this)" title="Area de Efeito (A)"><i class="fas fa-bullseye"></i></button>
+            <button class="tool-btn" onclick="setTool('fog', this)" title="Neblina (N)"><i class="fas fa-cloud-moon"></i></button>
+            <button class="tool-btn tool-btn--info" onclick="setTool('weather', this)" title="Clima (W)"><i class="fas fa-cloud-showers-heavy"></i></button>
+            <button class="tool-btn tool-btn--purple" onclick="setTool('dice', this)" title="Rolar Dados (G)"><i class="fas fa-dice-d20"></i></button>
+            <button class="tool-btn tool-btn--danger" onclick="clearDraw()" title="Limpar Desenhos (C)"><i class="fas fa-trash-alt"></i></button>
+        </div>
 
-   <div class="tools-bar">
-        <button class="tool-btn active" onclick="setTool('select', this)" title="Mover Tokens (S)"><i class="fas fa-hand-pointer"></i></button>
-        <button class="tool-btn" onclick="setTool('map-edit', this)" title="Mover Mapas (M)"><i class="fas fa-map"></i></button>
-        <button class="tool-btn" onclick="setTool('ruler', this)" title="Régua (R)"><i class="fas fa-ruler-combined"></i></button>
-        <button class="tool-btn" onclick="setTool('draw', this)" title="Lápis (D)"><i class="fas fa-pen-nib"></i></button>
-        <button class="tool-btn" onclick="setTool('aoe', this)" title="Área de Efeito (A)"><i class="fas fa-bullseye"></i></button>
-        <button class="tool-btn" onclick="setTool('eraser', this)" title="Borracha (E)"><i class="fas fa-eraser"></i></button>
-        <button class="tool-btn" onclick="setTool('fog', this)" title="Neblina (N)"><i class="fas fa-cloud-moon"></i></button>
-        <button class="tool-btn tool-btn--purple" onclick="setTool('dice', this)" title="Rolar Dados (G)"><i class="fas fa-dice-d20"></i></button>
         <div class="tool-separator"></div>
-        <button class="tool-btn tool-btn--info" onclick="setTool('weather', this)" title="Clima (W)"><i class="fas fa-cloud-showers-heavy"></i></button>
-        <button class="tool-btn tool-btn--danger" onclick="clearDraw()" title="Limpar Desenhos (C)"><i class="fas fa-trash-alt"></i></button>
+
+        <div class="dock-section" aria-label="Paineis">
+            <button class="tool-btn tab-btn" data-target-id="director-content" data-title="Diretor de Cena" title="Diretor de Cena"><i class="fas fa-clapperboard"></i></button>
+            <button class="tool-btn tab-btn" data-target-id="maps-content" data-title="Mapas" title="Mapas e Cenarios"><i class="fas fa-map-marked-alt"></i></button>
+            <button class="tool-btn tab-btn" data-target-id="tokens-content" data-title="Atores e Tokens" title="Atores / NPCs"><i class="fas fa-users"></i></button>
+            <button class="tool-btn tab-btn" data-target-id="chat-content" data-title="Chat" title="Chat Log"><i class="fas fa-comments"></i></button>
+            <button class="tool-btn tab-btn" data-target-id="notes-content" data-title="Notas" title="Diarios / Anotacoes"><i class="fas fa-book-journal-whills"></i></button>
+            <button class="tool-btn tab-btn" data-target-id="items-content" data-title="Compendio" title="Compendio e Monstros"><i class="fas fa-book-open"></i></button>
+            <button class="tool-btn tab-btn" data-target-id="images-content" data-title="Handouts" title="Imagens e Handouts"><i class="fas fa-image"></i></button>
+            <button class="tool-btn tab-btn" data-target-id="videos-content" data-title="Videos" title="Videos e Cenas"><i class="fas fa-video"></i></button>
+            <button class="tool-btn tab-btn" data-target-id="playlists-content" data-title="Audio" title="Musicas e Playlists"><i class="fas fa-music"></i></button>
+        </div>
+
         <div class="tool-separator"></div>
-        <button class="tool-btn tool-btn--accent" onclick="saveBoard()" title="Salvar Cena (Banco)"><i class="fas fa-save"></i></button>
-        <button class="tool-btn" onclick="loadBoard()" title="Gerenciar Cenas Salvas"><i class="fas fa-folder-open"></i></button>
-        <div class="tool-separator"></div>
-        <button class="tool-btn tool-btn--success" onclick="exportBoard()" title="Exportar Mesa (Download)"><i class="fas fa-download"></i></button>
-        <button class="tool-btn tool-btn--info" onclick="importBoard()" title="Importar Mesa (Upload)"><i class="fas fa-upload"></i></button>
-        <div class="tool-separator"></div>
-        <button class="tool-btn tool-btn--accent" onclick="abrirPuzzle1()" title="Puzzle: O Primeiro Ideal"><i class="fas fa-puzzle-piece"></i></button>
-        <button class="tool-btn tool-btn--purple" onclick="openPlayerScreen()" title="Lançar Tela do Jogador"><i class="fas fa-desktop"></i></button>
-        <button class="tool-btn tool-btn--pink" onclick="forceSyncToPlayer()" title="Sincronizar Visão"><i class="fas fa-sync-alt"></i></button>
-    </div>
+
+        <div class="dock-section" aria-label="Acoes globais">
+            <button class="tool-btn tool-btn--accent" onclick="saveBoard()" title="Salvar Cena (Banco)"><i class="fas fa-save"></i></button>
+            <button class="tool-btn" onclick="loadBoard()" title="Gerenciar Cenas Salvas"><i class="fas fa-folder-open"></i></button>
+            <button class="tool-btn tool-btn--success" onclick="exportBoard()" title="Exportar Mesa (Download)"><i class="fas fa-download"></i></button>
+            <button class="tool-btn tool-btn--info" onclick="importBoard()" title="Importar Mesa (Upload)"><i class="fas fa-upload"></i></button>
+            <button class="tool-btn tool-btn--purple" onclick="openPlayerScreen()" title="Lancar Tela do Jogador"><i class="fas fa-desktop"></i></button>
+            <button class="tool-btn tool-btn--pink" onclick="forceSyncToPlayer()" title="Sincronizar Visao"><i class="fas fa-sync-alt"></i></button>
+            <button class="tool-btn tool-btn--accent" onclick="abrirPuzzle1()" title="Puzzle: O Primeiro Ideal"><i class="fas fa-puzzle-piece"></i></button>
+            <button class="tool-btn tab-btn" data-target-id="settings-content" data-title="Configuracoes" title="Configuracoes"><i class="fas fa-cog"></i></button>
+        </div>
+    </nav>
 
     <div id="tool-options" class="tool-options-panel hidden"></div>
 
- <div id="sidebar" class="open">
-    <button id="btn-collapse-sidebar" onclick="toggleSidebarCollapse()" title="Recolher/Expandir" style="position:absolute; top:50%; transform:translateY(-50%); left:-20px; z-index:11; background:rgba(0,0,0,0.6); border:1px solid var(--border-color); border-right:none; border-radius:6px 0 0 6px; color:var(--accent); width:20px; height:40px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:10px;"><i class="fas fa-chevron-left"></i></button>
-    <div class="tabs">
-        <button class="tab-btn" onclick="switchTab('chat')" title="Chat Log"><i class="fas fa-comments"></i></button>
-        <button class="tab-btn active" onclick="switchTab('maps')" title="Mapas e Cenários"><i class="fas fa-map-marked-alt"></i></button>
-        <button class="tab-btn" onclick="switchTab('tokens')" title="Atores / NPCs"><i class="fas fa-users"></i></button>
-        <button class="tab-btn" onclick="switchTab('items')" title="Compêndio e Monstros"><i class="fas fa-book-open"></i></button>
-        <button class="tab-btn" onclick="switchTab('notes')" title="Diários / Anotações"><i class="fas fa-book-journal-whills"></i></button>
-        <button class="tab-btn" onclick="switchTab('director')" title="Diretor de Cena"><i class="fas fa-clapperboard"></i></button>
-        <button class="tab-btn" onclick="switchTab('images')" title="Imagens e Handouts"><i class="fas fa-image"></i></button>
-        <button class="tab-btn" onclick="switchTab('videos')" title="Vídeos e Cenas"><i class="fas fa-video"></i></button>
-        <button class="tab-btn" onclick="switchTab('playlists')" title="Músicas e Playlists"><i class="fas fa-music"></i></button>
-        <button class="tab-btn" onclick="switchTab('settings')" title="Configurações"><i class="fas fa-cog"></i></button>
-    </div>
-
-    <div style="padding: 10px; background: var(--bg-base); border-bottom: 1px solid var(--border-color);">
-        <input type="text" id="universal-search" placeholder="Pesquisar itens, mapas, sons..." onkeyup="filtrarSidebar(this.value)" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.5); border: 1px solid var(--accent); color: white; border-radius: 5px; outline: none; font-family: 'Segoe UI', sans-serif;">
-    </div>
-        
+    <section id="sidebar" class="vtt-flyout is-closed" aria-label="Painel flutuante">
+        <header class="vtt-flyout-header">
+            <h2 id="vtt-flyout-title">Painel</h2>
+            <button class="ui-icon-btn" type="button" onclick="closeFlyoutPanel()" title="Fechar painel"><i class="fas fa-times"></i></button>
+        </header>
+        <div class="vtt-flyout-search">
+            <input type="text" id="universal-search" placeholder="Pesquisar itens, mapas, sons..." onkeyup="filtrarSidebar(this.value)">
+        </div>
+        <div id="vtt-flyout-body" class="vtt-flyout-body">
     <div id="maps-content" class="content-area">
         <div id="map-list"></div>
     </div>
@@ -391,7 +399,9 @@
         </div>
     </div>
 
-</div> 
+        </div>
+    </section>
+</aside>
 
    <div id="char-sheet-modal" class="hidden">
         <div class="sheet-glass">

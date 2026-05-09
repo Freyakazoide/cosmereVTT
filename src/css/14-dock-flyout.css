@@ -1,0 +1,179 @@
+.vtt-dock-shell {
+  position: absolute;
+  inset: 16px auto 16px 16px;
+  z-index: 40;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.vtt-dock,
+.vtt-flyout,
+.tool-options-panel {
+  pointer-events: auto;
+}
+
+.vtt-dock.tools-bar {
+  position: relative;
+  width: 58px;
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  padding: 8px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-soft);
+  background: rgba(2, 6, 23, 0.72);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow-md);
+  scrollbar-width: none;
+}
+
+.vtt-dock.tools-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.dock-section {
+  display: grid;
+  gap: 5px;
+}
+
+.vtt-dock .tool-btn {
+  width: 42px;
+  height: 42px;
+}
+
+.vtt-dock .tab-btn {
+  flex: none;
+  padding: 0;
+  min-width: 0;
+  font-size: 18px;
+}
+
+.vtt-dock .tab-btn::after,
+.vtt-dock .tab-btn::before {
+  display: none !important;
+}
+
+#sidebar.vtt-flyout {
+  position: relative;
+  top: auto;
+  right: auto;
+  left: auto;
+  bottom: auto;
+  width: min(380px, calc(100vw - 92px));
+  height: calc(100vh - 32px);
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-soft);
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.84), rgba(2, 6, 23, 0.76));
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow-md);
+  transform: translateX(0);
+  opacity: 1;
+  transition: transform var(--motion-slow), opacity var(--motion-med);
+}
+
+#sidebar.vtt-flyout.is-closed {
+  transform: translateX(-18px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.vtt-flyout-header {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.vtt-flyout-header h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-family: Georgia, serif;
+  font-size: 18px;
+}
+
+.vtt-flyout-search {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.vtt-flyout-search input {
+  width: 100%;
+  height: 38px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-soft);
+  background: rgba(0, 0, 0, 0.32);
+  color: var(--color-text);
+  padding: 0 12px;
+}
+
+.vtt-flyout-body {
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.vtt-flyout .content-area {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px;
+}
+
+.vtt-flyout .content-area.hidden,
+.vtt-flyout .content-area:not(.active) {
+  display: none !important;
+}
+
+.vtt-flyout .content-area.active {
+  display: block !important;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.vtt-flyout #chat-content.active,
+.vtt-flyout .notes-panel.active {
+  display: flex !important;
+}
+
+.vtt-flyout .scene-director.active {
+  display: grid !important;
+}
+
+#btn-toggle-menu,
+#btn-collapse-sidebar,
+.tabs {
+  display: none !important;
+}
+
+.tool-options-panel {
+  position: absolute;
+  top: 0;
+  left: 68px;
+  max-width: min(720px, calc(100vw - 92px));
+}
+
+body.player-view .vtt-dock-shell {
+  display: none !important;
+}
+
+@media (max-width: 900px) {
+  .vtt-dock-shell {
+    inset: 10px auto 10px 10px;
+  }
+
+  .vtt-flyout {
+    width: min(330px, calc(100vw - 78px));
+    height: calc(100vh - 20px);
+  }
+}
