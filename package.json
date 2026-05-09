@@ -1,0 +1,13 @@
+{
+  "name": "cosmere-vtt",
+  "version": "1.0.0",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "electron": "^29.0.0",
+    "phaser": "^3.80.0",
+    "sqlite3": "^5.1.7"
+  }
+}

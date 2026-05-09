@@ -1,0 +1,81 @@
+.tools-bar {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 30;
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-soft);
+  background: rgba(2,6,23,0.66);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-md);
+}
+
+.dice-box-layer {
+  position: absolute;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9998;
+  pointer-events: none;
+}
+
+#btn-toggle-menu.toolbar-toggle {
+  display: none !important;
+}
+
+.tool-options-panel {
+  position: absolute;
+  top: 15px;
+  left: 70px;
+  z-index: 30;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  align-items: center;
+  padding: 10px 15px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: rgba(10, 15, 25, 0.95);
+  color: var(--text-dim);
+  font-size: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+}
+
+.tool-separator {
+  height: 1px;
+  margin: 2px 4px;
+  background: var(--border-soft);
+}
+
+.tool-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
+}
+
+.tool-btn.tool-btn--accent {
+  color: var(--color-accent);
+}
+
+.tool-btn.tool-btn--success {
+  color: var(--color-success);
+}
+
+.tool-btn.tool-btn--info {
+  color: var(--color-info);
+}
+
+.tool-btn.tool-btn--danger {
+  color: var(--color-danger);
+}
+
+.tool-btn.tool-btn--purple {
+  color: var(--color-purple);
+}
+
+.tool-btn.tool-btn--pink {
+  color: #e879f9;
+}

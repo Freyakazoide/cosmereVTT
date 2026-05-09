@@ -1,0 +1,110 @@
+.ui-btn,
+.glass-btn {
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-soft);
+  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.025));
+  color: var(--color-text-soft);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform var(--motion-fast), border-color var(--motion-fast), background var(--motion-fast), color var(--motion-fast);
+}
+
+.ui-btn:hover,
+.glass-btn:hover {
+  transform: translateY(-1px);
+  border-color: var(--color-accent-border);
+  background: var(--color-accent-soft);
+  color: var(--color-text);
+}
+
+.ui-btn--primary,
+.glass-btn.primary,
+.glass-btn.success {
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-2));
+  border-color: rgba(255,255,255,0.18);
+  color: #111827;
+  font-weight: 800;
+}
+
+.ui-btn--danger,
+.glass-btn.danger {
+  background: var(--color-danger-soft);
+  border-color: rgba(239,68,68,0.35);
+  color: #fecaca;
+}
+
+.ui-icon-btn,
+.tool-btn,
+.nav-btn {
+  width: var(--toolbar-size);
+  height: var(--toolbar-size);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-faint);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--motion-fast);
+}
+
+.ui-icon-btn:hover,
+.tool-btn:hover,
+.nav-btn:hover {
+  color: var(--color-text);
+  background: rgba(255,255,255,0.075);
+}
+
+.ui-icon-btn.is-active,
+.tool-btn.active,
+.nav-btn.active {
+  color: var(--color-accent);
+  border-color: var(--color-accent-border);
+  background: var(--color-accent-soft);
+  box-shadow: inset 0 0 18px rgba(0,0,0,0.45), 0 0 18px rgba(251,191,36,0.12);
+}
+
+.tool-btn[data-tooltip] {
+  position: relative;
+}
+
+.tool-btn[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  padding: 6px 9px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-soft);
+  background: rgba(2,6,23,0.92);
+  color: var(--color-text-soft);
+  font-size: 12px;
+  transition: opacity var(--motion-fast), transform var(--motion-fast);
+}
+
+.tool-btn[data-tooltip]:hover::after {
+  opacity: 1;
+  transform: translateY(-50%) translateX(2px);
+}
+
+.handout-list-item {
+  justify-content: space-between;
+}
+
+.handout-list-item > span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -1,0 +1,136 @@
+.scene-director {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+}
+
+.director-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.director-header h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-family: Georgia, serif;
+  font-size: 22px;
+}
+
+.director-kicker,
+.director-section__title,
+.director-field span {
+  color: var(--color-accent);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.director-field {
+  display: grid;
+  gap: 6px;
+}
+
+.director-tutorial {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-soft);
+  background: rgba(255, 255, 255, 0.045);
+  padding: 10px 12px;
+}
+
+.director-tutorial summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-soft);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.director-tutorial ol {
+  margin: 10px 0 0;
+  padding-left: 20px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.director-tutorial li + li {
+  margin-top: 5px;
+}
+
+.director-field input,
+.director-field select,
+.director-field textarea {
+  width: 100%;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-soft);
+  background: rgba(0, 0, 0, 0.34);
+  color: var(--color-text);
+  padding: 10px 11px;
+}
+
+.director-field textarea {
+  min-height: 82px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.director-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.director-section {
+  display: grid;
+  gap: 8px;
+}
+
+.director-note-list {
+  display: grid;
+  gap: 8px;
+}
+
+.director-note-item {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-soft);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.director-note-item strong {
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+.director-note-item span {
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.director-empty {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-style: italic;
+}
+
+.director-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+@media (max-width: 1366px) {
+  .director-grid,
+  .director-actions {
+    grid-template-columns: 1fr;
+  }
+}

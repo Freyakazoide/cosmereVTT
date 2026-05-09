@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Puzzle: O Primeiro Ideal</title>
+    <style>
+        :root {
+            --accent-gold: #fbbf24;
+            --success-green: #6ee7b7;
+            --error-red: #ef4444;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+
+       /* Pedestal responsivo usando tamanho real da imagem */
+        #pedestal {
+            position: relative;
+            height: 82vh; /* Ocupa 82% da altura total do monitor */
+            aspect-ratio: 2752 / 1536; /* Proporção exata da sua imagem original */
+            background: url('../assets/puzzle/puzzle1/toten.png') center/cover no-repeat;
+            box-sizing: border-box;
+            margin: 0 auto;
+        }
+
+        /* Slots crescem proporcionalmente ao tamanho da tela */
+        .slot {
+            width: 13vh;  
+            height: 13vh; 
+            background: transparent;
+            border: 2px dashed rgba(255,255,255,0.3);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: absolute;
+            z-index: 2;
+            transition: 0.3s;
+            transform: translate(-50%, -50%);
+        }
+
+        .slot.drag-over {
+            background: rgba(251, 191, 36, 0.2);
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.4);
+        }
+
+        .slot.par-correto {
+            border-color: var(--success-green);
+            box-shadow: 0 0 20px rgba(110, 231, 183, 0.6);
+        }
+
+        .slot.par-errado {
+            border-color: var(--error-red);
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+        }
+
+        /* Posições Absolutas agrupadas no centro da imagem */
+        /* Se precisar ajustar a posição, mude a % do top (cima/baixo) e left (esquerda/direita) */
+        #slot-tl { top: 31%; left: 44.5%; } 
+        #slot-tr { top: 31%; left: 55.5%; } 
+        #slot-l  { top: 48%; left: 39%; } 
+        #slot-center { top: 48%; left: 50%; border-style: solid; border-color: rgba(255,255,255,0.1); } 
+        #slot-r  { top: 48%; left: 61%; } 
+        #slot-bl { top: 65%; left: 44.5%; } 
+        #slot-br { top: 65%; left: 55.5%; } 
+
+       #inventory {
+            margin-top: 2vh;
+            display: flex;
+            gap: 15px;
+            padding: 10px;
+            min-height: 14vh;
+            width: 100%;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            z-index: 5;
+        }
+        /* Peças acompanham o tamanho do slot em qualquer monitor */
+        .glyph {
+            width: 12vh;
+            height: 12vh;
+            border-radius: 50%;
+            cursor: grab;
+            transition: transform 0.1s, box-shadow 0.3s;
+            background-size: cover;
+            background-position: center;
+        }
+        
+        .glyph:active { cursor: grabbing; transform: scale(0.95); }
+
+       .solved .glyph {
+            box-shadow: 0 0 20px var(--accent-gold);
+            filter: brightness(1.2);
+        }
+
+        /* Efeito mágico azul após o vídeo (aumentando e diminuindo suave) */
+        @keyframes pulse-blue-totem {
+            0%, 100% { box-shadow: 0 0 15px rgba(173, 216, 230, 0.1); }
+            50% { box-shadow: 0 0 80px rgba(173, 216, 230, 0.6); }
+        }
+
+        @keyframes pulse-blue-glyph {
+            0%, 100% { box-shadow: 0 0 10px rgba(173, 216, 230, 0.2); }
+            50% { box-shadow: 0 0 50px rgba(173, 216, 230, 1); filter: brightness(1.2); }
+        }
+
+        .final-glow-totem {
+            animation: pulse-blue-totem 4s infinite ease-in-out;
+        }
+
+        .final-glow-glyph {
+            animation: pulse-blue-glyph 4s infinite ease-in-out !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="pedestal">
+        <div class="slot" id="slot-tl" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)"></div>
+        <div class="slot" id="slot-tr" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)"></div>
+        <div class="slot" id="slot-l" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)"></div>
+        <div class="slot" id="slot-center" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)"></div>
+        <div class="slot" id="slot-r" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)"></div>
+        <div class="slot" id="slot-bl" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)"></div>
+        <div class="slot" id="slot-br" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)"></div>
+    </div>
+
+    <div id="inventory" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)">
+        <div class="glyph" id="glifo-vida" draggable="true" ondragstart="drag(event)" data-palavra="vida" style="background-image: url('../assets/puzzle/puzzle1/vida.png');"></div>
+        <div class="glyph" id="glifo-morte" draggable="true" ondragstart="drag(event)" data-palavra="morte" style="background-image: url('../assets/puzzle/puzzle1/morte.png');"></div>
+        <div class="glyph" id="glifo-forca" draggable="true" ondragstart="drag(event)" data-palavra="forca" style="background-image: url('../assets/puzzle/puzzle1/força.png');"></div>
+        <div class="glyph" id="glifo-fraqueza" draggable="true" ondragstart="drag(event)" data-palavra="fraqueza" style="background-image: url('../assets/puzzle/puzzle1/fraqueza.png');"></div>
+        <div class="glyph" id="glifo-jornada" draggable="true" ondragstart="drag(event)" data-palavra="jornada" style="background-image: url('../assets/puzzle/puzzle1/jornada.png');"></div>
+        <div class="glyph" id="glifo-destino" draggable="true" ondragstart="drag(event)" data-palavra="destino" style="background-image: url('../assets/puzzle/puzzle1/destino.png');"></div>
+        <div class="glyph" id="glifo-antes" draggable="true" ondragstart="drag(event)" data-palavra="antes" style="background-image: url('../assets/puzzle/puzzle1/antes.png');"></div>
+    </div>
+
+    <!-- Áudio de Sucesso -->
+    <audio id="audio-sucesso" src="../assets/puzzle/puzzle1/sucesso.mp3"></audio>
+
+    <!-- Vídeo de Sucesso (escondido inicialmente) -->
+    <video id="video-sucesso" src="../assets/puzzle/puzzle1/sucesso.mp4" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; z-index: 1000; background: #000;"></video>
+
+    <script>
+        function allowDrop(ev) {
+            ev.preventDefault();
+            if (ev.target.classList.contains('slot') || ev.target.id === 'inventory') {
+                ev.target.classList.add('drag-over');
+            }
+        }
+
+        function dragLeave(ev) {
+            if (ev.target.classList.contains('slot') || ev.target.id === 'inventory') {
+                ev.target.classList.remove('drag-over');
+            }
+        }
+
+        function drag(ev) {
+            ev.dataTransfer.setData("text", ev.target.id);
+        }
+
+        function drop(ev) {
+            ev.preventDefault();
+            const allSlots = document.querySelectorAll('.slot, #inventory');
+            allSlots.forEach(s => s.classList.remove('drag-over'));
+
+            if (document.body.classList.contains('solved')) return;
+
+            var data = ev.dataTransfer.getData("text");
+            var draggedElement = document.getElementById(data);
+
+            if (ev.target.classList.contains('slot') && ev.target.children.length === 0) {
+                ev.target.appendChild(draggedElement);
+                validarQuebraCabeca();
+            } else if (ev.target.id === 'inventory') {
+                ev.target.appendChild(draggedElement);
+                validarQuebraCabeca(); 
+            }
+        }
+
+        function getPalavraNoSlot(slotId) {
+            const slot = document.getElementById(slotId);
+            return slot.children.length > 0 ? slot.children[0].getAttribute('data-palavra') : null;
+        }
+
+        function validarQuebraCabeca() {
+            const centro = getPalavraNoSlot('slot-center');
+            const eixos = [
+                { id1: 'slot-tl', id2: 'slot-br', p1: getPalavraNoSlot('slot-tl'), p2: getPalavraNoSlot('slot-br') },
+                { id1: 'slot-tr', id2: 'slot-bl', p1: getPalavraNoSlot('slot-tr'), p2: getPalavraNoSlot('slot-bl') },
+                { id1: 'slot-l',  id2: 'slot-r',  p1: getPalavraNoSlot('slot-l'),  p2: getPalavraNoSlot('slot-r') }
+            ];
+
+            const paresCorretos = [['vida', 'morte'], ['forca', 'fraqueza'], ['jornada', 'destino']];
+            
+            document.querySelectorAll('.slot').forEach(s => s.classList.remove('par-correto', 'par-errado'));
+
+            let eixosValidos = 0;
+            let temErro = false;
+
+            if (centro && centro !== 'antes') {
+                document.getElementById('slot-center').classList.add('par-errado');
+                temErro = true;
+            }
+
+            eixos.forEach(eixo => {
+                if (eixo.p1 && eixo.p2) {
+                    const estaCorreto = paresCorretos.some(par => 
+                        (eixo.p1 === par[0] && eixo.p2 === par[1]) || (eixo.p1 === par[1] && eixo.p2 === par[0])
+                    );
+                    if (estaCorreto) {
+                        document.getElementById(eixo.id1).classList.add('par-correto');
+                        document.getElementById(eixo.id2).classList.add('par-correto');
+                        eixosValidos++;
+                    } else {
+                        document.getElementById(eixo.id1).classList.add('par-errado');
+                        document.getElementById(eixo.id2).classList.add('par-errado');
+                        temErro = true;
+                    }
+                }
+            });
+
+            if (temErro) {
+                setTimeout(() => {
+                    const inventory = document.getElementById('inventory');
+                    document.querySelectorAll('.slot .glyph').forEach(glyph => {
+                        inventory.appendChild(glyph);
+                    });
+                    document.querySelectorAll('.slot').forEach(s => s.classList.remove('par-correto', 'par-errado'));
+                }, 600);
+                return;
+            }
+
+            if (eixosValidos === 3 && centro === 'antes') {
+                dispararVitoria();
+            }
+        }
+
+      function dispararVitoria() {
+            if (document.body.classList.contains('solved')) return;
+            document.body.classList.add('solved'); // Dá o brilho dourado inicial
+            
+            const som = document.getElementById('audio-sucesso');
+            const video = document.getElementById('video-sucesso');
+
+            // Tenta tocar o áudio
+            som.play().then(() => {
+                // Quando o áudio acabar, toca o vídeo
+                som.onended = () => { rodarVideo(video); };
+            }).catch(e => {
+                console.log("Áudio bloqueado, tentando vídeo direto.");
+                rodarVideo(video); // Se falhar por bloqueio, vai pro vídeo direto
+            });
+        }
+
+        function rodarVideo(video) {
+            video.style.display = 'block';
+            video.play().catch(e => {
+                console.log("Vídeo bloqueado pelo navegador.");
+                aplicarBrilhoAzul(); // Pula pro brilho final se o vídeo der erro
+            });
+
+            // Quando o vídeo acabar, esconde ele e aplica o efeito mágico azul
+            video.onended = () => {
+                video.style.display = 'none';
+                aplicarBrilhoAzul();
+            };
+        }
+
+        function aplicarBrilhoAzul() {
+            // Remove a classe 'solved' para apagar o brilho dourado anterior
+            document.body.classList.remove('solved');
+            
+            // Aplica a classe de pulsar azul no Totem inteiro
+            document.getElementById('pedestal').classList.add('final-glow-totem');
+            
+            // Aplica a classe de pulsar azul nas pedras (glifos) que estão no totem
+            document.querySelectorAll('.slot .glyph').forEach(g => {
+                g.classList.add('final-glow-glyph');
+            });
+        }
+    </script>
+</body>
+</html>

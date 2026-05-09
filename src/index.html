@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Cosmere VTT</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/00-tokens.css">
+    <link rel="stylesheet" href="css/01-base.css">
+    <link rel="stylesheet" href="css/legacy-index.css">
+    <link rel="stylesheet" href="css/04-toolbar.css">
+    <link rel="stylesheet" href="css/05-buttons.css">
+    <link rel="stylesheet" href="css/07-character-sheet.css">
+    <link rel="stylesheet" href="css/09-notes.css">
+    <link rel="stylesheet" href="css/13-scene-director.css">
+    <link rel="stylesheet" href="css/11-player-view.css">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://unpkg.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com data:; img-src 'self' file: data: blob: https://unpkg.com; worker-src blob: 'self';">
+</head>
+<body>
+    <div id="intro-cinematic">
+        <video id="intro-video" src="../assets/videos/bridge_nine.mp4" autoplay></video>
+        <button id="skip-intro" onclick="finalizarIntro()" style="position: absolute; bottom: 30px; right: 30px; background: rgba(0,0,0,0.4); color: rgba(255,255,255,0.3); border: 1px solid rgba(255,255,255,0.1); padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; backdrop-filter: blur(5px); transition: 0.3s; z-index: 10000;">Pular Introdução [ESC]</button>
+    </div>
+
+    <div id="game-container"></div>
+    <!-- Camada invisível onde a gravidade atua -->
+    <div id="dice-box-container" class="dice-box-layer"></div>
+    
+<button id="btn-toggle-menu" class="toolbar-toggle" onclick="toggleMenu()"></button>
+
+   <div class="tools-bar">
+        <button class="tool-btn active" onclick="setTool('select', this)" title="Mover Tokens (S)"><i class="fas fa-hand-pointer"></i></button>
+        <button class="tool-btn" onclick="setTool('map-edit', this)" title="Mover Mapas (M)"><i class="fas fa-map"></i></button>
+        <button class="tool-btn" onclick="setTool('ruler', this)" title="Régua (R)"><i class="fas fa-ruler-combined"></i></button>
+        <button class="tool-btn" onclick="setTool('draw', this)" title="Lápis (D)"><i class="fas fa-pen-nib"></i></button>
+        <button class="tool-btn" onclick="setTool('aoe', this)" title="Área de Efeito (A)"><i class="fas fa-bullseye"></i></button>
+        <button class="tool-btn" onclick="setTool('eraser', this)" title="Borracha (E)"><i class="fas fa-eraser"></i></button>
+        <button class="tool-btn" onclick="setTool('fog', this)" title="Neblina (N)"><i class="fas fa-cloud-moon"></i></button>
+        <button class="tool-btn tool-btn--purple" onclick="setTool('dice', this)" title="Rolar Dados (G)"><i class="fas fa-dice-d20"></i></button>
+        <div class="tool-separator"></div>
+        <button class="tool-btn tool-btn--info" onclick="setTool('weather', this)" title="Clima (W)"><i class="fas fa-cloud-showers-heavy"></i></button>
+        <button class="tool-btn tool-btn--danger" onclick="clearDraw()" title="Limpar Desenhos (C)"><i class="fas fa-trash-alt"></i></button>
+        <div class="tool-separator"></div>
+        <button class="tool-btn tool-btn--accent" onclick="saveBoard()" title="Salvar Cena (Banco)"><i class="fas fa-save"></i></button>
+        <button class="tool-btn" onclick="loadBoard()" title="Gerenciar Cenas Salvas"><i class="fas fa-folder-open"></i></button>
+        <div class="tool-separator"></div>
+        <button class="tool-btn tool-btn--success" onclick="exportBoard()" title="Exportar Mesa (Download)"><i class="fas fa-download"></i></button>
+        <button class="tool-btn tool-btn--info" onclick="importBoard()" title="Importar Mesa (Upload)"><i class="fas fa-upload"></i></button>
+        <div class="tool-separator"></div>
+        <button class="tool-btn tool-btn--accent" onclick="abrirPuzzle1()" title="Puzzle: O Primeiro Ideal"><i class="fas fa-puzzle-piece"></i></button>
+        <button class="tool-btn tool-btn--purple" onclick="openPlayerScreen()" title="Lançar Tela do Jogador"><i class="fas fa-desktop"></i></button>
+        <button class="tool-btn tool-btn--pink" onclick="forceSyncToPlayer()" title="Sincronizar Visão"><i class="fas fa-sync-alt"></i></button>
+    </div>
+
+    <div id="tool-options" class="tool-options-panel hidden"></div>
+
+ <div id="sidebar" class="open">
+    <button id="btn-collapse-sidebar" onclick="toggleSidebarCollapse()" title="Recolher/Expandir" style="position:absolute; top:50%; transform:translateY(-50%); left:-20px; z-index:11; background:rgba(0,0,0,0.6); border:1px solid var(--border-color); border-right:none; border-radius:6px 0 0 6px; color:var(--accent); width:20px; height:40px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:10px;"><i class="fas fa-chevron-left"></i></button>
+    <div class="tabs">
+        <button class="tab-btn" onclick="switchTab('chat')" title="Chat Log"><i class="fas fa-comments"></i></button>
+        <button class="tab-btn active" onclick="switchTab('maps')" title="Mapas e Cenários"><i class="fas fa-map-marked-alt"></i></button>
+        <button class="tab-btn" onclick="switchTab('tokens')" title="Atores / NPCs"><i class="fas fa-users"></i></button>
+        <button class="tab-btn" onclick="switchTab('items')" title="Compêndio e Monstros"><i class="fas fa-book-open"></i></button>
+        <button class="tab-btn" onclick="switchTab('notes')" title="Diários / Anotações"><i class="fas fa-book-journal-whills"></i></button>
+        <button class="tab-btn" onclick="switchTab('director')" title="Diretor de Cena"><i class="fas fa-clapperboard"></i></button>
+        <button class="tab-btn" onclick="switchTab('images')" title="Imagens e Handouts"><i class="fas fa-image"></i></button>
+        <button class="tab-btn" onclick="switchTab('videos')" title="Vídeos e Cenas"><i class="fas fa-video"></i></button>
+        <button class="tab-btn" onclick="switchTab('playlists')" title="Músicas e Playlists"><i class="fas fa-music"></i></button>
+        <button class="tab-btn" onclick="switchTab('settings')" title="Configurações"><i class="fas fa-cog"></i></button>
+    </div>
+
+    <div style="padding: 10px; background: var(--bg-base); border-bottom: 1px solid var(--border-color);">
+        <input type="text" id="universal-search" placeholder="Pesquisar itens, mapas, sons..." onkeyup="filtrarSidebar(this.value)" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.5); border: 1px solid var(--accent); color: white; border-radius: 5px; outline: none; font-family: 'Segoe UI', sans-serif;">
+    </div>
+        
+    <div id="maps-content" class="content-area">
+        <div id="map-list"></div>
+    </div>
+    
+    <div id="tokens-content" class="content-area hidden">
+        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+            <button class="btn-create-new" onclick="criarNovoPersonagem()" style="margin-bottom: 0; flex: 1;">
+                <i class="fas fa-user-plus"></i> Nova Ficha
+            </button>
+            <button class="btn-create-new" onclick="criarNovaPasta()" style="margin-bottom: 0; flex: 1;">
+                <i class="fas fa-folder-plus"></i> Nova Pasta
+            </button>
+        </div>
+        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+            <input type="text" id="search-actor" placeholder="Buscar ator..." onkeyup="renderizarListaTokens()" style="flex: 2; padding: 8px; background: rgba(0,0,0,0.5); border: 1px solid var(--accent); color: white; border-radius: 5px; outline: none; font-family: 'Segoe UI', sans-serif; font-size: 12px;">
+            <select id="filter-actor-type" onchange="renderizarListaTokens()" style="flex: 1; padding: 8px; background: rgba(0,0,0,0.5); border: 1px solid var(--accent); color: white; border-radius: 5px; outline: none; font-size: 12px;">
+                <option value="all">Todos</option>
+                <option value="PC">Jogadores</option>
+                <option value="NPC">NPCs</option>
+                <option value="Monster">Monstros</option>
+            </select>
+        </div>
+        <div id="token-list" class="token-grid"></div>
+    </div>
+
+    <div id="chat-content" class="content-area hidden" style="display: flex; flex-direction: column; height: 100%;">
+        <div id="chat-log" style="flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; font-size: 13px;">
+            <div style="color: var(--accent); font-style: italic; opacity: 0.7;">Bem-vindo ao Cosmere VTT...</div>
+        </div>
+        <div style="padding: 10px; border-top: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2);">
+            <div style="display:flex; gap:6px; margin-bottom:6px;">
+                <select id="chat-target" style="background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1); color:#fff; padding:4px 8px; border-radius:4px; outline:none; font-size:11px; flex:1;">
+                    <option value="todos">Todos</option>
+                    <option value="mestre">Apenas Mestre</option>
+                </select>
+            </div>
+            <input type="text" id="chat-input" placeholder="Digite algo ou /r 1d20..." style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 8px; border-radius: 4px; outline: none;">
+        </div>
+    </div>
+
+    <div id="items-content" class="content-area hidden">
+        <input type="text" id="search-compendium" placeholder="Buscar no compêndio..." onkeyup="filtrarCompendio(this.value)" style="width:100%; padding:8px; background:rgba(0,0,0,0.5); border:1px solid var(--accent); color:white; border-radius:5px; outline:none; font-size:12px; margin-bottom:10px;">
+        <button class="btn-create-new" onclick="abrirModalItem()">
+            <i class="fas fa-plus"></i> Criar Novo Item / Arma
+        </button>
+        <div class="category-header">Meu Compêndio</div>
+    </div>
+
+    <div id="director-content" class="content-area hidden scene-director">
+        <div class="director-header">
+            <div>
+                <div class="director-kicker">Mesa</div>
+                <h2>Diretor de Cena</h2>
+            </div>
+            <button class="ui-icon-btn" onclick="refreshSceneDirector()" title="Atualizar assets"><i class="fas fa-rotate"></i></button>
+        </div>
+
+        <details class="director-tutorial">
+            <summary><i class="fas fa-circle-question"></i> Mini tutorial</summary>
+            <ol>
+                <li>Preencha nome, textos, mapa, música, clima e handout.</li>
+                <li>Fixe notas na aba Notas para elas aparecerem aqui.</li>
+                <li>Clique em Preparar para carregar mapa e clima no mestre.</li>
+                <li>Clique em Iniciar para tocar música, mostrar introdução/handout e sincronizar jogadores.</li>
+                <li>Use Salvar Cena na barra do mapa para guardar também este Diretor.</li>
+                <li>Ao carregar ou importar a cena, este painel é restaurado automaticamente.</li>
+            </ol>
+        </details>
+
+        <label class="director-field">
+            <span>Nome da cena</span>
+            <input id="director-scene-name" type="text" placeholder="Ex: Emboscada na ponte">
+        </label>
+
+        <label class="director-field">
+            <span>Texto para o mestre</span>
+            <textarea id="director-gm-text" placeholder="Notas privadas, objetivos ocultos, gatilhos..."></textarea>
+        </label>
+
+        <label class="director-field">
+            <span>Texto para os jogadores</span>
+            <textarea id="director-player-text" placeholder="Introducao revelada quando a cena comecar..."></textarea>
+        </label>
+
+        <div class="director-grid">
+            <label class="director-field">
+                <span>Mapa principal</span>
+                <select id="director-map"></select>
+            </label>
+            <label class="director-field">
+                <span>Musica</span>
+                <select id="director-audio"></select>
+            </label>
+            <label class="director-field">
+                <span>Clima</span>
+                <select id="director-weather">
+                    <option value="none">Sem clima</option>
+                    <option value="rain">Chuva</option>
+                    <option value="ash">Cinzas</option>
+                    <option value="sun">Sol forte</option>
+                    <option value="storm">Tempestade</option>
+                </select>
+            </label>
+            <label class="director-field">
+                <span>Handout</span>
+                <select id="director-handout"></select>
+            </label>
+        </div>
+
+        <div class="director-section">
+            <div class="director-section__title">Notas fixadas</div>
+            <div id="director-pinned-notes" class="director-note-list"></div>
+        </div>
+
+        <div class="director-grid">
+            <label class="director-field">
+                <span>Objetivo</span>
+                <input id="director-objective" type="text" placeholder="O que a cena precisa resolver">
+            </label>
+            <label class="director-field">
+                <span>Condicao de vitoria</span>
+                <input id="director-victory" type="text" placeholder="Como os jogadores vencem">
+            </label>
+            <label class="director-field">
+                <span>Condicao de falha</span>
+                <input id="director-failure" type="text" placeholder="O que acontece se falharem">
+            </label>
+        </div>
+
+        <div class="director-actions">
+            <button class="ui-btn ui-btn--primary" onclick="prepareDirectedScene()"><i class="fas fa-wand-magic-sparkles"></i> Preparar</button>
+            <button class="ui-btn" onclick="startDirectedScene()"><i class="fas fa-play"></i> Iniciar</button>
+            <button class="ui-btn" onclick="showDirectorIntroToPlayers()"><i class="fas fa-scroll"></i> Introducao</button>
+            <button class="ui-btn" onclick="playDirectorMusic()"><i class="fas fa-music"></i> Musica</button>
+            <button class="ui-btn" onclick="closeDirectorHandoutForPlayers()"><i class="fas fa-eye-slash"></i> Fechar handout</button>
+            <button class="ui-btn" onclick="syncDirectorSceneToPlayers()"><i class="fas fa-users-viewfinder"></i> Sync</button>
+            <button class="ui-btn ui-btn--danger" onclick="endDirectedScene()"><i class="fas fa-stop"></i> Encerrar</button>
+        </div>
+    </div>
+
+    <div id="playlists-content" class="content-area hidden">
+       <div id="audio-player-ui" style="background: rgba(0,0,0,0.4); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 15px; backdrop-filter: blur(5px);">
+            <div id="current-track-name" style="font-size: 11px; color: var(--accent); margin-bottom: 8px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Nenhuma faixa tocando</div>
+            
+            <input type="range" id="audio-progress" value="0" min="0" max="100" style="width: 100%; margin-bottom: 10px; accent-color: var(--accent);">
+            
+            <div style="display: flex; justify-content: center; gap: 15px; align-items: center; margin-bottom: 10px;">
+                <button onclick="togglePauseMusic()" class="tool-btn" style="border: 1px solid var(--accent); color: var(--accent);"><i id="play-pause-icon" class="fas fa-pause"></i></button>
+                <button onclick="stopMusic()" class="tool-btn" style="border: 1px solid #ef4444; color: #ef4444;"><i class="fas fa-stop"></i></button>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-volume-down" style="font-size: 10px; color: var(--text-dim);"></i>
+                <input type="range" id="audio-volume" min="0" max="1" step="0.01" value="0.4" oninput="updateVolume(this.value)" style="flex: 1; accent-color: var(--accent);">
+                <i class="fas fa-volume-up" style="font-size: 10px; color: var(--text-dim);"></i>
+            </div>
+        </div>
+        
+        <div id="active-tracks-ui" style="margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px;"></div>
+        
+        <div id="audio-list"></div>
+    </div>
+
+    <div id="settings-content" class="content-area hidden">
+
+    <div class="category-header">Aparência</div>
+
+    <div class="category-header">Áudio</div>
+    <div style="padding: 12px; background: rgba(0,0,0,0.3); border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 15px;">
+        <label style="font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 10px;">
+            <i class="fas fa-volume-up" style="margin-right: 6px;"></i>Volume Mestre
+        </label>
+        <div style="display:flex; align-items:center; gap:10px;">
+            <i class="fas fa-volume-down" style="font-size:10px; color:var(--text-dim);"></i>
+            <input type="range" id="master-volume" value="1.0" min="0" max="1" step="0.01" style="flex:1; accent-color:var(--accent);">
+            <i class="fas fa-volume-up" style="font-size:10px; color:var(--text-dim);"></i>
+            <span id="master-volume-display" style="font-size:11px; color:var(--text-dim); min-width:35px;">100%</span>
+        </div>
+    </div>
+
+    <div class="category-header">Aparência</div>
+
+    <div style="padding: 12px; background: rgba(0,0,0,0.3); border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 10px;">
+        <label style="font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 10px;">
+            <i class="fas fa-globe" style="margin-right: 6px;"></i>Mundo do Cosmere
+        </label>
+
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; border-radius: 5px; border: 1px solid var(--border-color); transition: 0.2s;"
+                   onmouseover="this.style.background='rgba(255,255,255,0.05)'"
+                   onmouseout="this.style.background='transparent'">
+                <input type="radio" name="tema-cosmere" value="default" onchange="aplicarTema(this.value)"
+                       style="accent-color: var(--accent);">
+                <div>
+                    <div style="font-size: 13px; font-weight: bold;">⭐ Cosmere (Padrão)</div>
+                    <div style="font-size: 11px; color: var(--text-dim);">Dourado neutro — sem planeta específico</div>
+                </div>
+            </label>
+
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; border-radius: 5px; border: 1px solid var(--border-color); transition: 0.2s;"
+                   onmouseover="this.style.background='rgba(56,189,248,0.07)'"
+                   onmouseout="this.style.background='transparent'">
+                <input type="radio" name="tema-cosmere" value="roshar" onchange="aplicarTema(this.value)"
+                       style="accent-color: #38bdf8;">
+                <div>
+                    <div style="font-size: 13px; font-weight: bold; color: #38bdf8;">💎 Roshar</div>
+                    <div style="font-size: 11px; color: var(--text-dim);">Luz Tempestuosa — azul cristalino</div>
+                </div>
+            </label>
+
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; border-radius: 5px; border: 1px solid var(--border-color); transition: 0.2s;"
+                   onmouseover="this.style.background='rgba(180,120,60,0.07)'"
+                   onmouseout="this.style.background='transparent'">
+                <input type="radio" name="tema-cosmere" value="scadrial" onchange="aplicarTema(this.value)"
+                       style="accent-color: #b4783c;">
+                <div>
+                    <div style="font-size: 13px; font-weight: bold; color: #b4783c;">🏭 Scadrial</div>
+                    <div style="font-size: 11px; color: var(--text-dim);">Cinzas e bronze — Era Mistborn</div>
+                </div>
+            </label>
+        </div>
+    </div>
+
+    <div style="padding: 12px; background: rgba(0,0,0,0.3); border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 15px;">
+        <label style="font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 10px;">
+            <i class="fas fa-dice-d20" style="margin-right: 6px;"></i>Cor dos Dados
+        </label>
+        <div style="display:flex; align-items:center; gap:10px;">
+            <input type="color" id="player-dice-color" value="#fbbf24" onchange="localStorage.setItem('dice-color', this.value)" style="width:40px; height:30px; border:none; border-radius:4px; cursor:pointer; background:transparent;">
+            <span style="font-size:11px; color:var(--text-dim);">Cor do dado ao rolar</span>
+        </div>
+    </div>
+
+    <div class="category-header" style="margin-top: 15px;">Investidura</div>
+    <div style="padding: 12px; background: rgba(0,0,0,0.3); border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 15px;">
+        <label style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+            Partículas ao rolar crítico
+            <input type="checkbox" id="toggle-particulas" checked
+                   style="accent-color: var(--accent); width: 16px; height: 16px; cursor: pointer;"
+                   onchange="localStorage.setItem('cosmere-particulas', this.checked)">
+        </label>
+        <div style="font-size: 11px; color: var(--text-dim); margin-top: 6px;">
+            Efeito de Luz Tempestuosa vazando ao acionar poderes e críticos.
+        </div>
+    </div>
+
+    <div class="category-header">Neblina de Guerra</div>
+    <div style="padding: 12px; background: rgba(0,0,0,0.3); border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 15px;">
+        <label style="font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 10px;">
+            <i class="fas fa-cloud" style="margin-right: 6px;"></i>Transparência da Névoa (GM)
+        </label>
+        <div style="display:flex; align-items:center; gap:10px;">
+            <i class="fas fa-eye-slash" style="font-size:10px; color:var(--text-dim);"></i>
+            <input type="range" id="fog-opacity" min="0.2" max="1" step="0.05" value="0.9" style="flex:1; accent-color:var(--accent);" oninput="if(window.phaserScene) window.phaserScene.setFogOpacity(this.value)">
+            <i class="fas fa-eye" style="font-size:10px; color:var(--text-dim);"></i>
+            <span id="fog-opacity-display" style="font-size:11px; color:var(--text-dim); min-width:35px;">90%</span>
+        </div>
+        <div style="font-size: 10px; color: var(--text-dim); margin-top: 4px;">
+            Ajusta a opacidade da neblina na tela do Mestre. Jogadores sempre veem 100% preto.
+        </div>
+    </div>
+
+</div>
+
+    <div id="images-content" class="content-area hidden">
+        <div id="images-list"></div>
+    </div>
+
+    <div id="videos-content" class="content-area hidden">
+        <div id="videos-list"></div>
+    </div>
+
+   <div id="notes-content" class="content-area hidden notes-panel">
+        <div id="notes-list-view" class="notes-list-view">
+            <div class="notes-topbar">
+                <button onclick="createNewNote()" class="glass-btn primary notes-new-btn"><i class="fas fa-plus"></i> Nova Anotacao</button>
+                <button class="view-toggle-btn" onclick="toggleNotesView()" id="btn-notes-view" title="Alternar visualizacao">
+                    <i class="fas fa-th-large"></i>
+                </button>
+            </div>
+            <input type="text" id="search-note" class="notes-search" placeholder="Buscar nas anotacoes..." onkeyup="renderNotesList()">
+            <div id="notes-list" class="notes-grid"></div>
+        </div>
+
+       <div id="note-editor-view" class="hidden note-editor-view">
+            <div class="note-editor-header">
+                <button onclick="closeNoteEditor()" class="ui-btn ui-btn--ghost"><i class="fas fa-arrow-left"></i> Voltar</button>
+                <button onclick="saveCurrentNote()" class="glass-btn success note-save-btn"><i class="fas fa-save"></i> Salvar</button>
+            </div>
+
+            <input type="text" id="note-title" class="note-input note-title-input" placeholder="Titulo da Anotacao">
+
+            <div class="note-meta-grid">
+                <select id="note-type" class="note-input note-select"></select>
+                <input type="text" id="note-category" class="note-input" placeholder="Pasta (ex: Geral, Missoes, Lore...)" value="Geral">
+                <input type="text" id="note-tags" class="note-input" placeholder="Tags separadas por virgula">
+            </div>
+
+            <div class="note-status-row">
+                <label><input type="checkbox" id="note-pinned"> Fixada na cena</label>
+                <label><input type="checkbox" id="note-revealed"> Revelada aos jogadores</label>
+            </div>
+
+            <div class="note-editor-actions">
+                <button class="ui-btn ui-btn--ghost" data-note-action="share-current"><i class="fas fa-share-alt"></i> Mostrar</button>
+                <button class="ui-btn ui-btn--ghost" data-note-action="duplicate-current"><i class="fas fa-copy"></i> Duplicar</button>
+                <button class="ui-btn ui-btn--danger" data-note-action="archive-current"><i class="fas fa-box-archive"></i> Arquivar</button>
+            </div>
+
+            <div id="note-toolbar" class="note-toolbar">
+                <button onclick="document.execCommand('bold',false,null)" class="ui-icon-btn" title="Negrito"><i class="fas fa-bold"></i></button>
+                <button onclick="document.execCommand('italic',false,null)" class="ui-icon-btn" title="Italico"><i class="fas fa-italic"></i></button>
+                <button onclick="document.execCommand('underline',false,null)" class="ui-icon-btn" title="Sublinhado"><i class="fas fa-underline"></i></button>
+            </div>
+
+            <div id="note-body" class="note-body" contenteditable="true" placeholder="Os segredos de Luthadel comecam aqui..."></div>
+        </div>
+    </div>
+
+</div> 
+
+   <div id="char-sheet-modal" class="hidden">
+        <div class="sheet-glass">
+            <button class="btn-close-sheet" onclick="fecharFicha()"><i class="fas fa-times"></i></button>
+            
+            <div class="sheet-sidebar">
+                <div class="portrait-wrapper">
+                    <img id="char-portrait" src="" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100%\' height=\'100%\'><rect width=\'100%\' height=\'100%\' fill=\'%23111827\'/><text x=\'50%\' y=\'50%\' fill=\'%23374151\' font-size=\'48\' text-anchor=\'middle\' dy=\'.3em\' font-family=\'Arial\'>?</text></svg>'">
+                    <div class="portrait-overlay"></div>
+                    
+                    <button class="portrait-change-btn" onclick="abrirSeletorRetrato('portrait')" title="Trocar Retrato">
+                        <i class="fas fa-user-circle"></i>
+                    </button>
+
+                    <!-- Token para o Mapa (Flutuante dentro do retrato para poupar espaco) -->
+                    <div class="portrait-token" onclick="abrirSeletorRetrato('token')" title="Trocar Arte do Token do Mapa">
+                        <img id="char-token-img" src="" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100%\' height=\'100%\'><rect width=\'100%\' height=\'100%\' fill=\'%23111827\'/><text x=\'50%\' y=\'50%\' fill=\'%23374151\' font-size=\'20\' text-anchor=\'middle\' dy=\'.3em\' font-family=\'Arial\'>T</text></svg>'">
+                        <div class="portrait-token-label">TOKEN</div>
+                    </div>
+                </div>
+                
+                <input type="text" class="char-title-input" id="char-name" placeholder="Nome do Radiante" style="margin-bottom: 5px;">
+                
+                <select id="char-type" style="background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: var(--accent); padding: 6px; border-radius: 4px; outline: none; margin-bottom: 5px; width: 100%; font-size: 13px; font-weight: bold; text-align: center;">
+                    <option value="PC">⚔️ Personagem Jogador (PC)</option>
+                    <option value="NPC">🤝 NPC / Aliado</option>
+                    <option value="Monster">👹 Monstro / Inimigo</option>
+                </select>
+                
+                <select id="char-folder" style="background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; padding: 6px; border-radius: 4px; outline: none; margin-bottom: 15px; width: 100%; font-size: 13px; font-weight: bold; text-align: center;">
+                    <option value="default">📁 Pasta: Atores</option>
+                </select>
+
+                <div class="vital-box hp card-vida">
+                    <div class="vital-label"><i class="fas fa-heart"></i> Vida (Atual/Max)</div>
+                    <div class="vital-inputs"><input type="text" id="hp-atual-input" value="10" onchange="atualizarHPSalvo()" style="transition: color 0.3s, text-shadow 0.3s;"> / <input type="text" id="hp-max-input" value="10" onchange="atualizarHPSalvo()"></div>
+                </div>
+                <div class="vital-box focus card-foco">
+                    <div class="vital-label"><i class="fas fa-eye"></i> Foco (Max/Atual)</div>
+                    <div class="vital-inputs"><input type="text" value="3"> / <input type="text" value="3"></div>
+                </div>
+                <div class="vital-box invest card-investidura">
+                    <div class="vital-label"><i class="fas fa-sun"></i> Investidura (Max/Atual)</div>
+                    <div class="vital-inputs"><input type="text" value="0"> / <input type="text" value="0"></div>
+                </div>
+
+                <button class="glass-btn success" onclick="salvarFichaCompleta(true); addChatMessage('Sistema', 'Ficha salva manualmente!', '#22c55e');" style="margin-top: auto; width: 100%; padding: 15px;">
+                    <i class="fas fa-save"></i> SALVAR ALTERAÇÕES
+                </button>
+                <button class="glass-btn primary" onclick="openCombatSheet()" style="width: 100%; padding: 12px;">
+                    <i class="fas fa-khanda"></i> COMBATE RAPIDO
+                </button>
+                <button class="glass-btn primary" onclick="exportarFichaJSON()" style="width: 100%; padding: 12px;">
+                    <i class="fas fa-download"></i> EXPORTAR JSON
+                </button>
+            </div>
+
+            <div class="sheet-main">
+                <div class="sheet-nav">
+                    <button class="nav-btn active" onclick="switchSheetTab('tab-stats', this)" title="Estatísticas & Perícias"><i class="fas fa-dna"></i></button>
+                    <button class="nav-btn" onclick="switchSheetTab('tab-combat', this)" title="Equipamento & Combate"><i class="fas fa-khanda"></i></button>
+                    <button class="nav-btn" onclick="switchSheetTab('tab-magic', this)" title="Surgebinding & Magia"><i class="fas fa-magic"></i></button>
+                    <button class="nav-btn" onclick="switchSheetTab('tab-lore', this)" title="Narrativa & Conexões"><i class="fas fa-book-journal-whills"></i></button>
+                    <button class="nav-btn" onclick="switchSheetTab('tab-gm', this)" title="Anotações do Mestre"><i class="fas fa-user-secret"></i></button>
+                </div>
+                
+                <div class="sheet-content-area">
+                    
+                    <div id="tab-stats" class="tab-content active">
+                        <div class="defenses-grid" style="margin-bottom: 40px;">
+                            <div class="char-card card-ancestralidade long-text"><label>Ancestralidade</label><input type="text" placeholder="Ex: Alethi"></div>
+                            <div class="char-card card-trilha long-text"><label>Trilhas</label><input type="text" placeholder="Ex: Dançarino das Bordas"></div>
+                            <div class="char-card card-nivel"><label>Nível</label><input type="number" placeholder="1"></div>
+                        </div>
+
+                        <div class="section-title"><i class="fas fa-shield-alt"></i> Defesas Especiais</div>
+                        <div class="defenses-grid">
+                            <div class="char-card card-fisico"><label>Físico</label><input type="text" value="10"></div>
+                            <div class="char-card card-cognitivo"><label>Cognitivo</label><input type="text" value="10"></div>
+                            <div class="char-card card-espiritual"><label>Espiritual</label><input type="text" value="10"></div>
+                        </div>
+
+                        <div class="section-title"><i class="fas fa-language"></i> Idiomas e Derivados</div>
+                        <div class="defenses-grid" style="grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 25px;">
+                            <div class="char-card card-cognitivo long-text" style="grid-column: span 2;"><label>Idiomas Fluentes</label><input type="text" id="char-idiomas" placeholder="Ex: Alethi, Vorin, Thayleno"></div>
+                            
+                            <!-- Se você digitar algo nesses campos, ele trava no "modo manual". Se apagar tudo, ele volta a preencher sozinho! -->
+                            <div class="char-card card-fisico long-text"><label>Carga (Força)</label><input type="text" id="char-carga" oninput="if(this.value==='') delete this.dataset.manual; else this.dataset.manual='true';" placeholder="Auto"></div>
+                            <div class="char-card card-velocidade long-text"><label>Movimento (Veloc.)</label><input type="text" id="char-movimento" oninput="if(this.value==='') delete this.dataset.manual; else this.dataset.manual='true';" placeholder="Auto"></div>
+                            <div class="char-card card-vontade long-text"><label>Recuperação (Vontade)</label><input type="text" id="char-recuperacao" oninput="if(this.value==='') delete this.dataset.manual; else this.dataset.manual='true';" placeholder="Auto"></div>
+                            <div class="char-card card-consciencia long-text"><label>Sentidos (Consc.)</label><input type="text" id="char-sentidos" oninput="if(this.value==='') delete this.dataset.manual; else this.dataset.manual='true';" placeholder="Auto"></div>
+                            <div class="char-card card-presenca long-text" style="grid-column: span 2;"><label>Conexões/Tempo (Presença)</label><input type="text" id="char-conexoes-deriv" oninput="if(this.value==='') delete this.dataset.manual; else this.dataset.manual='true';" placeholder="Auto"></div>
+                        </div>
+
+                        <div class="section-title"><i class="fas fa-fist-raised"></i> Atributos e Perícias</div>
+                        <div class="skills-wrapper" id="dynamic-skills-container">
+                            </div>
+                    </div>
+
+                    <div id="tab-combat" class="tab-content">
+                        <div class="grid-header" style="grid-template-columns: 1fr 1fr;">
+                            <div class="char-card card-fisico"><label>Armadura</label><input type="text" id="char-armor" placeholder="Ex: Armadura Fragmentada"></div>
+                            <div class="char-card card-espiritual"><label>Deflexão</label><input type="text" id="char-deflection" placeholder="Valor de Deflexão"></div>
+                        </div>
+                        
+                        <div class="section-title">
+                            <i class="fas fa-khanda"></i> Equipamento
+                            <span id="peso-total-display" style="font-size:11px; color:var(--text-dim); font-weight:normal; margin-left:8px;">Peso Total: 0</span>
+                            <button class="btn-add-item" onclick="addEquipamento()"><i class="fas fa-plus"></i></button>
+                        </div>
+                        <div class="equipment-grid" id="equipment-container">
+                            <div class="char-card card-fisico slot-weapon"><label><i class="fas fa-khanda"></i> Mão Principal</label><input type="text" placeholder="Arma 1"><input type="number" class="item-weight" placeholder="Peso" min="0" step="0.1" oninput="calcularPeso()" style="width:60px; margin:4px auto 0; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:var(--accent); font-size:11px; padding:3px; text-align:center; border-radius:4px;"><div class="slot-desc">1d8 + Força</div></div>
+                            <div class="char-card card-fisico slot-weapon"><label><i class="fas fa-shield-alt"></i> Mão Secundária</label><input type="text" placeholder="Arma 2 / Escudo"><input type="number" class="item-weight" placeholder="Peso" min="0" step="0.1" oninput="calcularPeso()" style="width:60px; margin:4px auto 0; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:var(--accent); font-size:11px; padding:3px; text-align:center; border-radius:4px;"><div class="slot-desc">-</div></div>
+                            <div class="char-card card-espiritual slot-relic"><label><i class="fas fa-ring"></i> Relíquia / Foco</label><input type="text" placeholder="Ex: Frasco"><input type="number" class="item-weight" placeholder="Peso" min="0" step="0.1" oninput="calcularPeso()" style="width:60px; margin:4px auto 0; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:var(--accent); font-size:11px; padding:3px; text-align:center; border-radius:4px;"><div class="slot-desc">Cargas: 3/3</div></div>
+                        </div>
+
+                        <div class="section-title">
+                            <i class="fas fa-bolt"></i> Talentos & Poderes
+                            <button class="btn-add-item" onclick="addTalento()"><i class="fas fa-plus"></i></button>
+                        </div>
+                        <div class="talents-grid" id="talents-container">
+                            <div class="talent-card card-trilha">
+                                <div class="talent-header">
+                                    <input type="text" value="Crescimento Estiloso">
+                                    <i class="fas fa-leaf"></i>
+                                </div>
+                                <textarea placeholder="Descreva o efeito mecânico do seu talento aqui..."></textarea>
+                            </div>
+                            <div class="talent-card card-investidura">
+                                <div class="talent-header">
+                                    <input type="text" value="Atração Gravitacional">
+                                    <i class="fas fa-arrow-down"></i>
+                                </div>
+                                <textarea placeholder="Descreva o efeito mecânico do seu talento aqui..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tab-magic" class="tab-content">
+                        <div class="section-title" style="margin-top:0;"><i class="fas fa-sun"></i> Juramentos Radiantes</div>
+                        <div class="lore-banners-container">
+                            <div class="lore-banner ideal-banner">
+                                <i class="fas fa-shield-alt banner-icon"></i>
+                                <div class="banner-content">
+                                    <label>1º Juramento — Proteção</label>
+                                    <input type="text" id="magic-oath1" placeholder="Ex: Vida antes da morte...">
+                                </div>
+                            </div>
+                            <div class="lore-banner">
+                                <i class="fas fa-crown banner-icon"></i>
+                                <div class="banner-content">
+                                    <label>2º Juramento — Justiça</label>
+                                    <input type="text" id="magic-oath2" placeholder="">
+                                </div>
+                            </div>
+                            <div class="lore-banner flaw-banner">
+                                <i class="fas fa-star banner-icon"></i>
+                                <div class="banner-content">
+                                    <label>3º Juramento — Verdade</label>
+                                    <input type="text" id="magic-oath3" placeholder="">
+                                </div>
+                            </div>
+                            <div class="lore-banner">
+                                <i class="fas fa-bolt banner-icon"></i>
+                                <div class="banner-content">
+                                    <label>4º Juramento</label>
+                                    <input type="text" id="magic-oath4" placeholder="">
+                                </div>
+                            </div>
+                            <div class="lore-banner ideal-banner">
+                                <i class="fas fa-gem banner-icon"></i>
+                                <div class="banner-content">
+                                    <label>5º Juramento — Imortal</label>
+                                    <input type="text" id="magic-oath5" placeholder="">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section-title"><i class="fas fa-gem"></i> Esferas de Tempestade</div>
+                        <div class="defenses-grid">
+                            <div class="char-card card-espiritual"><label>Esferas Infundidas</label><input type="number" id="magic-spheres" value="0" min="0"></div>
+                            <div class="char-card card-cognitivo"><label>Carga da Esfera</label><input type="number" id="magic-sphere-charge" value="100" min="0" max="100">%</div>
+                            <div class="char-card card-fisico"><label>Tipo de Esfera</label><input type="text" id="magic-sphere-type" placeholder="Ex: Rubi, Safira"></div>
+                        </div>
+
+                        <div class="section-title"><i class="fas fa-arrow-up"></i> Lashings (Amarrações)</div>
+                        <div class="talents-grid" id="lashings-container">
+                            <div class="talent-card card-trilha">
+                                <div class="talent-header">
+                                    <input type="text" value="Lashing Básica" placeholder="Nome do Lashing">
+                                    <i class="fas fa-arrow-up"></i>
+                                </div>
+                                <textarea placeholder="Descreva: direção, intensidade, duração..."></textarea>
+                            </div>
+                        </div>
+                        <button class="glass-btn primary" onclick="addLashing()" style="margin-top:15px;"><i class="fas fa-plus"></i> Adicionar Lashing</button>
+                    </div>
+
+                    <div id="tab-lore" class="tab-content">
+                        <div class="lore-banners-container">
+                            <div class="lore-banner ideal-banner">
+                                <i class="fas fa-sun banner-icon"></i>
+                                <div class="banner-content">
+                                    <label>Ideal / Propósito</label>
+                                    <input type="text" placeholder="Ex: Proteger aqueles que não podem se proteger">
+                                </div>
+                            </div>
+                            <div class="lore-banner flaw-banner">
+                                <i class="fas fa-link-slash banner-icon"></i>
+                                <div class="banner-content">
+                                    <label>Obstáculo / Falha Dramática</label>
+                                    <input type="text" placeholder="Ex: Eu não confio em olhos-claros">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="section-title">
+                            <i class="fas fa-users"></i> Laços & Conexões
+                            <button class="btn-add-item" onclick="addConexao()"><i class="fas fa-plus"></i></button>
+                        </div>
+                        <div class="connections-grid" id="connections-container">
+                            <div class="connection-medal">
+                                <div class="medal-circle"><i class="fas fa-user-secret"></i></div>
+                                <input type="text" placeholder="Nome do Aliado">
+                                <input type="text" class="medal-desc" placeholder="Relação / Dívida">
+                            </div>
+                            <div class="connection-medal">
+                                <div class="medal-circle"><i class="fas fa-crown"></i></div>
+                                <input type="text" placeholder="Nome do Aliado">
+                                <input type="text" class="medal-desc" placeholder="Relação / Dívida">
+                            </div>
+                            <div class="connection-medal">
+                                <div class="medal-circle"><i class="fas fa-gem"></i></div>
+                                <input type="text" placeholder="Nome do Aliado">
+                                <input type="text" class="medal-desc" placeholder="Relação / Dívida">
+                            </div>
+                            <div class="connection-medal">
+                                <div class="medal-circle"><i class="fas fa-ghost"></i></div>
+                                <input type="text" placeholder="Nome do Aliado">
+                                <input type="text" class="medal-desc" placeholder="Relação / Dívida">
+                            </div>
+                        </div>
+
+                        <div class="section-title"><i class="fas fa-scroll"></i> Fragmentos & Memórias</div>
+                        <div class="journal-wrapper">
+                            <textarea placeholder="Escreva aqui a sua história, cicatrizes, aparência física ou as notas que seu personagem faz em seu diário..."></textarea>
+                        </div>
+                    </div>
+
+                    <div id="tab-gm" class="tab-content" style="height: 100%;">
+                        <div class="section-title" style="margin-top: 0;"><i class="fas fa-user-secret"></i> Segredos & Anotações (Apenas GM)</div>
+                        <div class="journal-wrapper" style="flex: 1;">
+                            <textarea id="char-gm-notes" placeholder="Anotações cruciais sobre a lore do jogador, itens escondidos, intenções do mestre, etc..." style="height: 100%; min-height: 400px; color: var(--accent);"></textarea>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="image-viewer-modal" class="hidden" onclick="fecharViewer()">
+        <img id="viewer-img-src" src="" class="hidden">
+        <video id="viewer-video-src" src="" controls class="hidden"></video>
+        <button class="glass-btn primary gm-only viewer-share-btn" onclick="event.stopPropagation(); showCurrentHandoutToPlayers()">
+            <i class="fas fa-users"></i> Mostrar aos jogadores
+        </button>
+        <button class="glass-btn danger gm-only viewer-hide-btn" onclick="event.stopPropagation(); hideHandoutFromPlayers()">
+            <i class="fas fa-eye-slash"></i> Fechar para jogadores
+        </button>
+        <div class="viewer-close-hint">Clique fora para fechar</div>
+    </div>
+
+    <div id="save-scene-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 3000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
+        <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent); padding: 20px; border-radius: 8px; width: 300px; box-shadow: 0 0 20px rgba(0,0,0,0.8);">
+            <h3 style="color: var(--accent); margin-top: 0; font-family: 'Georgia', serif;">Nome da Cena</h3>
+            <input type="text" id="scene-name-input" placeholder="Ex: Acampamento Skaa" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 10px; border-radius: 4px; margin-bottom: 15px; outline: none; box-sizing: border-box; font-family: monospace;">
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="glass-btn danger" onclick="document.getElementById('save-scene-modal').classList.add('hidden')">Cancelar</button>
+                <button class="glass-btn success" onclick="confirmSaveScene()">Salvar Mesa</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="load-scene-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 3000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
+        <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent); padding: 20px; border-radius: 8px; width: 350px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 0 20px rgba(0,0,0,0.8);">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(251,191,36,0.3); padding-bottom: 10px; margin-bottom: 15px;">
+                <h3 style="color: var(--accent); margin: 0; font-family: 'Georgia', serif;">Carregar Cena</h3>
+                <button onclick="document.getElementById('load-scene-modal').classList.add('hidden')" style="background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:16px;"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="scene-list-container" style="overflow-y: auto; display: flex; flex-direction: column; gap: 8px;"></div>
+        </div>
+    </div>
+
+    <button id="btn-help" onclick="toggleHelp()">?</button>
+    
+   <div id="init-tracker" class="hidden">
+        <div class="init-header">
+            <span><i class="fas fa-list-ol"></i> Ordem de Combate</span>
+            <span id="round-counter" style="font-size:11px; color:var(--text-dim);">Round: 1</span>
+            <button onclick="sortInitiative()" title="Ordenar por iniciativa" style="background:none;border:none;color:#22c55e;cursor:pointer;margin-right:5px;"><i class="fas fa-sort-amount-down"></i></button>
+            <button onclick="collapseInitiative()" title="Minimizar" style="background:none;border:none;color:var(--accent);cursor:pointer;margin-right:5px;"><i class="fas fa-minus"></i></button>
+            <button onclick="toggleInitiative()" style="background:none;border:none;color:var(--text-dim);cursor:pointer;"><i class="fas fa-times"></i></button>
+        </div>
+        <ul class="init-list" id="init-list">
+            </ul>
+       <div class="init-controls">
+            <div class="init-input-row">
+                <input type="text" id="init-name" placeholder="Nome" style="width: 100px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 6px; border-radius: 4px;">
+                <input type="number" id="init-val" placeholder="Iniciativa" style="width: 70px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 6px; border-radius: 4px; text-align: center;">
+                <button onclick="addInitiative()" class="glass-btn primary" style="width: 60px; padding: 6px;">+ ADD</button>
+            </div>
+            <button onclick="nextTurn()" class="glass-btn primary" style="margin-top:5px; padding: 8px;"><i class="fas fa-forward"></i> Próximo Turno</button>
+            <button onclick="clearInitiative()" class="glass-btn danger" style="margin-top:5px; padding: 5px; font-size: 10px;">Limpar Combate</button>
+        </div>
+    </div>
+
+   <div id="token-sound-menu" class="hidden"></div>
+    <div id="context-menu" class="hidden">
+        <div class="ctx-item" onclick="abrirSonsToken()"><i class="fas fa-volume-up"></i> Sons do Personagem</div>
+        <div class="ctx-item" onclick="ativarRedimensionamento()"><i class="fas fa-crop-alt"></i> Redimensionar (Enter p/ Confirmar)</div>
+        <div class="ctx-item" onclick="setContextElevation()"><i class="fas fa-sort-amount-up-alt"></i> Definir Elevação</div>
+        <div class="ctx-item" onclick="contextTrazerFrente()"><i class="fas fa-layer-group"></i> Trazer pra Frente</div>
+        <div class="ctx-item" onclick="contextEnviarTras()"><i class="fas fa-layer-group" style="opacity:0.5;"></i> Enviar pra Trás</div>
+        <div class="ctx-item" style="color: #ef4444; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 5px;" onclick="setContextAura('#ef4444', 'Sangrando', '🩸')"><i class="fas fa-tint"></i> Sangrando</div>
+        <div class="ctx-item" style="color: #f59e0b;" onclick="setContextAura('#f59e0b', 'Queimando', '🔥')"><i class="fas fa-fire"></i> Queimando</div>
+        <div class="ctx-item" style="color: #3b82f6;" onclick="setContextAura('#3b82f6', 'Investido', '⚡')"><i class="fas fa-shield-alt"></i> Investido</div>
+        <div class="ctx-item" style="color: #ef4444; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 5px;" onclick="deleteContextToken()"><i class="fas fa-trash"></i> Remover do Mapa</div>
+        <div class="ctx-item" style="border-top: 1px solid rgba(255,255,255,0.05); margin-top: 5px; color: #94a3b8;" onclick="clearContextAuras()"><i class="fas fa-eraser"></i> Limpar Condições</div>
+    </div>
+
+    <div id="map-context-menu" class="hidden">
+        <div class="ctx-item" onclick="if(window.phaserScene) window.phaserScene.coverFog()"><i class="fas fa-cloud"></i> Cobrir Neblina</div>
+        <div class="ctx-item" onclick="if(window.phaserScene) window.phaserScene.clearFog()"><i class="fas fa-eye"></i> Limpar Neblina</div>
+        <div class="ctx-item" onclick="toggleMapLock()"><i class="fas fa-lock"></i> Travas/Destravar Mapa</div>
+        <div class="ctx-item" onclick="clearDraw()"><i class="fas fa-eraser"></i> Limpar Desenhos</div>
+    </div>
+
+    <div id="help-modal" class="hidden" style="position: absolute; bottom: 70px; right: 20px; z-index: 20; background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent); border-radius: 8px; padding: 15px 20px; color: #fff; font-size: 13px; box-shadow: 0 5px 20px rgba(0,0,0,0.8); backdrop-filter: blur(5px);">
+        <h4 style="margin: 0 0 10px 0; color: var(--accent); border-bottom: 1px solid rgba(251,191,36,0.3); padding-bottom: 5px; font-family: 'Georgia', serif;">Atalhos e Comandos</h4>
+        <ul style="list-style: none; padding: 0; margin: 0; line-height: 2;">
+            <li><b style="color: var(--accent); display: inline-block; width: 75px;">Tecla I</b> Abrir Combate (Iniciativa)</li>
+            <li><b style="color: var(--accent); display: inline-block; width: 75px;">ALT + Esq</b> Ping de Radar no mapa</li>
+            <li><b style="color: var(--accent); display: inline-block; width: 75px;">Bot. Direito</b> no Token = Menu Z/Auras</li>
+            <li><b style="color: var(--accent); display: inline-block; width: 75px;">Tecla S</b> Mover Tokens | <b style="color: var(--accent);">M</b> Mover Mapas</li>
+            <li><b style="color: var(--accent); display: inline-block; width: 75px;">Tecla R</b> Régua | <b style="color: var(--accent);">D</b> Lápis | <b style="color: var(--accent);">A</b> Área de Efeito</li>
+            <li><b style="color: var(--accent); display: inline-block; width: 75px;">Tecla N</b> Neblina | <b style="color: var(--accent);">W</b> Clima | <b style="color: var(--accent);">G</b> Dados</li>
+            <li><b style="color: var(--accent); display: inline-block; width: 75px;">Tecla E</b> Borracha | <b style="color: var(--accent);">C</b> Limpar Desenhos</li>
+            <li><b style="color: var(--accent); display: inline-block; width: 75px;">ESC</b> Fechar Fichas/Menus</li>
+        </ul>
+    </div>
+
+    <div id="clone-confirm-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 3000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
+        <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent); padding: 25px; border-radius: 8px; width: 320px; box-shadow: 0 0 30px rgba(251, 191, 36, 0.4); text-align: center;">
+            <i class="fas fa-clone" style="font-size: 30px; color: var(--accent); margin-bottom: 15px;"></i>
+            <h3 style="color: #fff; margin-top: 0; font-family: 'Segoe UI', sans-serif;">Clonar Personagem</h3>
+            <p style="color: var(--text-dim); font-size: 13px; margin-bottom: 20px;">Tem certeza que deseja criar uma cópia exata deste personagem?</p>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button class="glass-btn danger" onclick="document.getElementById('clone-confirm-modal').classList.add('hidden')">Cancelar</button>
+                <button class="glass-btn success" onclick="executarClone()">Sim, Clonar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="delete-confirm-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 3000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
+        <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid #ef4444; padding: 25px; border-radius: 8px; width: 320px; box-shadow: 0 0 30px rgba(239, 68, 68, 0.4); text-align: center;">
+            <i class="fas fa-exclamation-triangle" style="font-size: 30px; color: #ef4444; margin-bottom: 15px;"></i>
+            <h3 style="color: #fff; margin-top: 0; font-family: 'Segoe UI', sans-serif;">Tem certeza?</h3>
+            <p style="color: var(--text-dim); font-size: 13px; margin-bottom: 20px;">Você está prestes a apagar este item permanentemente da sua ficha.</p>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button class="glass-btn primary" onclick="document.getElementById('delete-confirm-modal').classList.add('hidden')">Cancelar</button>
+                <button class="glass-btn danger" onclick="executarDelecao()">Sim, Apagar</button>
+            </div>
+        </div>
+    </div>
+
+<div id="create-folder-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 3000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
+        <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent); padding: 25px; border-radius: 8px; width: 320px; box-shadow: 0 0 30px rgba(0,0,0,0.8); text-align: center;">
+            <i class="fas fa-folder-plus" style="font-size: 30px; color: var(--accent); margin-bottom: 15px;"></i>
+            <h3 style="color: #fff; margin-top: 0; font-family: 'Georgia', serif;">Nova Pasta</h3>
+            <input type="text" id="new-folder-name-input" placeholder="Ex: Heróis, Inimigos..." style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 4px; margin-bottom: 20px; outline: none; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; text-align: center; font-size: 16px;">
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button class="glass-btn danger" onclick="document.getElementById('create-folder-modal').classList.add('hidden')">Cancelar</button>
+                <button class="glass-btn success" onclick="confirmarNovaPasta()">Criar Pasta</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="create-char-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 3000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
+            <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent); padding: 25px; border-radius: 8px; width: 320px; box-shadow: 0 0 30px rgba(0,0,0,0.8); text-align: center;">
+            <i class="fas fa-user-plus" style="font-size: 30px; color: var(--accent); margin-bottom: 15px;"></i>
+            <h3 style="color: #fff; margin-top: 0; font-family: 'Georgia', serif;">Nova Ficha</h3>
+            <p style="color: var(--text-dim); font-size: 13px; margin-bottom: 15px;">Qual o nome do personagem?</p>
+            
+            <input type="text" id="new-char-name-input" placeholder="Ex: Kaladin" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 4px; margin-bottom: 20px; outline: none; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; text-align: center; font-size: 16px;">
+            
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button class="glass-btn danger" onclick="fecharModalCriacao()">Cancelar</button>
+                <button class="glass-btn success" onclick="confirmarCriacaoPersonagem()">Criar Ficha</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="add-skill-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 3000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
+        <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent); padding: 25px; border-radius: 8px; width: 320px; box-shadow: 0 0 30px rgba(0,0,0,0.8); text-align: center;">
+            <i class="fas fa-plus-circle" style="font-size: 30px; color: var(--accent); margin-bottom: 15px;"></i>
+            <h3 style="color: #fff; margin-top: 0; font-family: 'Georgia', serif;">Nova Perícia</h3>
+            <input type="text" id="new-skill-name-input" placeholder="Ex: Armamento Leve" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 4px; margin-bottom: 20px; outline: none; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; text-align: center; font-size: 16px;">
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button class="glass-btn danger" onclick="fecharModalNovaPericia()">Cancelar</button>
+                <button class="glass-btn success" onclick="confirmarNovaPericia()">Adicionar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE ITEM COMPÊNDIO -->
+    <div id="item-compendium-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 4000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
+        <div class="sheet-glass" style="width: 600px; height: 450px; display: flex; flex-direction: row; padding: 0;">
+            <div style="width: 200px; border-right: 1px solid rgba(255,255,255,0.1); padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.3);">
+                <div style="width: 150px; height: 150px; border-radius: 8px; border: 2px solid var(--accent); overflow: hidden; margin-bottom: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.5);">
+                    <img id="item-image-preview" src="../assets/itens/default.png" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100%\' height=\'100%\'><rect width=\'100%\' height=\'100%\' fill=\'%23111827\'/><text x=\'50%\' y=\'50%\' fill=\'%23fbbf24\' font-size=\'40\' text-anchor=\'middle\' dy=\'.3em\' font-family=\'Arial\'>?</text></svg>'">
+                </div>
+                <input type="text" id="item-image-path" placeholder="nome_da_imagem.png" style="width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 8px; border-radius: 4px; font-size: 11px; text-align: center; margin-bottom: 10px;" onchange="document.getElementById('item-image-preview').src = '../assets/itens/' + this.value">
+                <span style="font-size: 9px; color: var(--text-dim); text-align: center;">Nome do arquivo dentro de assets/itens/</span>
+            </div>
+            <div style="flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <input type="text" id="item-name-input" placeholder="Nome do Item/Arma" style="background: transparent; border: none; border-bottom: 2px solid var(--accent); color: #fff; font-size: 24px; font-family: 'Georgia', serif; outline: none; width: 80%;">
+                    <button class="btn-close-sheet" onclick="fecharModalItem()" style="position: relative; top: 0; right: 0; width: 30px; height: 30px; font-size: 14px;"><i class="fas fa-times"></i></button>
+                </div>
+                <textarea id="item-obs-input" placeholder="Observações, regras, dados de dano, efeitos especiais..." style="flex: 1; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1; padding: 15px; border-radius: 6px; resize: none; font-family: 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.5; outline: none;"></textarea>
+                <button class="glass-btn success" onclick="salvarItemCompendio()" style="padding: 12px; font-size: 14px; letter-spacing: 1px;"><i class="fas fa-save"></i> SALVAR ITEM</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../node_modules/phaser/dist/phaser.js"></script>
+    <script src="renderer.js"></script>
+    <script src="js/ui/toolbar.js"></script>
+    <script src="js/ui/audio.js"></script>
+    <script src="js/ui/dice.js"></script>
+    <script src="js/ui/initiative.js"></script>
+    <script src="js/ui/notes.js"></script>
+    <script src="js/ui/toast.js"></script>
+    <script src="js/ui/character-sheet.js"></script>
+    <script src="js/ui/compendium.js"></script>
+    <script src="js/ui/player-view.js"></script>
+    <script src="js/ui/handouts.js"></script>
+    <script src="js/ui/scene-director.js"></script>
+    <script src="js/ui/session-tools.js"></script>
+    <script src="js/systems/scenes.js"></script>
+    <script src="js/app.js"></script>
+
+    <div id="portrait-selector-modal" class="hidden">
+        <div class="portrait-selector-dialog">
+            <div class="portrait-selector-header">
+                <h2 class="portrait-selector-title">Selecionar Retrato</h2>
+                <button class="glass-btn danger" onclick="document.getElementById('portrait-selector-modal').classList.add('hidden')">FECHAR</button>
+            </div>
+            <div id="portrait-grid"></div>
+        </div>
+    </div>
+</body>
+</html> 
