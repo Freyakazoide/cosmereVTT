@@ -232,3 +232,382 @@ body.player-view #global-actions {
     height: calc(100vh - 20px);
   }
 }
+
+/* ==========================================================================
+   OVERHAUL DOS ITENS INTERNOS DO FLYOUT / MENU ESQUERDO
+   Mantém a estrutura atual, mas melhora todos os itens abertos do painel.
+   ========================================================================== */
+
+.vtt-flyout {
+  --flyout-card-bg: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.065),
+    rgba(255, 255, 255, 0.025)
+  );
+  --flyout-card-hover: linear-gradient(
+    135deg,
+    rgba(251, 191, 36, 0.15),
+    rgba(255, 255, 255, 0.055)
+  );
+  --flyout-border: rgba(255, 255, 255, 0.105);
+  --flyout-border-strong: rgba(251, 191, 36, 0.28);
+  --flyout-text-soft: rgba(226, 232, 240, 0.68);
+}
+
+/* Corpo interno do painel */
+.vtt-flyout .content-area {
+  padding: 16px;
+  background:
+    radial-gradient(circle at top left, rgba(251, 191, 36, 0.055), transparent 34%),
+    linear-gradient(180deg, rgba(2, 6, 23, 0.18), rgba(2, 6, 23, 0.42));
+}
+
+/* Scrollbar mais elegante */
+.vtt-flyout .content-area::-webkit-scrollbar {
+  width: 7px;
+}
+
+.vtt-flyout .content-area::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 999px;
+}
+
+.vtt-flyout .content-area::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(251, 191, 36, 0.55), rgba(251, 191, 36, 0.18));
+  border-radius: 999px;
+}
+
+/* Títulos de categoria: Mapas, Áudio, Pastas etc. */
+.vtt-flyout .category-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  margin: 18px 0 10px;
+  padding: 9px 11px 9px 13px;
+
+  border-radius: 12px;
+  border: 1px solid rgba(251, 191, 36, 0.16);
+  border-left: 3px solid var(--accent);
+
+  background:
+    linear-gradient(135deg, rgba(251, 191, 36, 0.13), rgba(255, 255, 255, 0.035)),
+    rgba(0, 0, 0, 0.24);
+
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.055),
+    0 8px 22px rgba(0, 0, 0, 0.22);
+}
+
+.vtt-flyout .category-header:first-child {
+  margin-top: 0;
+}
+
+.vtt-flyout .category-header::before {
+  content: "✦";
+  font-size: 10px;
+  opacity: 0.9;
+}
+
+.vtt-flyout .category-header::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: linear-gradient(90deg, rgba(251, 191, 36, 0.35), transparent);
+  opacity: 0.7;
+}
+
+/* Item base das listas: mapas, handouts, vídeos, áudio etc. */
+.vtt-flyout .list-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+
+  min-height: 48px;
+  margin: 0 0 8px;
+  padding: 11px 12px;
+
+  border-radius: 14px;
+  border: 1px solid var(--flyout-border);
+  border-left: 3px solid transparent;
+
+  background: var(--flyout-card-bg);
+  color: var(--color-text, var(--text));
+  font-size: 13px;
+  line-height: 1.25;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 8px 22px rgba(0, 0, 0, 0.18);
+
+  transition:
+    transform 0.18s ease,
+    background 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.vtt-flyout .list-item:hover {
+  transform: translateX(4px);
+  background: var(--flyout-card-hover);
+  border-color: var(--flyout-border-strong);
+  border-left-color: var(--accent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 12px 28px rgba(0, 0, 0, 0.28),
+    0 0 18px rgba(251, 191, 36, 0.08);
+}
+
+/* Ícones dentro dos itens */
+.vtt-flyout .list-item i {
+  width: 28px;
+  height: 28px;
+
+  display: inline-grid;
+  place-items: center;
+
+  margin: 0 !important;
+  border-radius: 10px;
+
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(251, 191, 36, 0.16);
+
+  color: var(--accent) !important;
+  font-size: 13px;
+
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* Textos clicáveis dentro dos itens */
+.vtt-flyout .list-item span {
+  min-width: 0;
+  flex: 1;
+
+  color: rgba(248, 250, 252, 0.88);
+  font-weight: 650;
+
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Itens com botão lateral, como handouts e vídeos */
+.vtt-flyout .handout-list-item {
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.vtt-flyout .handout-list-item span {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+/* Botões pequenos dentro dos cards */
+.vtt-flyout .list-item .ui-icon-btn,
+.vtt-flyout .handout-list-item .ui-icon-btn {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+
+  border-radius: 10px;
+  border: 1px solid rgba(251, 191, 36, 0.18);
+
+  background: rgba(0, 0, 0, 0.24);
+  color: rgba(248, 250, 252, 0.72);
+
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.vtt-flyout .list-item .ui-icon-btn:hover,
+.vtt-flyout .handout-list-item .ui-icon-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(251, 191, 36, 0.16);
+  color: #fff;
+  border-color: rgba(251, 191, 36, 0.36);
+}
+
+/* Botões de criar nova ficha, pasta, item etc. */
+.vtt-flyout .btn-create-new,
+.vtt-flyout .glass-btn,
+.vtt-flyout .ui-btn {
+  border-radius: 12px;
+  border: 1px solid rgba(251, 191, 36, 0.22);
+
+  background:
+    linear-gradient(135deg, rgba(251, 191, 36, 0.18), rgba(255, 255, 255, 0.045)),
+    rgba(0, 0, 0, 0.26);
+
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.055),
+    0 8px 22px rgba(0, 0, 0, 0.20);
+
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.vtt-flyout .btn-create-new:hover,
+.vtt-flyout .glass-btn:hover,
+.vtt-flyout .ui-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(251, 191, 36, 0.42);
+  background:
+    linear-gradient(135deg, rgba(251, 191, 36, 0.26), rgba(255, 255, 255, 0.065)),
+    rgba(0, 0, 0, 0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 12px 28px rgba(0, 0, 0, 0.30),
+    0 0 18px rgba(251, 191, 36, 0.10);
+}
+
+/* Inputs e selects internos do painel */
+.vtt-flyout input[type="text"],
+.vtt-flyout input[type="search"],
+.vtt-flyout select,
+.vtt-flyout textarea {
+  border-radius: 12px !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.022)),
+    rgba(0, 0, 0, 0.30) !important;
+
+  color: rgba(248, 250, 252, 0.92) !important;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 8px 20px rgba(0, 0, 0, 0.14);
+
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
+}
+
+.vtt-flyout input[type="text"]:focus,
+.vtt-flyout input[type="search"]:focus,
+.vtt-flyout select:focus,
+.vtt-flyout textarea:focus {
+  border-color: rgba(251, 191, 36, 0.42) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 0 3px rgba(251, 191, 36, 0.09),
+    0 10px 24px rgba(0, 0, 0, 0.22);
+  outline: none;
+}
+
+/* Busca global do flyout */
+.vtt-flyout-search {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.012));
+}
+
+.vtt-flyout-search input {
+  height: 42px;
+  padding-left: 38px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)),
+    rgba(0, 0, 0, 0.34) !important;
+}
+
+.vtt-flyout-search {
+  position: relative;
+}
+
+.vtt-flyout-search::before {
+  content: "\f002";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+
+  position: absolute;
+  left: 25px;
+  top: 50%;
+  transform: translateY(-50%);
+
+  color: rgba(251, 191, 36, 0.7);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+/* Cabeçalho do painel que abre */
+.vtt-flyout-header {
+  background:
+    radial-gradient(circle at top left, rgba(251, 191, 36, 0.12), transparent 38%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018));
+}
+
+.vtt-flyout-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  font-size: 19px;
+  letter-spacing: 0.02em;
+}
+
+.vtt-flyout-header h2::before {
+  content: "✦";
+  color: var(--accent);
+  font-size: 13px;
+}
+
+/* Botões do dock principal */
+.vtt-dock .tab-btn,
+.vtt-dock .tool-btn {
+  border-radius: 13px;
+}
+
+.vtt-dock .tab-btn.active,
+.vtt-dock .tool-btn.active {
+  background:
+    linear-gradient(135deg, rgba(251, 191, 36, 0.20), rgba(255, 255, 255, 0.045)),
+    rgba(0, 0, 0, 0.28);
+  border-color: rgba(251, 191, 36, 0.34);
+  color: var(--accent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 18px rgba(251, 191, 36, 0.12);
+}
+
+/* Tema Roshar aproveitando as mesmas estruturas */
+body.theme-roshar .vtt-flyout {
+  --flyout-border-strong: rgba(56, 189, 248, 0.32);
+}
+
+body.theme-roshar .vtt-flyout .list-item:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 12px 28px rgba(0, 0, 0, 0.28),
+    0 0 18px rgba(56, 189, 248, 0.10);
+}
+
+/* Tema Scadrial aproveitando as mesmas estruturas */
+body.theme-scadrial .vtt-flyout {
+  --flyout-border-strong: rgba(180, 120, 60, 0.34);
+}
+
+body.theme-scadrial .vtt-flyout .list-item:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 12px 28px rgba(0, 0, 0, 0.28),
+    0 0 18px rgba(180, 120, 60, 0.12);
+}
