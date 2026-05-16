@@ -8,7 +8,7 @@
   padding: 8px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-soft);
-  background: rgba(2,6,23,0.66);
+  background: var(--color-panel);
   backdrop-filter: blur(16px);
   box-shadow: var(--shadow-md);
 }
@@ -38,7 +38,7 @@
   padding: 10px 15px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-color);
-  background: rgba(10, 15, 25, 0.95);
+  background: var(--color-panel);
   color: var(--text-dim);
   font-size: 12px;
   box-shadow: 0 4px 15px rgba(0,0,0,0.5);
@@ -50,32 +50,8 @@
   background: var(--border-soft);
 }
 
-.tool-btn {
+.tools-bar .tool-btn {
   width: 42px;
   height: 42px;
   border-radius: var(--radius-md);
-}
-
-.tool-btn.tool-btn--accent {
-  color: var(--color-accent);
-}
-
-.tool-btn.tool-btn--success {
-  color: var(--color-success);
-}
-
-.tool-btn.tool-btn--info {
-  color: var(--color-info);
-}
-
-.tool-btn.tool-btn--danger {
-  color: var(--color-danger);
-}
-
-.tool-btn.tool-btn--purple {
-  color: var(--color-purple);
-}
-
-.tool-btn.tool-btn--pink {
-  color: #e879f9;
 }

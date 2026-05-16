@@ -1,0 +1,285 @@
+.roster-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  padding-bottom: 20px;
+}
+
+.roster-card {
+  position: relative;
+  height: 160px;
+  overflow: hidden;
+  border: 1px solid var(--border-soft);
+  border-top-color: var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-1);
+  box-shadow: var(--shadow-md);
+  transition: transform var(--motion-slow), border-color var(--motion-fast), box-shadow var(--motion-fast);
+}
+
+.roster-card:hover {
+  transform: translateY(-5px) scale(1.02);
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
+}
+
+.roster-card:active {
+  transform: translateY(-2px) scale(1.01);
+}
+
+.roster-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.8;
+  transition: transform var(--motion-slow), filter var(--motion-slow);
+}
+
+.roster-card:hover .roster-img {
+  transform: scale(1.1);
+  filter: brightness(0.3) blur(3px);
+}
+
+.roster-info {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 20px 15px 15px;
+  background: linear-gradient(to top, var(--color-overlay), var(--color-overlay-soft), transparent);
+  pointer-events: none;
+  transition: opacity var(--motion-med), transform var(--motion-med);
+}
+
+.roster-card:hover .roster-info {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.roster-name {
+  margin-bottom: 4px;
+  overflow: hidden;
+  color: var(--color-text);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  text-shadow: 0 2px 5px var(--color-overlay);
+  white-space: nowrap;
+}
+
+.roster-class {
+  color: var(--color-accent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.roster-hp-bar {
+  width: 100%;
+  height: 4px;
+  margin-top: 8px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--border-soft);
+}
+
+.roster-hp-fill {
+  height: 100%;
+  background: var(--color-success);
+  transition: width var(--motion-med);
+}
+
+.roster-actions {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  align-content: center;
+  padding: 15px;
+  opacity: 0;
+  transition: opacity var(--motion-med);
+}
+
+.roster-card:hover .roster-actions {
+  opacity: 1;
+}
+
+.roster-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 0;
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-sm);
+  background: var(--color-overlay-mid);
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 800;
+  transition: background var(--motion-fast), border-color var(--motion-fast), color var(--motion-fast);
+  backdrop-filter: blur(4px);
+}
+
+.roster-btn.spawn:hover {
+  border-color: var(--color-info);
+  background: var(--color-info-soft);
+  color: var(--color-info);
+}
+
+.roster-btn.edit:hover {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.roster-btn.delete:hover {
+  border-color: var(--color-danger);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+#token-list.list-view-compact .roster-grid,
+#tokens-content.list-view .roster-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 5px;
+}
+
+#token-list.list-view-compact .roster-card,
+#tokens-content.list-view .roster-card {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 50px;
+  padding: 5px;
+}
+
+#token-list.list-view-compact .roster-img,
+#tokens-content.list-view .roster-img {
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  border-radius: var(--radius-xs);
+  object-fit: cover;
+  opacity: 1;
+}
+
+#token-list.list-view-compact .roster-info,
+#tokens-content.list-view .roster-info {
+  position: static;
+  flex: 1;
+  padding: 0 10px;
+  background: none;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#token-list.list-view-compact .roster-name,
+#tokens-content.list-view .roster-name {
+  margin-bottom: 0;
+  font-size: 14px;
+}
+
+#token-list.list-view-compact .roster-class {
+  display: none;
+}
+
+#token-list.list-view-compact .roster-hp-bar {
+  display: none;
+}
+
+#token-list.list-view-compact .roster-actions,
+#tokens-content.list-view .roster-actions {
+  position: static;
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  width: auto;
+  height: auto;
+  padding: 0;
+  opacity: 1;
+}
+
+#token-list.list-view-compact .roster-btn,
+#tokens-content.list-view .roster-btn {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  font-size: 12px;
+}
+
+#token-list.list-view-compact .roster-card:hover .roster-img,
+#tokens-content.list-view .roster-card:hover .roster-img {
+  transform: none;
+  filter: none;
+}
+
+#token-list.list-view-compact .hover-stats-tooltip {
+  display: none !important;
+}
+
+.roster-card.touch-active .roster-actions {
+  opacity: 1;
+}
+
+.roster-card.touch-active .roster-info {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.roster-card.touch-active .roster-img {
+  transform: scale(1.1);
+  filter: brightness(0.3) blur(3px);
+}
+
+@media (max-width: 768px) {
+  .roster-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .roster-card {
+    height: 120px;
+  }
+
+  .roster-name {
+    font-size: 16px;
+  }
+
+  .roster-actions {
+    gap: 8px;
+  }
+
+  .roster-btn {
+    min-height: 36px;
+    padding: 6px;
+    font-size: 10px;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .roster-actions {
+    opacity: 1;
+  }
+
+  .roster-info {
+    opacity: 1;
+    transform: none;
+  }
+
+  .roster-img {
+    opacity: 0.6;
+  }
+
+  .roster-card:hover .roster-img,
+  .roster-card:hover .roster-info {
+    transform: none;
+    filter: none;
+    opacity: 1;
+  }
+}

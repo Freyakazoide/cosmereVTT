@@ -1,0 +1,19 @@
+body.theme-roshar {
+  --color-accent: var(--color-info);
+  --color-accent-2: var(--color-roshar-accent-2);
+  --color-panel: var(--color-roshar-panel);
+  --color-panel-soft: var(--color-roshar-panel-soft);
+  --color-accent-soft: var(--color-info-soft);
+  --color-accent-border: var(--color-roshar-accent-border);
+  --color-accent-glow: var(--color-roshar-accent-glow);
+}
+
+body.theme-scadrial {
+  --color-accent: var(--mistborn-gold);
+  --color-accent-2: var(--mistborn-bronze);
+  --color-panel: var(--color-scadrial-panel);
+  --color-panel-soft: var(--color-scadrial-panel-soft);
+  --color-accent-soft: var(--mistborn-gold-soft);
+  --color-accent-border: var(--color-scadrial-accent-border);
+  --color-accent-glow: var(--color-scadrial-accent-glow);
+}

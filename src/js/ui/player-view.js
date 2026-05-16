@@ -26,6 +26,7 @@ if (isPlayerView) {
 
             if (window.phaserScene) {
                 window.phaserScene.loadBoardState(state);
+                renderPlayerSceneNotes(state);
                 if (state.weather) window.phaserScene.setAdvancedWeather(state.weather);
                 if (state.drawings && state.drawings.length > 0) {
                     state.drawings.forEach(d => {
@@ -119,6 +120,44 @@ function renderPlayerNote(note) {
     `;
     document.body.appendChild(overlay);
     overlay.addEventListener('click', () => overlay.remove());
+}
+
+function renderPlayerSceneNotes(state) {
+    const existing = document.querySelector('.player-scene-notes');
+    if (existing) existing.remove();
+    if (!state) return;
+
+    const notes = [
+        ...(Array.isArray(state.revealedNotes) ? state.revealedNotes : []),
+        ...(Array.isArray(state.sceneNotes) ? state.sceneNotes : []),
+        ...(Array.isArray(state.sceneDirector?.pinnedNotes) ? state.sceneDirector.pinnedNotes : [])
+    ].filter(note => note && note.isRevealed);
+
+    const uniqueNotes = [];
+    notes.forEach(note => {
+        if (!uniqueNotes.some(existingNote => existingNote.id === note.id)) uniqueNotes.push(note);
+    });
+
+    if (uniqueNotes.length === 0) return;
+
+    const dock = document.createElement('aside');
+    dock.className = 'player-scene-notes';
+    dock.innerHTML = `
+        <div class="player-scene-notes__title">${state.sceneName || state.sceneDirector?.sceneName || 'Cena'}</div>
+        ${uniqueNotes.map(note => `
+            <button class="player-scene-note" data-note-id="${note.id}">
+                <span>${note.type || 'Nota'}</span>
+                <strong>${note.title || 'Nota Revelada'}</strong>
+            </button>
+        `).join('')}
+    `;
+    document.body.appendChild(dock);
+    dock.addEventListener('click', event => {
+        const button = event.target.closest('[data-note-id]');
+        if (!button) return;
+        const note = uniqueNotes.find(item => item.id === button.dataset.noteId);
+        renderPlayerNote(note);
+    });
 }
 
 function openPlayerScreen() {

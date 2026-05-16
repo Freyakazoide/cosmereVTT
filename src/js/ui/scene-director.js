@@ -70,6 +70,9 @@ function restoreDirectedSceneFromState(sceneDirectorState) {
 function saveDirectedSceneDraft() {
     directedSceneDraft = getDirectedSceneDraftFromUI();
     window.directedSceneDraft = directedSceneDraft;
+    if (directedSceneDraft.sceneName && typeof setCurrentSceneContext === 'function') {
+        setCurrentSceneContext(directedSceneDraft.sceneName);
+    }
     localStorage.setItem('cosmere_directed_scene_draft', JSON.stringify(directedSceneDraft));
 }
 
@@ -84,6 +87,12 @@ function loadDirectedSceneDraft() {
 
 function directorOption(item) {
     return `<option value="${item.path.replace(/\\/g, '/')}">${item.name.replace(/\.[^/.]+$/, '')}</option>`;
+}
+
+function escapeDirectorText(value) {
+    const div = document.createElement('div');
+    div.textContent = value || '';
+    return div.innerHTML;
 }
 
 function populateDirectorSelects() {
@@ -106,9 +115,13 @@ function renderDirectorPinnedNotes() {
     }
 
     container.innerHTML = notes.map(note => `
-        <div class="director-note-item">
-            <strong>${note.title || 'Nota'}</strong>
-            <span>${note.type || 'Nota'}${note.tags?.length ? ' / ' + note.tags.join(', ') : ''}</span>
+        <div class="director-note-item" data-note-id="${escapeDirectorText(note.id)}">
+            <strong>${escapeDirectorText(note.title || 'Nota')}</strong>
+            <span>${escapeDirectorText(note.type || 'Nota')}${note.tags?.length ? ' / ' + escapeDirectorText(note.tags.join(', ')) : ''}</span>
+            <div class="director-note-actions">
+                <button class="ui-icon-btn" onclick="revealNoteById('${escapeDirectorText(note.id)}')" title="Revelar aos jogadores"><i class="fas fa-eye"></i></button>
+                <button class="ui-icon-btn" onclick="unpinNoteById('${escapeDirectorText(note.id)}')" title="Soltar da cena"><i class="fas fa-times"></i></button>
+            </div>
         </div>
     `).join('');
 }

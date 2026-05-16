@@ -1,137 +1,12 @@
-﻿:root {
-            --bg-base: #05080f;      
-            --bg-panel: rgba(0, 0, 0, 0.45); 
-            --bg-item: rgba(255, 255, 255, 0.03);      
-            --accent: #fbbf24;       
-            --accent-hover: #fcd34d;
-            --text: #f8fafc;
-            --text-dim: #94a3b8;
-            --border-color: rgba(255, 255, 255, 0.1); 
-        }
-        
-        /* =============================================
-   TEMA ROSHAR â€” Luz Tempestuosa
-   Adicionar logo apÃ³s o bloco :root { }
-   ============================================= */
-body.theme-roshar {
-    --accent:        #38bdf8;
-    --accent-hover:  #7dd3fc;
-    --bg-base:       #020b18;
-    --bg-panel:      rgba(8, 28, 60, 0.55);
-    --bg-item:       rgba(56, 189, 248, 0.04);
-    --border-color:  rgba(56, 189, 248, 0.18);
-    --text:          #e0f2fe;
-    --text-dim:      #7dd3fc;
-}
-
-/* BotÃµes e barras ficam com brilho azul no Roshar */
-body.theme-roshar .tool-btn.active {
-    border-color: var(--accent);
-    color: var(--accent);
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.8), 0 0 8px rgba(56,189,248,0.4);
-}
-body.theme-roshar .tab-btn.active::after {
-    background: var(--accent);
-    box-shadow: 0 -2px 10px rgba(56,189,248,0.7);
-}
-body.theme-roshar #sidebar {
-    border-left-color: rgba(56,189,248,0.2);
-    box-shadow: -10px 0 40px rgba(0,80,160,0.3);
-}
-body.theme-roshar .vital-box.focus::before {
-    background: linear-gradient(90deg, transparent, #38bdf8, transparent);
-    box-shadow: 0 0 10px #38bdf8;
-}
-/* Scrollbar Roshar */
-body.theme-roshar .sheet-content-area::-webkit-scrollbar-thumb {
-    background: rgba(56,189,248,0.35);
-}
-
-/* =============================================
-   TEMA SCADRIAL â€” NÃ©voa e Cinzas
-   ============================================= */
-body.theme-scadrial {
-    --accent:        #b4783c;
-    --accent-hover:  #d4a05c;
-    --bg-base:       #0a0a0a;
-    --bg-panel:      rgba(20, 18, 15, 0.65);
-    --bg-item:       rgba(180, 120, 60, 0.04);
-    --border-color:  rgba(180, 120, 60, 0.18);
-    --text:          #d4c8b8;
-    --text-dim:      #a89070;
-}
-
-body.theme-scadrial .tool-btn.active {
-    border-color: var(--accent);
-    color: var(--accent);
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.8), 0 0 8px rgba(180,120,60,0.4);
-}
-body.theme-scadrial .tab-btn.active::after {
-    background: var(--accent);
-    box-shadow: 0 -2px 10px rgba(180,120,60,0.7);
-}
-body.theme-scadrial #sidebar {
-    border-left-color: rgba(180,120,60,0.2);
-    box-shadow: -10px 0 40px rgba(40,30,20,0.3);
-}
-body.theme-scadrial .vital-box.focus::before {
-    background: linear-gradient(90deg, transparent, #b4783c, transparent);
-    box-shadow: 0 0 10px #b4783c;
-}
-body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
-    background: rgba(180,120,60,0.35);
-}
-
-        body { margin: 0; padding: 0; overflow: hidden; background: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.6)), url('../../assets/wallpaper.png') center/cover no-repeat fixed, var(--bg-base); width: 100vw; height: 100vh; font-family: 'Segoe UI', Tahoma, sans-serif; color: var(--text); }
-        
-        /* ForÃ§a o ponteiro em absolutamente toda a tela */
+/* Força o ponteiro em absolutamente toda a tela */
         *, body, button, .list-item, .tool-btn, .tab-btn, .nav-btn, .glass-btn, .color-swatch, i, img, select { 
             cursor: url('../../assets/ponteiro.png'), auto !important; 
         }
-        /* Mas mantÃ©m o cursor de texto nos inputs */
+        /* Mas mantém o cursor de texto nos inputs */
         input, textarea, [contenteditable="true"] { 
             cursor: text !important; 
         }
-        
-        /* CSS do Toast/Aviso Padronizado */
-        .toast-msg {
-            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-            padding: 12px 25px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.2);
-            font-weight: bold; z-index: 10000; display: flex; align-items: center; gap: 10px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8); color: #fff; font-size: 14px;
-            animation: slideDownFade 0.4s ease forwards; backdrop-filter: blur(5px);
-        }
-        .toast-msg.success { background: rgba(34, 197, 94, 0.9); }
-        .toast-msg.danger { background: rgba(239, 68, 68, 0.9); }
-        .toast-msg.warning { background: rgba(245, 158, 11, 0.9); color: #000; }
-        
-        /* Efeitos Visuais de CrÃ­tico (Camada separada para nÃ£o bugar o fundo) */
-        .crit-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 10000; opacity: 0; }
-        .crit-success-flash { animation: flashGold 1.5s ease-out; }
-        .crit-fail-flash { animation: flashRed 1.5s ease-out; }
-
-        /* Remove barras de rolagem da bandeja de dados */
-        #dice-tray, #dice-container-inner {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        #dice-tray::-webkit-scrollbar, #dice-container-inner::-webkit-scrollbar {
-            display: none;
-        }
-
-        @keyframes flashGold {
-            0% { opacity: 0; box-shadow: inset 0 0 0px gold; background: rgba(255, 215, 0, 0); }
-            20% { opacity: 1; box-shadow: inset 0 0 150px gold; background: rgba(255, 215, 0, 0.2); }
-            100% { opacity: 0; box-shadow: inset 0 0 0px gold; background: rgba(255, 215, 0, 0); }
-        }
-        @keyframes flashRed {
-            0% { opacity: 0; box-shadow: inset 0 0 0px red; background: rgba(255, 0, 0, 0); }
-            20% { opacity: 1; box-shadow: inset 0 0 200px red; background: rgba(255, 0, 0, 0.3); }
-            100% { opacity: 0; box-shadow: inset 0 0 0px red; background: rgba(255, 0, 0, 0); }
-        }
-        #game-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
-        
-        #btn-toggle-menu {
+#btn-toggle-menu {
             position: absolute; top: 15px; z-index: 30;
             background: rgba(0, 0, 0, 0.4); color: var(--accent);
             border: 1px solid rgba(251, 191, 36, 0.4); padding: 10px 15px;
@@ -168,119 +43,17 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
             font-size: 10px; transition: 0.2s;
         }
         #btn-collapse-sidebar:hover { background: var(--accent); color: #000; }
-
-        /* Categorias AutomÃ¡ticas de Pastas */
-        .category-header {
-            background: rgba(0, 0, 0, 0.5); color: var(--accent);
-            padding: 8px 12px; font-size: 11px; font-weight: bold;
-            margin-top: 20px; margin-bottom: 10px; border-left: 3px solid var(--accent);
-            text-transform: uppercase; letter-spacing: 2px;
-            backdrop-filter: blur(5px); border-radius: 2px;
-        }
-        .category-header:first-child { margin-top: 5px; }
-
-        .list-item { 
-            background: rgba(255, 255, 255, 0.03); margin-bottom: 5px; padding: 12px; 
-            border-radius: 4px; cursor: pointer; transition: 0.2s; border: 1px solid rgba(255,255,255,0.05); 
-            font-size: 13px; display: flex; align-items: center; gap: 10px;
-        }
-        .list-item:hover { background: rgba(255, 255, 255, 0.08); border-color: var(--accent); transform: translateX(5px); }
-
-        .tools-bar { 
-            position: absolute; top: 15px; left: 15px; z-index: 30;
-            display: flex; flex-direction: column; gap: 4px; padding: 8px; 
-            background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(0, 0, 0, 0.6); 
-            border-radius: 6px; backdrop-filter: blur(5px); box-shadow: 0 4px 10px rgba(0,0,0,0.8);
-        }
-        .tool-btn { background: transparent; border: 1px solid transparent; color: rgba(255, 255, 255, 0.5); padding: 8px; cursor: pointer; border-radius: 4px; font-size: 18px; transition: all 0.2s ease; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
-        .tool-btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff !important; text-shadow: 0 0 8px rgba(255,255,255,0.8); }
-        .tool-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0, 0, 0, 0.6); box-shadow: inset 0 0 10px rgba(0,0,0,0.8); }
-
-        .tabs { display: flex; background: rgba(15, 23, 42, 0.9); border-bottom: 1px solid rgba(59, 130, 246, 0.3); }
-        .tab-btn { flex: 1; padding: 16px 0; border: none; background: transparent; color: #64748b; cursor: pointer; font-size: 20px; transition: all 0.3s ease; display: flex; justify-content: center; align-items: center; position: relative; }
-        .tab-btn:hover { color: var(--text); background: rgba(255,255,255,0.02); }
-        .tab-btn.active { color: var(--accent); }
-        .tab-btn.active::after { content: ''; position: absolute; bottom: 0; left: 15%; width: 70%; height: 3px; background: var(--accent); border-radius: 3px 3px 0 0; box-shadow: 0 -2px 10px rgba(251,191,36,0.6); }
-        
-        .content-area { flex: 1; overflow-y: auto; padding: 15px; }
+        /* Categorias/listas, toolbar e botoes migrados para 04-toolbar.css, 05-buttons.css e 06-components.css. */
+.content-area { flex: 1; overflow-y: auto; padding: 15px; }
         .content-area::-webkit-scrollbar { width: 6px; }
         .content-area::-webkit-scrollbar-thumb { background: rgba(251, 191, 36, 0.3); border-radius: 3px; }
         
         .token-grid { display: flex; flex-direction: column; width: 100%; }
-        
-        .list-item { background: var(--bg-item); margin-bottom: 8px; padding: 10px; border-radius: 4px; cursor: pointer; transition: 0.2s; border-left: 2px solid transparent; font-size: 14px; }
-        .list-item:hover { background: rgba(251, 191, 36, 0.1); border-color: var(--accent); }
-        
-        /* =============================================
-           NOVA VISUALIZAÃ‡ÃƒO DE ELENCO (ROSTER CARDS)
-           ============================================= */
-        .roster-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; padding-bottom: 20px; }
-        
-        .roster-card {
-            position: relative; height: 160px; border-radius: 12px; overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.1); border-top: 1px solid rgba(255,255,255,0.3);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            background: var(--bg-base);
-        }
-        .roster-card:hover { transform: translateY(-5px) scale(1.02); border-color: var(--accent); box-shadow: 0 15px 40px rgba(0,0,0,0.9), 0 0 20px rgba(251,191,36,0.2); }
-        .roster-card:active { transform: translateY(-2px) scale(1.01); }
-        
-        .roster-img { width: 100%; height: 100%; object-fit: cover; transition: 0.5s; opacity: 0.8; }
-        .roster-card:hover .roster-img { transform: scale(1.1); filter: brightness(0.3) blur(3px); }
-        
-        .roster-info {
-            position: absolute; bottom: 0; left: 0; width: 100%;
-            background: linear-gradient(to top, rgba(0,0,0,1) 10%, rgba(0,0,0,0.8) 50%, transparent);
-            padding: 20px 15px 15px; pointer-events: none; transition: 0.3s;
-        }
-        .roster-card:hover .roster-info { opacity: 0; transform: translateY(10px); }
-        
-        .roster-name { font-family: 'Georgia', serif; font-size: 20px; font-weight: bold; color: #fff; text-shadow: 0 2px 5px #000; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .roster-class { font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 2px; font-weight: 800; }
-        
-        /* Barra de HP no CartÃ£o */
-        .roster-hp-bar { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 8px; overflow: hidden; }
-        .roster-hp-fill { height: 100%; background: #22c55e; transition: width 0.3s; }
-        
-       /* BotÃµes de AÃ§Ã£o que aparecem no Hover */
-        .roster-actions {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
-            align-content: center; padding: 15px; box-sizing: border-box;
-            opacity: 0; transition: 0.3s;
-        }
-        .roster-card:hover .roster-actions { opacity: 1; }
-        .roster-btn {
-            background: rgba(0,0,0,0.7); color: #fff; border: 1px solid rgba(255,255,255,0.2);
-            padding: 10px 0; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer;
-            transition: 0.2s; backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center;
-        }
-
-        /* --- CORREÃ‡ÃƒO DO MODO LISTA COMPACTO --- */
-        #token-list.list-view-compact .roster-grid { display: flex; flex-direction: column; gap: 4px; padding-bottom: 5px; }
-        #token-list.list-view-compact .roster-card { height: 50px; display: flex; flex-direction: row; align-items: center; padding: 5px; }
-        #token-list.list-view-compact .roster-img { width: 40px; height: 40px; min-width: 40px; border-radius: 4px; object-fit: cover; opacity: 1; }
-        #token-list.list-view-compact .roster-info { position: static; background: none; padding: 0 10px; flex: 1; opacity: 1; pointer-events: auto; }
-        #token-list.list-view-compact .roster-name { font-size: 14px; margin-bottom: 0; }
-        #token-list.list-view-compact .roster-class { display: none; }
-        #token-list.list-view-compact .roster-hp-bar { display: none; }
-        #token-list.list-view-compact .roster-actions { position: static; opacity: 1; display: flex; flex-direction: row; gap: 4px; width: auto; height: auto; padding: 0; }
-        #token-list.list-view-compact .roster-btn { width: 30px; height: 30px; padding: 0; font-size: 12px; }
-        #token-list.list-view-compact .roster-card:hover .roster-img { transform: none; filter: none; }
-        #token-list.list-view-compact .hover-stats-tooltip { display: none !important; }
-        .roster-btn.spawn:hover { background: rgba(56, 189, 248, 0.3); border-color: #38bdf8; color: #38bdf8; }
-        .roster-btn.edit:hover { background: rgba(251, 191, 36, 0.3); border-color: var(--accent); color: var(--accent); }
-        .roster-btn.delete:hover { background: rgba(239, 68, 68, 0.3); border-color: #ef4444; color: #ef4444; }
-
-        .notes-textarea { width: 100%; height: 98%; box-sizing: border-box; background: rgba(0,0,0,0.4); color: #fff; border: 1px solid var(--border-color); border-radius: 4px; padding: 12px; resize: none; font-family: 'Georgia', serif; line-height: 1.5; outline: none; }
+/* Roster migrado para 08-roster.css. */
+.notes-textarea { width: 100%; height: 98%; box-sizing: border-box; background: rgba(0,0,0,0.4); color: #fff; border: 1px solid var(--border-color); border-radius: 4px; padding: 12px; resize: none; font-family: 'Georgia', serif; line-height: 1.5; outline: none; }
         .notes-textarea:focus { border-color: var(--accent); }
-
-        #dice-panel { position: absolute; bottom: 20px; left: 20px; z-index: 20; background: var(--bg-panel); border: 2px solid var(--accent); border-radius: 8px; padding: 10px 15px; display: flex; gap: 8px; align-items: center; box-shadow: 0 8px 20px rgba(0,0,0,0.8); }
-        #dice-panel span.label { font-weight: 700; color: var(--accent); font-size: 12px; letter-spacing: 1px; margin-right: 5px; }
-        #dice-panel .tool-btn { font-size: 14px; padding: 6px 10px; font-weight: bold; font-family: monospace;}
-        #dice-display { width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); border-radius: 6px; margin-left: 10px; border: 1px solid var(--accent); }
-
-      /* =========================================================================
+        /* Dados migrados para 10-dice.css. */
+/* =========================================================================
            UI MODERNA DA FICHA DE PERSONAGEM (ESTILO VIDEOGAME RPG)
            ========================================================================= */
         #char-sheet-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(circle at center, rgba(10, 15, 30, 0.4), rgba(0, 0, 0, 0.8)); backdrop-filter: blur(6px); z-index: 100; display: flex; justify-content: center; align-items: center; opacity: 1; transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
@@ -349,7 +122,7 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
         
         .sheet-main { flex: 1; display: flex; flex-direction: column; background: transparent; position: relative; }
         
-       /* NavegaÃ§Ã£o HUD por Ãcones */
+       /* Navegação HUD por Ícones */
         .sheet-nav { display: flex; justify-content: center; gap: 20px; background: linear-gradient(to bottom, rgba(15, 23, 42, 0.9), transparent); padding: 20px 30px 10px; position: relative; z-index: 1; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .nav-btn { width: 60px; height: 60px; border-radius: 12px; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); color: var(--text-dim); font-size: 24px; cursor: pointer; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; align-items: center; justify-content: center; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5), 0 5px 15px rgba(0,0,0,0.3); position: relative; overflow: hidden; }
         .nav-btn::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(251,191,36,0.1) 0%, transparent 70%); opacity: 0; transition: 0.3s; }
@@ -364,7 +137,7 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
         
        .tab-content { display: none !important; animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .tab-content.active { display: block !important; }
-        /* ForÃ§a a aba do GM a ser flex apenas quando estiver ativa */
+        /* Força a aba do GM a ser flex apenas quando estiver ativa */
         #tab-gm.active { display: flex !important; flex-direction: column; }
         @keyframes slideUpFade { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
         
@@ -376,7 +149,7 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
         .input-group input, .input-group textarea { background: rgba(0, 0, 0, 0.5); border: none; border-bottom: 2px solid rgba(255, 255, 255, 0.1); border-radius: 6px 6px 0 0; color: #fff; padding: 12px 15px; font-family: 'Segoe UI', sans-serif; font-size: 15px; outline: none; transition: all 0.3s ease; box-shadow: inset 0 2px 8px rgba(0,0,0,0.5); }
         .input-group input:focus, .input-group textarea:focus { border-bottom-color: var(--accent); background: rgba(251, 191, 36, 0.05); box-shadow: inset 0 2px 8px rgba(0,0,0,0.5), 0 10px 20px -10px rgba(251,191,36,0.3); }
         
-      /* TÃ­tulos de SeÃ§Ã£o Estilo Ribbon (Faixa 3D) */
+      /* Títulos de Seção Estilo Ribbon (Faixa 3D) */
         .section-title {
             position: relative; font-family: 'Georgia', serif; color: #000 !important; font-size: 18px; font-weight: 900;
             background: linear-gradient(90deg, var(--accent), var(--accent-hover));
@@ -404,10 +177,10 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
             transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; overflow: hidden; 
         }
         
-        /* ConfiguraÃ§Ã£o Base das Imagens (Cards, Vitais e Atributos) */
+        /* Configuração Base das Imagens (Cards, Vitais e Atributos) */
         .char-card::before, .vital-box::before, .attr-block::before { 
             content: ''; position: absolute; inset: 0; 
-            /* Coloca a imagem no canto direito, estilo marca d'Ã¡gua elegante */
+            /* Coloca a imagem no canto direito, estilo marca d'água elegante */
             background-size: 60%; background-position: right -10px bottom -10px; background-repeat: no-repeat;
             opacity: 0.15; 
             filter: invert(1); /* INVERTE O PRETO PARA BRANCO AUTOMATICAMENTE */
@@ -430,7 +203,7 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
         .talent-card textarea { position: relative; z-index: 2; background: transparent; border: none; color: var(--text-dim); font-size: 13px; font-family: 'Segoe UI', sans-serif; resize: none; height: 80px; outline: none; line-height: 1.4; }
         .talent-card textarea:focus { color: #fff; }
 
-        /* Aba 3: Banners de Ideais e ObstÃ¡culos */
+        /* Aba 3: Banners de Ideais e Obstáculos */
         .lore-banners-container { display: flex; flex-direction: column; gap: 15px; margin-bottom: 35px; }
         .lore-banner { display: flex; align-items: center; background: linear-gradient(90deg, rgba(15, 23, 42, 0.9), transparent); border-left: 4px solid var(--accent); border-radius: 4px; padding: 15px 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); position: relative; overflow: hidden; transition: 0.3s; }
         .lore-banner::after { content: ''; position: absolute; right: 0; top: 0; height: 100%; width: 50%; background: linear-gradient(90deg, transparent, rgba(0,0,0,0.8)); pointer-events: none; }
@@ -443,7 +216,7 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
         .banner-content input { background: transparent; border: none; color: #fff; font-family: 'Georgia', serif; font-size: 18px; font-style: italic; outline: none; width: 100%; text-shadow: 0 2px 4px #000; }
         .banner-content input:focus { color: var(--accent); }
 
-        /* Aba 3: MedalhÃµes de ConexÃµes */
+        /* Aba 3: Medalhões de Conexões */
         .connections-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 35px; }
         .connection-medal { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 5px; }
         .medal-circle { width: 60px; height: 60px; border-radius: 50%; background: radial-gradient(circle at top, rgba(30, 41, 59, 0.8), rgba(0, 0, 0, 0.9)); border: 2px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 20px; color: var(--text-dim); transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: inset 0 2px 5px rgba(255,255,255,0.1), 0 5px 10px rgba(0,0,0,0.5); cursor: pointer; }
@@ -452,7 +225,7 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
         .connection-medal input:focus { border-bottom-color: var(--accent); }
         .connection-medal input.medal-desc { font-family: 'Segoe UI', sans-serif; font-size: 11px; color: var(--text-dim); font-weight: normal; font-style: italic; }
 
-        /* BotÃµes DinÃ¢micos (Add e Delete) */
+        /* Botões Dinâmicos (Add e Delete) */
         .btn-add-item { background: transparent; border: none; color: #fff; background: rgba(0,0,0,0.4); border-radius: 50%; width: 28px; height: 28px; cursor: pointer; transition: 0.2s; margin-left: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
         .btn-add-item:hover { background: var(--accent); color: #000; transform: scale(1.1); box-shadow: 0 0 10px rgba(251,191,36,0.5); }
         
@@ -460,7 +233,7 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
         .char-card:hover .btn-delete-item, .talent-card:hover .btn-delete-item, .connection-medal:hover .btn-delete-item { opacity: 1; }
         .btn-delete-item:hover { background: #ef4444; color: #fff; box-shadow: 0 0 10px rgba(239, 68, 68, 0.5); }
 
-        /* NotificaÃ§Ã£o de Salvamento */
+        /* Notificação de Salvamento */
         #save-notification {
             position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
             background: rgba(34, 197, 94, 0.9); color: #fff; padding: 10px 25px;
@@ -470,7 +243,7 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
         }
         @keyframes slideDownFade { from { opacity: 0; transform: translate(-50%, -20px); } to { opacity: 1; transform: translate(-50%, 0); } }
 
-        /* BotÃ£o Novo Personagem */
+        /* Botão Novo Personagem */
         .btn-create-new {
             grid-column: span 3; background: rgba(251, 191, 36, 0.1);
             border: 1px dashed var(--accent); color: var(--accent);
@@ -480,11 +253,11 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
         }
         .btn-create-new:hover { background: rgba(251, 191, 36, 0.2); transform: translateY(-2px); }
 
-        /* Para a lixeira do medalhÃ£o que Ã© redondo */
+        /* Para a lixeira do medalhão que é redondo */
         .connection-medal { position: relative; }
         .connection-medal .btn-delete-item { top: -5px; right: -5px; border-radius: 50%; }
 
-        /* Aba 3: DiÃ¡rio / Fragmentos */
+        /* Aba 3: Diário / Fragmentos */
         .journal-wrapper { background: linear-gradient(135deg, rgba(15, 23, 42, 0.6), rgba(0, 0, 0, 0.8)); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; padding: 2px; position: relative; box-shadow: inset 0 0 20px rgba(0,0,0,0.5); }
         .journal-wrapper::before { content: ''; position: absolute; left: 15px; top: 0; bottom: 0; width: 1px; background: rgba(251, 191, 36, 0.2); }
         .journal-wrapper textarea { width: 100%; height: 200px; background: transparent; border: none; color: #cbd5e1; font-family: 'Georgia', serif; font-size: 15px; line-height: 1.8; padding: 20px 20px 20px 35px; resize: none; outline: none; box-sizing: border-box; }
@@ -511,11 +284,11 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
         
         /* O Efeito de Acender e Brilhar no Hover - CORRIGIDO PARA LEITURA */
         .char-card:hover::before, .vital-box:hover::before, .attr-block:hover::before { 
-            opacity: 0.25; /* Reduzido para nÃ£o ofuscar o texto */
+            opacity: 0.25; /* Reduzido para não ofuscar o texto */
             filter: invert(1) drop-shadow(0 0 5px var(--accent)); 
         }
         
-        /* Garante que o texto fique legÃ­vel e nÃ£o estoure na tela no hover */
+        /* Garante que o texto fique legível e não estoure na tela no hover */
         .char-card:hover input, .vital-box:hover input, .talent-card:hover textarea, .talent-card:hover input {
             text-shadow: 0 2px 4px #000, 0 0 10px #000, 0 0 20px #000;
         }
@@ -529,11 +302,11 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
             text-shadow: 0 2px 10px #000; font-size: 24px; 
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
-        /* Ajuste automÃ¡tico de fonte para campos de texto longo (Ancestralidade/Trilha) */
+        /* Ajuste automático de fonte para campos de texto longo (Ancestralidade/Trilha) */
         .char-card.long-text input { font-size: 16px; font-family: 'Segoe UI', sans-serif; letter-spacing: 1px; color: var(--accent); } 
         .skills-wrapper { display: grid; grid-template-columns: repeat(2, 1fr); gap: 25px; }
         
-        /* Atributos Estilo "Cartas MÃ¡gicas" */
+        /* Atributos Estilo "Cartas Mágicas" */
         .attr-block { background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.2)); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.08); border-top: 1px solid rgba(255, 255, 255, 0.2); border-left: 1px solid rgba(255, 255, 255, 0.15); border-radius: 10px; padding: 20px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 8px 20px rgba(0,0,0,0.5); position: relative; }
         .attr-block::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 10px; box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0); transition: 0.3s; pointer-events: none; }
         .attr-block:hover { transform: translateY(-4px); background: linear-gradient(180deg, rgba(30, 41, 59, 0.6), rgba(0, 0, 0, 0.8)); box-shadow: inset 0 0 20px rgba(0,0,0,0.8), 0 15px 30px rgba(0,0,0,0.6); }
@@ -557,55 +330,7 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
         .skill-dot:hover { border-color: var(--accent); transform: scale(1.2); }
         .skill-dot.filled { background: radial-gradient(circle at 35% 35%, #fff, var(--accent) 40%, #b45309); border-color: var(--accent); box-shadow: 0 0 12px rgba(251, 191, 36, 0.8), inset 0 0 4px rgba(255,255,255,0.5); }
 
-        /* Tracker de Iniciativa */
-        #init-tracker { position: absolute; left: 300px; top: 20px; width: 280px; background: var(--bg-panel); border: 2px solid var(--accent); border-radius: 8px; z-index: 15; padding: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.8); transition: none; cursor: default; }
-        #init-tracker.hidden { transform: translateX(150%); display: block !important; }
-        #init-tracker .init-header { cursor: grab; user-select: none; }
-        #init-tracker .init-header:active { cursor: grabbing; }
-        .init-tracker-dragging { opacity: 0.85; }
-        .init-header { color: var(--accent); font-weight: bold; border-bottom: 1px solid rgba(251,191,36,0.3); padding-bottom: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; font-family: 'Georgia', serif; letter-spacing: 1px; }
-        .init-list { list-style: none; padding: 0; margin: 0 0 10px 0; max-height: 250px; overflow-y: auto; }
-        .init-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; background: rgba(0,0,0,0.2); margin-bottom: 2px; border-radius: 4px; transition: 0.2s; }
-        .init-item.active { background: rgba(251, 191, 36, 0.2); border-left: 4px solid var(--accent); font-weight: bold; box-shadow: inset 0 0 10px rgba(251, 191, 36, 0.1); }
-        .init-controls { display: flex; gap: 5px; flex-direction: column; }
-        .init-input-row { display: flex; gap: 5px; }
-        .init-controls input { background: #000; color: #fff; border: 1px solid var(--border-color); padding: 6px; border-radius: 3px; outline: none; }
-        .init-controls input[type="text"] { flex: 2; }
-        .init-controls input[type="number"] { flex: 1; text-align: center; }
-        .init-controls button { background: var(--bg-item); color: #fff; border: 1px solid var(--border-color); cursor: pointer; padding: 6px; border-radius: 3px; font-weight: bold; transition: 0.2s; }
-        .init-controls button:hover { background: var(--accent); color: #000; border-color: var(--accent); }
-
-        /* Menu de Contexto (BotÃ£o Direito no Token) */
-        #context-menu { position: absolute; background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent); border-radius: 6px; z-index: 50; padding: 5px 0; box-shadow: 0 8px 20px rgba(0,0,0,0.8); min-width: 180px; backdrop-filter: blur(5px); }
-        #map-context-menu { position: absolute; background: rgba(15, 23, 42, 0.95); border: 1px solid var(--border-color); border-radius: 6px; z-index: 50; padding: 5px 0; box-shadow: 0 8px 20px rgba(0,0,0,0.8); min-width: 160px; backdrop-filter: blur(5px); }
-        #map-context-menu .ctx-item { padding: 8px 15px; cursor: pointer; color: #fff; font-size: 13px; display: flex; align-items: center; gap: 8px; transition: 0.1s; }
-        #map-context-menu .ctx-item:hover { background: rgba(251,191,36,0.2); }
-        #map-context-menu .ctx-item i { color: var(--accent); width: 14px; }
-        .ctx-item { padding: 10px 15px; font-size: 13px; color: var(--text); cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.02); }
-        .ctx-item:hover { background: rgba(251, 191, 36, 0.1); color: var(--accent); padding-left: 20px; }
-        .ctx-item i { width: 15px; text-align: center; }
-
-        /* BotÃµes Glass Padronizados */
-        .glass-btn {
-            background: rgba(255, 255, 255, 0.05); color: var(--text); border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 8px 12px; border-radius: 6px; cursor: pointer; backdrop-filter: blur(5px);
-            font-weight: bold; transition: all 0.2s ease; text-transform: uppercase; font-size: 11px; letter-spacing: 1px;
-        }
-        .glass-btn:hover { background: rgba(255, 255, 255, 0.1); box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        .glass-btn.primary { background: rgba(251, 191, 36, 0.15); color: var(--accent); border-color: rgba(251, 191, 36, 0.4); }
-        .glass-btn.primary:hover { background: rgba(251, 191, 36, 0.3); box-shadow: 0 0 15px rgba(251, 191, 36, 0.2); }
-        .glass-btn.success { background: rgba(34, 197, 94, 0.15); color: #22c55e; border-color: rgba(34, 197, 94, 0.4); }
-        .glass-btn.success:hover { background: rgba(34, 197, 94, 0.3); box-shadow: 0 0 15px rgba(34, 197, 94, 0.2); }
-        .glass-btn.danger { background: rgba(239, 68, 68, 0.15); color: #ef4444; border-color: rgba(239, 68, 68, 0.4); }
-        .glass-btn.danger:hover { background: rgba(239, 68, 68, 0.3); box-shadow: 0 0 15px rgba(239, 68, 68, 0.2); }
-
-        #btn-help {
-            position: absolute; bottom: 20px; right: 20px; z-index: 20; 
-            background: rgba(0,0,0,0.5); color: var(--accent); border: 1px solid rgba(251, 191, 36, 0.4); 
-            width: 40px; height: 40px; border-radius: 50%; font-size: 18px; backdrop-filter: blur(5px); 
-            cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center;
-        }
-        #btn-help:hover { background: rgba(251, 191, 36, 0.2); box-shadow: 0 0 15px rgba(251, 191, 36, 0.3); }
+        /* Iniciativa, menus de contexto, ajuda e botoes base migrados para 05-buttons.css e 06-components.css. */
 
         #image-viewer-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); z-index: 2000; display: flex; justify-content: center; align-items: center; cursor: pointer; backdrop-filter: blur(5px); }
         #image-viewer-modal img, #image-viewer-modal video { max-width: 90%; max-height: 90%; border: 1px solid var(--accent); box-shadow: 0 0 30px rgba(0,0,0,0.9); border-radius: 4px; outline: none; position: relative; }
@@ -613,7 +338,7 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
         .viewer-share-btn { position: absolute; top: 20px; right: 20px; padding: 10px 14px; }
         .viewer-close-hint { position: absolute; bottom: 20px; padding: 5px 10px; border: 1px solid var(--accent); border-radius: 4px; background: rgba(0,0,0,0.7); color: var(--text-dim); font-weight: bold; pointer-events: none; }
 
-        /* Intro CinemÃ¡tica Fullscreen */
+        /* Intro Cinemática Fullscreen */
         #intro-cinematic {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: #000; z-index: 9999; display: flex; justify-content: center; align-items: center;
@@ -623,7 +348,7 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
 
         .hidden { display: none !important; opacity: 0; pointer-events: none; }
 
-        /* AnimaÃ§Ã£o e Estilo dos Dados 3D */
+        /* Animação e Estilo dos Dados 3D */
         @keyframes rollDiceAnim {
             0% { transform: scale(0.1) translateY(-200px) rotate(0deg); opacity: 0; }
             50% { transform: scale(1.2) translateY(20px) rotate(360deg); opacity: 1; }
@@ -641,7 +366,7 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
             font-size: 42px; 
             font-weight: 900; 
             color: #ffffff; 
-            /* Borda escura espessa para destacar o nÃºmero em cima da imagem complexa */
+            /* Borda escura espessa para destacar o número em cima da imagem complexa */
             text-shadow: 
                 -2px -2px 0 #000,  
                  2px -2px 0 #000,
@@ -653,7 +378,7 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
         }
 
         /* =============================================
-   TRANSIÃ‡Ã•ES CINEMÃTICAS â€” estilo pergaminho
+   TRANSIÇÕES CINEMÁTICAS — estilo pergaminho
    ============================================= */
 .content-area {
     animation: revelarPergaminho 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -671,7 +396,7 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
     }
 }
 
-/* Modal da ficha: materializa como nÃ©voa */
+/* Modal da ficha: materializa como névoa */
 #char-sheet-modal {
     transition: opacity 0.4s ease, backdrop-filter 0.4s ease;
 }
@@ -681,7 +406,7 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
     backdrop-filter: blur(0px);
 }
 
-/* Canvas de partÃ­culas (overlay da sidebar) */
+/* Canvas de partículas (overlay da sidebar) */
 #investidura-canvas {
     position: absolute;
     top: 0; left: 0;
@@ -691,7 +416,7 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
 }
 
 /* =============================================
-   CLICK-TO-ROLL â€” Estilo dos botÃµes de rolagem
+   CLICK-TO-ROLL — Estilo dos botões de rolagem
    ============================================= */
 .rollable {
     cursor: pointer;
@@ -712,9 +437,9 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
     color: var(--accent);
     text-shadow: 0 0 8px rgba(251,191,36,0.5);
 }
-/* Ãcone de dado que aparece no hover */
+/* Ícone de dado que aparece no hover */
 .rollable::after {
-    content: 'âš„';
+    content: '⚄';
     font-size: 11px;
     opacity: 0;
     transform: scale(0.6);
@@ -730,7 +455,7 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
     background: rgba(251, 191, 36, 0.25);
 }
 
-/* BotÃ£o de roll inline no header do atributo */
+/* Botão de roll inline no header do atributo */
 .attr-roll-btn {
     background: transparent;
     border: 1px solid rgba(255,255,255,0.15);
@@ -749,7 +474,7 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
     background: rgba(251,191,36,0.1);
 }
 
-/* Slot de arma com botÃ£o de roll */
+/* Slot de arma com botão de roll */
 .slot-roll-bar {
     display: flex;
     align-items: center;
@@ -775,10 +500,10 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
 }
 
 /* =============================================
-   TRACKER DE CONDIÃ‡Ã•ES INTELIGENTE
+   TRACKER DE CONDIÇÕES INTELIGENTE
    ============================================= */
 
-/* Badge de condiÃ§Ã£o na lista de iniciativa */
+/* Badge de condição na lista de iniciativa */
 .init-condition-badge {
     display: inline-flex;
     align-items: center;
@@ -796,7 +521,7 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
     50%       { opacity: 0.6; }
 }
 
-/* BotÃ£o de remover condiÃ§Ã£o inline */
+/* Botão de remover condição inline */
 .init-remove-cond {
     background: transparent;
     border: none;
@@ -809,18 +534,7 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
 }
 .init-remove-cond:hover { color: #ef4444; }
 
-/* Item ativo na iniciativa com borda pulsante */
-.init-item.active {
-    border-left: 3px solid var(--accent) !important;
-    background: rgba(251, 191, 36, 0.08) !important;
-    animation: initPulse 1.5s ease-in-out infinite;
-}
-@keyframes initPulse {
-    0%, 100% { box-shadow: inset 0 0 0 rgba(251,191,36,0); }
-    50%       { box-shadow: inset 0 0 12px rgba(251,191,36,0.1); }
-}
-
-/* BotÃ£o de + condiÃ§Ã£o no item da iniciativa */
+/* Botão de + condição no item da iniciativa */
 .init-add-cond-btn {
     background: transparent;
     border: 1px solid rgba(255,255,255,0.1);
@@ -850,7 +564,7 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
 }
 
 /* =============================================
-           SISTEMA DE ANOTAÃ‡Ã•ES - GRID E LISTA
+           SISTEMA DE ANOTAÇÕES - GRID E LISTA
            ============================================= */
         .notes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }
         .notes-list-mode { display: flex; flex-direction: column; gap: 8px; }
@@ -894,36 +608,7 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
             transition: 0.2s; display: inline-flex; align-items: center; gap: 6px;
         }
         .view-toggle-btn:hover { background: rgba(251, 191, 36, 0.15); border-color: var(--accent); }
-
-        #tokens-content.list-view .roster-grid { display: flex; flex-direction: column; gap: 8px; }
-        #tokens-content.list-view .roster-card {
-            height: auto; flex-direction: row;
-            display: flex; align-items: center; padding: 8px;
-        }
-        #tokens-content.list-view .roster-img {
-            width: 50px; height: 50px; min-width: 50px; border-radius: 6px;
-            object-fit: cover; opacity: 1;
-        }
-        #tokens-content.list-view .roster-info {
-            position: relative; background: none; padding: 0 12px;
-            opacity: 1; transform: none; flex: 1;
-        }
-        #tokens-content.list-view .roster-name { font-size: 14px; }
-        #tokens-content.list-view .roster-class { font-size: 10px; }
-        #tokens-content.list-view .roster-hp-bar { margin-top: 4px; height: 3px; }
-        #tokens-content.list-view .roster-actions {
-            position: relative; opacity: 1; padding: 0;
-            flex-direction: row; gap: 4px; width: auto; height: auto;
-        }
-        #tokens-content.list-view .roster-btn {
-            width: 32px; height: 32px; padding: 0;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 12px; border-radius: 4px;
-        }
-        #tokens-content.list-view .roster-card:hover .roster-info { opacity: 1; transform: none; }
-        #tokens-content.list-view .roster-card:hover .roster-img { transform: none; filter: none; }
-
-        #token-list.list-view-compact { display: flex !important; flex-direction: column; gap: 4px; }
+#token-list.list-view-compact { display: flex !important; flex-direction: column; gap: 4px; }
         #token-list.list-view-compact .token-item {
             padding: 6px !important; margin-bottom: 2px !important;
             border-radius: 4px !important;
@@ -967,23 +652,11 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
             0%, 100% { box-shadow: 0 0 5px rgba(251,191,36,0.3); }
             50% { box-shadow: 0 0 15px rgba(251,191,36,0.6); }
         }
-
-        .roster-card.touch-active .roster-actions { opacity: 1; }
-        .roster-card.touch-active .roster-info { opacity: 0; transform: translateY(10px); }
-        .roster-card.touch-active .roster-img { transform: scale(1.1); filter: brightness(0.3) blur(3px); }
-
-        @media (max-width: 1400px) {
-            #sidebar { width: 300px; }
-            .roster-grid { grid-template-columns: 1fr; gap: 15px; }
-            .roster-card { height: 150px; }
-        }
+@media (max-width: 1400px) {
+            #sidebar { width: 300px; } }
 
         @media (max-width: 1024px) {
-            #sidebar { width: 280px; }
-            .roster-card { height: 140px; }
-            .roster-name { font-size: 18px; }
-            .roster-btn { padding: 6px; font-size: 11px; }
-            .sheet-sidebar { width: 260px; }
+            #sidebar { width: 280px; } .sheet-sidebar { width: 260px; }
             .sheet-glass { width: 95vw; height: 95vh; }
         }
 
@@ -997,16 +670,8 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
             #btn-toggle-menu {
                 top: auto; bottom: 15px; right: 15px;
                 padding: 8px 12px; font-size: 10px;
-            }
-            .roster-grid { grid-template-columns: 1fr; gap: 10px; padding: 10px; }
-            .roster-card { height: 120px; }
-            .roster-name { font-size: 16px; }
-            .roster-actions { gap: 8px; }
-            .roster-btn { padding: 6px; font-size: 10px; }
-            .tab-btn { font-size: 14px; padding: 10px 0; }
-            .tools-bar { transform: scale(0.85); transform-origin: top left; }
-            #dice-panel { transform: scale(0.8); transform-origin: bottom left; bottom: 10px; left: 10px; }
-            .sheet-glass { width: 100vw; height: 100vh; border-radius: 0; }
+            } .tab-btn { font-size: 14px; padding: 10px 0; }
+            .tools-bar { transform: scale(0.85); transform-origin: top left; } .sheet-glass { width: 100vw; height: 100vh; border-radius: 0; }
             .sheet-sidebar { width: 100%; max-height: 40vh; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.05); }
             .sheet-main { flex: 1; }
             .sheet-nav { gap: 10px; padding: 10px 15px 5px; }
@@ -1017,35 +682,19 @@ body.theme-scadrial .sheet-content-area::-webkit-scrollbar-thumb {
             .equipment-grid { grid-template-columns: repeat(2, 1fr); }
             .talents-grid { grid-template-columns: 1fr; }
             .connections-grid { grid-template-columns: repeat(3, 1fr); }
-            #init-tracker { width: 240px; right: 10px; top: 10px; }
         }
 
         @media (max-width: 480px) {
             #sidebar { padding-top: 0; }
             .tabs { flex-wrap: wrap; }
-            .tab-btn { flex: 0 0 20%; min-width: 44px; padding: 8px 0; font-size: 12px; }
-            .roster-card { height: 100px; }
-            .roster-name { font-size: 14px; }
-            .roster-class { font-size: 9px; }
-            .roster-btn { padding: 4px; font-size: 9px; }
-            .char-title-input { font-size: 20px; }
+            .tab-btn { flex: 0 0 20%; min-width: 44px; padding: 8px 0; font-size: 12px; } .char-title-input { font-size: 20px; }
             .attr-header span { font-size: 12px; }
             .attr-header input { width: 35px; height: 35px; font-size: 16px; }
             .section-title { font-size: 14px; padding: 8px 15px 8px 30px; margin-left: -20px; }
-            #init-tracker { width: 200px; }
         }
 
         @media (hover: none) and (pointer: coarse) {
-            .roster-actions { opacity: 1; }
-            .roster-info { opacity: 1; transform: none; }
-            .roster-img { opacity: 0.6; }
-            .roster-card:hover .roster-img { transform: none; filter: none; }
-            .roster-card:hover .roster-info { opacity: 1; transform: none; }
-            .token-item .token-actions { opacity: 1; position: relative; right: auto; background: none; padding-left: 0; }
-            .tool-btn { min-width: 44px; min-height: 44px; }
-            .tab-btn { min-height: 44px; }
-            .roster-btn { min-height: 36px; }
-            .token-item { flex-wrap: wrap; }
+            .tab-btn { min-height: 44px; } .token-item { flex-wrap: wrap; }
             .token-item .token-actions {
                 position: relative; right: auto; opacity: 1;
                 background: none; padding-left: 0;

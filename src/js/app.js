@@ -654,22 +654,7 @@ function clearContextAuras() {
             });
         }
         
-        // =============================================
-// SISTEMA DE TEMAS
-// =============================================
-function aplicarTema(tema) {
-    document.body.className = document.body.className
-        .replace(/theme-\S+/g, '').trim();
-    if (tema && tema !== 'default') {
-        document.body.classList.add('theme-' + tema);
-    }
-    localStorage.setItem('cosmere-tema', tema);
-}
-
-// Restaurar tema salvo ao carregar
 (function() {
-    const temaSalvo = localStorage.getItem('cosmere-tema');
-    if (temaSalvo) aplicarTema(temaSalvo);
     const diceColor = localStorage.getItem('dice-color');
     if (diceColor) {
         const colorInput = document.getElementById('player-dice-color');
@@ -793,9 +778,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const depois = parseInt(e.target.value);
             if (depois < antes) {
                 // Gastou Investidura
-                const tema = localStorage.getItem('cosmere-tema') || 'default';
-                const tipo = tema === 'theme-roshar' ? 'tempestade' : 'critico';
-                window.triggerInvestidura(tipo);
+                window.triggerInvestidura('critico');
             }
             e.target.dataset.lastVal = depois;
         }

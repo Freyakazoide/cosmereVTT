@@ -18,6 +18,21 @@ function escaparHtmlVtt(valor) {
         .replace(/'/g, '&#039;');
 }
 
+function escaparJsVtt(valor) {
+    return String(valor || '')
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/"/g, '\\"')
+        .replace(/\r?\n/g, ' ');
+}
+
+function nomeArquivoVtt(item, fallback = 'arquivo-sem-nome') {
+    const rawName = item?.name || item?.fileName || '';
+    const rawPath = item?.path || item || '';
+    const pathName = String(rawPath || '').split(/[\\/]/).pop();
+    return rawName || pathName || fallback;
+}
+
 function renderVttLibraryCard({
     icon = 'fa-solid fa-diamond',
     title = 'Item sem nome',
@@ -31,42 +46,49 @@ function renderVttLibraryCard({
     actions = '',
     variant = ''
 }) {
-    const safeTitle = escaparHtmlVtt(title);
-    const safeFileName = escaparHtmlVtt(fileName || title);
+    const normalizedPath = normalizarCaminhoVtt(path);
+    const normalizedPreview = normalizarCaminhoVtt(preview || path);
+    const resolvedFileName = fileName || title || nomeArquivoVtt(path);
+    const resolvedTitle = title || limparExtensaoVtt(resolvedFileName);
+
+    const safeTitle = escaparHtmlVtt(resolvedTitle);
+    const safeFileName = escaparHtmlVtt(resolvedFileName);
     const safeSubtitle = escaparHtmlVtt(subtitle);
     const safeMeta = escaparHtmlVtt(meta);
-    const safePath = escaparHtmlVtt(path);
+    const safePath = escaparHtmlVtt(normalizedPath);
+    const safeVariant = escaparHtmlVtt(variant);
+    const safeIcon = escaparHtmlVtt(icon);
 
     let previewHtml = `
         <span class="vtt-library-preview vtt-library-preview--icon">
-            <i class="${icon}"></i>
+            <i class="${safeIcon}"></i>
         </span>
     `;
 
-    if (preview && previewType === 'image') {
+    if (normalizedPreview && previewType === 'image') {
         previewHtml = `
             <span class="vtt-library-preview vtt-library-preview--image">
-                <img src="file://${preview}" alt="${safeTitle}" loading="lazy">
+                <img src="file://${normalizedPreview}" alt="${safeTitle}" loading="lazy">
             </span>
         `;
     }
 
-    if (preview && previewType === 'video') {
+    if (normalizedPreview && previewType === 'video') {
         previewHtml = `
             <span class="vtt-library-preview vtt-library-preview--video">
-                <video src="file://${preview}" muted preload="metadata"></video>
+                <video src="file://${normalizedPreview}" muted preload="metadata"></video>
                 <i class="fas fa-play"></i>
             </span>
         `;
     }
 
     return `
-        <article class="vtt-library-card ${variant ? `vtt-library-card--${variant}` : ''}">
+        <article class="vtt-library-card ${safeVariant ? `vtt-library-card--${safeVariant}` : ''}">
             <button class="vtt-library-card__main-action" type="button" onclick="${onClick}">
                 ${previewHtml}
 
                 <span class="vtt-library-card__content">
-                    <strong>${safeFileName}</strong>
+                    <strong class="vtt-library-card__filename">${safeFileName}</strong>
                     <small>${safeSubtitle}</small>
                     ${safeMeta ? `<em>${safeMeta}</em>` : ''}
                     ${safePath ? `<code>${safePath}</code>` : ''}
@@ -79,7 +101,7 @@ function renderVttLibraryCard({
 }
 
 function renderVttCategoryHeader(title, count = null) {
-    const safeTitle = escaparHtmlVtt(title);
+    const safeTitle = escaparHtmlVtt(title || 'Sem categoria');
     const counter = Number.isFinite(count) ? `<span>${count}</span>` : '';
 
     return `
@@ -425,9 +447,13 @@ class MainScene extends Phaser.Scene {
     // --- SISTEMA DE TABULEIRO (SAVE/LOAD) ---
     getBoardState() {
         const camera = this.cameras.main;
+        const notesState = typeof window.getSceneAwareNotesState === 'function'
+            ? window.getSceneAwareNotesState()
+            : { pinnedNotes: window.pinnedNotes || [], revealedNotes: [] };
         const state = {
             version: 2,
-            sceneName: '',
+            sceneName: window.currentSceneName || window.directedSceneDraft?.sceneName || '',
+            sceneId: window.currentSceneId || notesState.sceneId || '',
             camera: {
                 x: camera.scrollX,
                 y: camera.scrollY,
@@ -454,7 +480,12 @@ class MainScene extends Phaser.Scene {
                 currentTrack: window.currentAudioTrack || null,
                 volume: document.getElementById('audio-volume') ? parseFloat(document.getElementById('audio-volume').value) : 0.5
             },
-            pinnedNotes: window.pinnedNotes || [],
+            pinnedNotes: notesState.pinnedNotes || [],
+            revealedNotes: notesState.revealedNotes || [],
+            sceneNotes: [
+                ...(notesState.pinnedNotes || []),
+                ...(notesState.revealedNotes || []).filter(note => !(notesState.pinnedNotes || []).some(pinned => pinned.id === note.id))
+            ],
             revealedHandouts: window.revealedHandouts || [],
             sceneDirector: window.directedSceneDraft || null
         };
@@ -548,6 +579,13 @@ class MainScene extends Phaser.Scene {
             restoreDirectedSceneFromState(state.sceneDirector);
         } else if (state.sceneDirector) {
             window.directedSceneDraft = state.sceneDirector;
+        }
+        if (!window.location.search.includes('player=true') && typeof restoreSceneNotesFromBoardState === 'function') {
+            restoreSceneNotesFromBoardState(state);
+        } else {
+            window.currentSceneName = state.sceneName || state.sceneDirector?.sceneName || '';
+            window.currentSceneId = state.sceneId || '';
+            window.pinnedNotes = Array.isArray(state.pinnedNotes) ? state.pinnedNotes : [];
         }
         if (Array.isArray(state.revealedHandouts)) {
             window.revealedHandouts = state.revealedHandouts;
@@ -652,170 +690,210 @@ class MainScene extends Phaser.Scene {
         const maps = await window.api.getMaps();
         const tokens = await window.api.getTokens();
         const audios = await window.api.getAudio();
-        
+
         // Puxa as fichas do banco ANTES de desenhar a interface
-        if(window.api && window.api.getCharacters) {
+        if (window.api && window.api.getCharacters) {
             const dadosBrutos = await window.api.getCharacters();
             if (typeof window.fichasSalvas === 'undefined' && typeof fichasSalvas === 'undefined') {
                 window.fichasSalvas = {};
             }
             const fichaRef = typeof fichasSalvas !== 'undefined' ? fichasSalvas : window.fichasSalvas;
-            
+
             for (let id in dadosBrutos) {
                 try {
                     fichaRef[id] = typeof dadosBrutos[id] === 'string' ? JSON.parse(dadosBrutos[id]) : dadosBrutos[id];
-                } catch(e) { }
+                } catch (e) { }
             }
         }
-        
+
         const mapList = document.getElementById('map-list');
         const tokenList = document.getElementById('token-list');
         const audioList = document.getElementById('audio-list');
         const imgList = document.getElementById('images-list');
         const videoList = document.getElementById('videos-list');
 
-        // Renderizar Vídeos Dinâmicos
-        if (videoList && window.api.getVideos) {
-    const videos = await window.api.getVideos();
-
-    videoList.innerHTML = `
-        ${renderVttCategoryHeader('Cenas e vídeos', videos.length)}
-        <div class="vtt-library-stack">
-            ${videos.map(v => {
-                const path = normalizarCaminhoVtt(v.path);
-                const name = limparExtensaoVtt(v.name);
-
-                return renderVttLibraryCard({
-    icon: 'fa-solid fa-film',
-    title: name,
-    fileName: v.name,
-    subtitle: 'Vídeo / Cena cinematográfica',
-    meta: 'Clique para pré-visualizar',
-    path: path,
-    preview: path,
-    previewType: 'video',
-    variant: 'video',
-    onClick: `mostrarVideo('${path}')`,
-    actions: `
-        <button class="ui-icon-btn" type="button" onclick="showHandoutPathToPlayers('${path}', 'video', '${escaparHtmlVtt(v.name)}')" data-vtt-tooltip="Mostrar aos jogadores">
-            <i class="fas fa-users"></i>
-        </button>
-    `
-});
-            }).join('')}
-        </div>
-    `;
-}
-
-        // Renderizar Imagens Dinâmicas
-        if (imgList && window.api.getImages) {
-    const imagens = await window.api.getImages();
-
-    imgList.innerHTML = `
-        ${renderVttCategoryHeader('Handouts visuais', imagens.length)}
-        <div class="vtt-library-stack">
-            ${imagens.map(i => {
-                const path = normalizarCaminhoVtt(i.path);
-                const name = limparExtensaoVtt(i.name);
-
-                return renderVttLibraryCard({
-    icon: 'fa-solid fa-image',
-    title: name,
-    fileName: i.name,
-    subtitle: 'Imagem / Handout',
-    meta: 'Material visual da campanha',
-    path: path,
-    preview: path,
-    previewType: 'image',
-    variant: 'image',
-    onClick: `mostrarImagem('${path}')`,
-    actions: `
-        <button class="ui-icon-btn" type="button" onclick="showHandoutPathToPlayers('${path}', 'image', '${escaparHtmlVtt(i.name)}')" data-vtt-tooltip="Mostrar aos jogadores">
-            <i class="fas fa-users"></i>
-        </button>
-    `
-});
-            }).join('')}
-        </div>
-    `;
-}
-
-       // Renderizar Áudios Dinâmicos Agrupados por Pasta
-if (audioList && audios) {
-    const agruparPorCategoria = (itens) => {
-        return itens.reduce((acc, item) => {
-            const categoria = item.category || 'Raiz';
-            (acc[categoria] = acc[categoria] || []).push(item);
-            return acc;
-        }, {});
-    };
-
-    const audiosByCat = agruparPorCategoria(audios);
-
-    audioList.innerHTML = Object.keys(audiosByCat).sort().map(cat => {
-        const itensDaCategoria = audiosByCat[cat].sort((a, b) => {
-            return String(a.name || '').localeCompare(String(b.name || ''));
-        });
-
-        return `
-            ${renderVttCategoryHeader(cat, itensDaCategoria.length)}
-            <div class="vtt-library-stack">
-                ${itensDaCategoria.map(a => {
-                    const path = normalizarCaminhoVtt(a.path);
-                    const name = limparExtensaoVtt(a.name);
-
-                    return renderVttLibraryCard({
-    icon: 'fa-solid fa-music',
-    title: name,
-    fileName: a.name,
-    subtitle: 'Áudio / Ambiente',
-    meta: cat === 'Raiz' ? 'Arquivo de áudio da mesa' : `Pasta: ${cat}`,
-    path: path,
-    previewType: 'icon',
-    variant: 'audio',
-    onClick: `playMusic('${path}', '${escaparHtmlVtt(a.name)}')`,
-    actions: `
-        <button class="ui-icon-btn" type="button" onclick="tocarJunto('${path}', '${escaparHtmlVtt(a.name)}')" data-vtt-tooltip="Tocar junto">
-            <i class="fas fa-plus"></i>
-        </button>
-    `
-});
-                }).join('')}
-            </div>
-        `;
-    }).join('');
-}
-        
         const agruparPorCategoria = (itens) => {
-            return itens.reduce((acc, item) => {
-                (acc[item.category] = acc[item.category] || []).push(item);
+            return (itens || []).reduce((acc, item) => {
+                const categoria = item.category || 'Raiz';
+                (acc[categoria] = acc[categoria] || []).push(item);
                 return acc;
             }, {});
         };
 
+        const ordenarPorNome = (itens) => {
+            return [...(itens || [])].sort((a, b) => {
+                return String(a.name || '').localeCompare(String(b.name || ''));
+            });
+        };
+
+        // Renderizar Vídeos Dinâmicos com preview + nome exato do arquivo
+        if (videoList && window.api.getVideos) {
+            const videos = ordenarPorNome(await window.api.getVideos());
+
+            videoList.innerHTML = `
+                ${renderVttCategoryHeader('Cenas e vídeos', videos.length)}
+                <div class="vtt-library-stack">
+                    ${videos.map(v => {
+                        const path = normalizarCaminhoVtt(v.path);
+                        const fileName = nomeArquivoVtt(v, 'video-sem-nome');
+                        const title = limparExtensaoVtt(fileName);
+                        const jsPath = escaparJsVtt(path);
+                        const jsFileName = escaparJsVtt(fileName);
+
+                        return renderVttLibraryCard({
+                            icon: 'fa-solid fa-film',
+                            title,
+                            fileName,
+                            subtitle: 'Vídeo / Cena cinematográfica',
+                            meta: 'Clique para pré-visualizar',
+                            path,
+                            preview: path,
+                            previewType: 'video',
+                            variant: 'video',
+                            onClick: `mostrarVideo('${jsPath}')`,
+                            actions: `
+                                <button class="ui-icon-btn" type="button" onclick="showHandoutPathToPlayers('${jsPath}', 'video', '${jsFileName}')" data-vtt-tooltip="Mostrar aos jogadores">
+                                    <i class="fas fa-users"></i>
+                                </button>
+                            `
+                        });
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        // Renderizar Imagens Dinâmicas com preview + nome exato do arquivo
+        if (imgList && window.api.getImages) {
+            const imagens = ordenarPorNome(await window.api.getImages());
+
+            imgList.innerHTML = `
+                ${renderVttCategoryHeader('Handouts visuais', imagens.length)}
+                <div class="vtt-library-stack">
+                    ${imagens.map(i => {
+                        const path = normalizarCaminhoVtt(i.path);
+                        const fileName = nomeArquivoVtt(i, 'imagem-sem-nome');
+                        const title = limparExtensaoVtt(fileName);
+                        const jsPath = escaparJsVtt(path);
+                        const jsFileName = escaparJsVtt(fileName);
+
+                        return renderVttLibraryCard({
+                            icon: 'fa-solid fa-image',
+                            title,
+                            fileName,
+                            subtitle: 'Imagem / Handout',
+                            meta: 'Material visual da campanha',
+                            path,
+                            preview: path,
+                            previewType: 'image',
+                            variant: 'image',
+                            onClick: `mostrarImagem('${jsPath}')`,
+                            actions: `
+                                <button class="ui-icon-btn" type="button" onclick="showHandoutPathToPlayers('${jsPath}', 'image', '${jsFileName}')" data-vtt-tooltip="Mostrar aos jogadores">
+                                    <i class="fas fa-users"></i>
+                                </button>
+                            `
+                        });
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        // Renderizar Áudios Dinâmicos Agrupados por Pasta com nome exato do arquivo
+        if (audioList && audios) {
+            const audiosByCat = agruparPorCategoria(audios);
+
+            audioList.innerHTML = Object.keys(audiosByCat).sort().map(cat => {
+                const itensDaCategoria = ordenarPorNome(audiosByCat[cat]);
+
+                return `
+                    ${renderVttCategoryHeader(cat, itensDaCategoria.length)}
+                    <div class="vtt-library-stack">
+                        ${itensDaCategoria.map(a => {
+                            const path = normalizarCaminhoVtt(a.path);
+                            const fileName = nomeArquivoVtt(a, 'audio-sem-nome');
+                            const title = limparExtensaoVtt(fileName);
+                            const jsPath = escaparJsVtt(path);
+                            const jsFileName = escaparJsVtt(fileName);
+
+                            return renderVttLibraryCard({
+                                icon: 'fa-solid fa-music',
+                                title,
+                                fileName,
+                                subtitle: 'Áudio / Ambiente',
+                                meta: cat === 'Raiz' ? 'Arquivo de áudio da mesa' : `Pasta: ${cat}`,
+                                path,
+                                previewType: 'icon',
+                                variant: 'audio',
+                                onClick: `playMusic('${jsPath}', '${jsFileName}')`,
+                                actions: `
+                                    <button class="ui-icon-btn" type="button" onclick="playMusic('${jsPath}', '${jsFileName}')" data-vtt-tooltip="Tocar">
+                                        <i class="fas fa-play"></i>
+                                    </button>
+                                    <button class="ui-icon-btn" type="button" onclick="if (typeof tocarJunto === 'function') { tocarJunto('${jsPath}', '${jsFileName}'); } else { playMusic('${jsPath}', '${jsFileName}'); }" data-vtt-tooltip="Tocar junto">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                `
+                            });
+                        }).join('')}
+                    </div>
+                `;
+            }).join('');
+        }
+
         const mapsByCat = agruparPorCategoria(maps);
-        const tokensByCat = agruparPorCategoria(tokens);
 
         // 1. PRIMEIRO CARREGAMOS AS FICHAS (Correção do erro de variável!)
         const fichaRefLocal = typeof fichasSalvas !== 'undefined' ? fichasSalvas : (window.fichasSalvas || {});
 
-        // 2. DEPOIS RENDERIZAMOS OS MAPAS
-        mapList.innerHTML = Object.keys(mapsByCat).sort().map(cat => `
-            <div class="category-header">${cat}</div>
-            ${mapsByCat[cat].map(m => `
-                <div class="list-item" onclick="phaserScene.carregarMapa('${m.path.replace(/\\/g, '/')}', '${m.name}')">${m.name}</div>
-            `).join('')}
-        `).join('');
+        // 2. DEPOIS RENDERIZAMOS OS MAPAS com preview + nome exato do arquivo
+        if (mapList) {
+            mapList.innerHTML = Object.keys(mapsByCat).sort().map(cat => {
+                const itensDaCategoria = ordenarPorNome(mapsByCat[cat]);
 
-       // 3. Chama a função oficial do HTML para gerenciar a lista de atores/tokens,
+                return `
+                    ${renderVttCategoryHeader(cat, itensDaCategoria.length)}
+                    <div class="vtt-library-stack">
+                        ${itensDaCategoria.map(m => {
+                            const path = normalizarCaminhoVtt(m.path);
+                            const fileName = nomeArquivoVtt(m, 'mapa-sem-nome');
+                            const title = limparExtensaoVtt(fileName);
+                            const ext = path.split('.').pop().toLowerCase();
+                            const isVideo = ['webm', 'mp4'].includes(ext);
+                            const jsPath = escaparJsVtt(path);
+                            const jsFileName = escaparJsVtt(fileName);
+
+                            return renderVttLibraryCard({
+                                icon: 'fa-solid fa-map-location-dot',
+                                title,
+                                fileName,
+                                subtitle: isVideo ? 'Mapa animado / Vídeo' : 'Mapa / Cenário',
+                                meta: cat === 'Raiz' ? 'Cenário da mesa' : `Pasta: ${cat}`,
+                                path,
+                                preview: path,
+                                previewType: isVideo ? 'video' : 'image',
+                                variant: 'map',
+                                onClick: `phaserScene.carregarMapa('${jsPath}', '${jsFileName}')`
+                            });
+                        }).join('')}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 3. Chama a função oficial do HTML para gerenciar a lista de atores/tokens,
         // garantindo que não tenha mais conflito de views.
         if (typeof window.renderizarListaTokens === 'function') {
             window.renderizarListaTokens();
         }
+
+        // Reaplica tooltips customizados nos botões recriados dinamicamente, quando existir no app.js.
+        if (typeof window.setupVttTooltips === 'function') {
+            window.setupVttTooltips();
+        }
     }
 
-    
-    
+
+
     carregarMapa(caminhoAbsoluto, nome) {
         const ext = caminhoAbsoluto.split('.').pop().toLowerCase();
         const isVideo = ['webm', 'mp4'].includes(ext);

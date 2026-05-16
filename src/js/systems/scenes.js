@@ -10,13 +10,16 @@
             const sceneName = document.getElementById('scene-name-input').value;
             if (!sceneName || sceneName.trim() === '') return;
             
+            const cleanSceneName = sceneName.trim();
+            if (typeof setCurrentSceneContext === 'function') setCurrentSceneContext(cleanSceneName);
             const state = window.phaserScene.getBoardState();
-            state.sceneName = sceneName.trim();
+            state.sceneName = cleanSceneName;
+            state.sceneId = window.currentSceneId || state.sceneId;
             if (state.sceneDirector && !state.sceneDirector.sceneName) {
                 state.sceneDirector.sceneName = state.sceneName;
             }
-            await window.api.saveScene(sceneName, JSON.stringify(state));
-            addChatMessage("Sistema", `Cena <strong>${sceneName}</strong> salva com sucesso!`, "#22c55e");
+            await window.api.saveScene(cleanSceneName, JSON.stringify(state));
+            addChatMessage("Sistema", `Cena <strong>${cleanSceneName}</strong> salva com sucesso!`, "#22c55e");
             document.getElementById('save-scene-modal').classList.add('hidden');
         }
 
@@ -42,7 +45,10 @@
         async function confirmLoadScene(sceneName) {
             const stateJSON = await window.api.loadSceneData(sceneName);
             if(stateJSON) {
-                window.phaserScene.loadBoardState(JSON.parse(stateJSON));
+                const state = JSON.parse(stateJSON);
+                state.sceneName = state.sceneName || sceneName;
+                if (typeof setCurrentSceneContext === 'function') setCurrentSceneContext(state.sceneName, state.sceneId);
+                window.phaserScene.loadBoardState(state);
                 addChatMessage("Sistema", `Mesa carregada: <strong>${sceneName}</strong>`, "#a78bfa");
             }
             document.getElementById('load-scene-modal').classList.add('hidden');

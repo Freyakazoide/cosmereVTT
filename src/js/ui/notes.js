@@ -5,17 +5,20 @@ let notasPastasAbertas = {};
 let notesViewMode = localStorage.getItem('notes-view') || 'grid';
 
 const NOTE_TYPES = ['Cena', 'NPC', 'Local', 'Pista', 'Tesouro', 'Faccao', 'Segredo', 'Sessao', 'Sistema'];
+const UNASSIGNED_SCENE_ID = 'campaign';
 
 function createNoteId() {
     return `note_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function normalizeNote(note) {
+    note = note || {};
     const now = new Date().toISOString();
     const content = note.content ?? note.body ?? '';
     const tags = Array.isArray(note.tags)
         ? note.tags
         : String(note.tags || '').split(',').map(tag => tag.trim()).filter(Boolean);
+    const sceneId = note.sceneId || (note.sceneName ? createSceneId(note.sceneName) : null);
 
     return {
         id: note.id || createNoteId(),
@@ -25,7 +28,8 @@ function normalizeNote(note) {
         category: note.category || note.type || 'Geral',
         type: note.type || note.category || 'Cena',
         tags,
-        sceneId: note.sceneId || null,
+        sceneId,
+        sceneName: note.sceneName || null,
         characterId: note.characterId || null,
         isPinned: Boolean(note.isPinned),
         isRevealed: Boolean(note.isRevealed),
@@ -35,10 +39,74 @@ function normalizeNote(note) {
     };
 }
 
+function createSceneId(name) {
+    const value = String(name || '').trim();
+    if (!value) return UNASSIGNED_SCENE_ID;
+    return value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || UNASSIGNED_SCENE_ID;
+}
+
+function getCurrentSceneName() {
+    return window.currentSceneName
+        || window.directedSceneDraft?.sceneName
+        || document.getElementById('director-scene-name')?.value
+        || '';
+}
+
+function getCurrentSceneId() {
+    return window.currentSceneId
+        || createSceneId(getCurrentSceneName())
+        || UNASSIGNED_SCENE_ID;
+}
+
+function noteBelongsToScene(note, sceneId = getCurrentSceneId()) {
+    return !note.sceneId || note.sceneId === sceneId || sceneId === UNASSIGNED_SCENE_ID;
+}
+
+function getScenePinnedNotes(sceneId = getCurrentSceneId()) {
+    return campaignNotes.filter(note => note.isPinned && !note.isArchived && noteBelongsToScene(note, sceneId));
+}
+
+function getSceneRevealedNotes(sceneId = getCurrentSceneId()) {
+    return campaignNotes.filter(note => note.isRevealed && !note.isArchived && noteBelongsToScene(note, sceneId));
+}
+
+function buildNotePayload(note) {
+    return {
+        id: note.id,
+        title: note.title,
+        type: note.type,
+        tags: note.tags || [],
+        sceneId: note.sceneId || null,
+        sceneName: note.sceneName || null,
+        characterId: note.characterId || null,
+        isPinned: Boolean(note.isPinned),
+        isRevealed: Boolean(note.isRevealed),
+        createdAt: note.createdAt,
+        updatedAt: note.updatedAt,
+        content: note.content,
+        body: note.content
+    };
+}
+
+function getSceneAwareNotesState(sceneId = getCurrentSceneId()) {
+    return {
+        sceneId,
+        sceneName: getCurrentSceneName(),
+        pinnedNotes: getScenePinnedNotes(sceneId).map(buildNotePayload),
+        revealedNotes: getSceneRevealedNotes(sceneId).map(buildNotePayload)
+    };
+}
+
 function syncNotesGlobals() {
     campaignNotes = campaignNotes.map(normalizeNote);
     window.campaignNotes = campaignNotes;
-    window.pinnedNotes = campaignNotes.filter(note => note.isPinned && !note.isArchived);
+    window.pinnedNotes = getScenePinnedNotes();
+    window.getSceneAwareNotesState = getSceneAwareNotesState;
 }
 
 function persistNotes() {
@@ -56,9 +124,13 @@ function getEditorNoteDraft(existing = {}) {
     const now = new Date().toISOString();
     const typeEl = document.getElementById('note-type');
     const tagsEl = document.getElementById('note-tags');
+    const sceneEl = document.getElementById('note-scene-id');
+    const characterEl = document.getElementById('note-character-id');
     const pinnedEl = document.getElementById('note-pinned');
     const revealedEl = document.getElementById('note-revealed');
     const content = document.getElementById('note-body').innerHTML;
+    const sceneId = sceneEl ? sceneEl.value.trim() : existing.sceneId;
+    const sceneName = sceneId === getCurrentSceneId() ? getCurrentSceneName() : existing.sceneName;
 
     return normalizeNote({
         ...existing,
@@ -66,6 +138,9 @@ function getEditorNoteDraft(existing = {}) {
         category: document.getElementById('note-category').value || 'Geral',
         type: typeEl ? typeEl.value : existing.type,
         tags: tagsEl ? tagsEl.value : existing.tags,
+        sceneId: sceneId || null,
+        sceneName: sceneName || null,
+        characterId: characterEl ? characterEl.value.trim() || null : existing.characterId,
         content,
         body: content,
         isPinned: pinnedEl ? pinnedEl.checked : existing.isPinned,
@@ -159,7 +234,7 @@ function renderNotesList() {
                     <p class="note-card__preview">${previewText}</p>
                     <div class="note-tags">${tagHtml}</div>
                     <div class="note-actions">
-                        <button class="ui-icon-btn" data-note-action="pin" data-note-index="${index}" title="Fixar na cena"><i class="fas fa-thumbtack"></i></button>
+                        <button class="ui-icon-btn" data-note-action="pin" data-note-index="${index}" title="Fixar na cena atual"><i class="fas fa-thumbtack"></i></button>
                         <button class="ui-icon-btn" data-note-action="share" data-note-index="${index}" title="Mostrar aos jogadores"><i class="fas fa-share-alt"></i></button>
                         <button class="ui-icon-btn" data-note-action="duplicate" data-note-index="${index}" title="Duplicar"><i class="fas fa-copy"></i></button>
                         <button class="ui-icon-btn note-danger" data-note-action="delete" data-note-index="${index}" title="Apagar"><i class="fas fa-trash"></i></button>
@@ -176,17 +251,15 @@ function shareNote(index, e) {
     if (e) e.stopPropagation();
     const note = campaignNotes[index];
     if (!note) return;
+    if (!note.sceneId) {
+        note.sceneId = getCurrentSceneId();
+        note.sceneName = getCurrentSceneName() || note.sceneName;
+    }
     note.isRevealed = true;
     note.updatedAt = new Date().toISOString();
     persistNotes();
 
-    const payload = {
-        id: note.id,
-        title: note.title,
-        type: note.type,
-        content: note.content,
-        tags: note.tags
-    };
+    const payload = buildNotePayload(note);
 
     if (window.api && window.api.syncBoard) {
         window.api.syncBoard({ type: 'show-note', note: payload });
@@ -197,6 +270,19 @@ function shareNote(index, e) {
     renderNotesList();
 }
 
+function shareCurrentEditorDraft(event) {
+    if (currentEditingNoteIndex === -1) {
+        const note = getEditorNoteDraft({});
+        campaignNotes.push(note);
+        currentEditingNoteIndex = campaignNotes.length - 1;
+        persistNotes();
+    } else {
+        campaignNotes[currentEditingNoteIndex] = getEditorNoteDraft(campaignNotes[currentEditingNoteIndex]);
+        persistNotes();
+    }
+    shareNote(currentEditingNoteIndex, event);
+}
+
 function createNewNote() {
     currentEditingNoteIndex = -1;
     document.getElementById('note-title').value = '';
@@ -204,10 +290,14 @@ function createNewNote() {
     document.getElementById('note-body').innerHTML = '';
     const typeEl = document.getElementById('note-type');
     const tagsEl = document.getElementById('note-tags');
+    const sceneEl = document.getElementById('note-scene-id');
+    const characterEl = document.getElementById('note-character-id');
     const pinnedEl = document.getElementById('note-pinned');
     const revealedEl = document.getElementById('note-revealed');
     if (typeEl) typeEl.value = 'Cena';
     if (tagsEl) tagsEl.value = '';
+    if (sceneEl) sceneEl.value = '';
+    if (characterEl) characterEl.value = '';
     if (pinnedEl) pinnedEl.checked = false;
     if (revealedEl) revealedEl.checked = false;
     document.getElementById('notes-list-view').classList.add('hidden');
@@ -223,10 +313,14 @@ function editNote(index) {
     document.getElementById('note-body').innerHTML = note.content;
     const typeEl = document.getElementById('note-type');
     const tagsEl = document.getElementById('note-tags');
+    const sceneEl = document.getElementById('note-scene-id');
+    const characterEl = document.getElementById('note-character-id');
     const pinnedEl = document.getElementById('note-pinned');
     const revealedEl = document.getElementById('note-revealed');
     if (typeEl) typeEl.value = note.type;
     if (tagsEl) tagsEl.value = (note.tags || []).join(', ');
+    if (sceneEl) sceneEl.value = note.sceneId || '';
+    if (characterEl) characterEl.value = note.characterId || '';
     if (pinnedEl) pinnedEl.checked = note.isPinned;
     if (revealedEl) revealedEl.checked = note.isRevealed;
     document.getElementById('notes-list-view').classList.add('hidden');
@@ -262,10 +356,33 @@ function deleteNote(e, index) {
 function togglePinNote(index) {
     const note = campaignNotes[index];
     if (!note) return;
-    note.isPinned = !note.isPinned;
+    const sceneId = getCurrentSceneId();
+    const pinnedToCurrentScene = note.isPinned && noteBelongsToScene(note, sceneId);
+    note.isPinned = !pinnedToCurrentScene;
+    if (note.isPinned) {
+        note.sceneId = sceneId;
+        note.sceneName = getCurrentSceneName() || note.sceneName;
+    }
     note.updatedAt = new Date().toISOString();
     persistNotes();
     renderNotesList();
+    if (typeof renderDirectorPinnedNotes === 'function') renderDirectorPinnedNotes();
+}
+
+function pinCurrentEditorDraft() {
+    const sceneEl = document.getElementById('note-scene-id');
+    const pinnedEl = document.getElementById('note-pinned');
+    if (sceneEl) sceneEl.value = getCurrentSceneId();
+    if (pinnedEl) pinnedEl.checked = true;
+    if (currentEditingNoteIndex >= 0) {
+        const note = campaignNotes[currentEditingNoteIndex];
+        note.sceneId = getCurrentSceneId();
+        note.sceneName = getCurrentSceneName() || note.sceneName;
+        note.isPinned = true;
+        note.updatedAt = new Date().toISOString();
+        persistNotes();
+        if (typeof renderDirectorPinnedNotes === 'function') renderDirectorPinnedNotes();
+    }
 }
 
 function duplicateNote(index) {
@@ -305,7 +422,8 @@ function handleNotesClick(event) {
         if (action === 'delete') return deleteNote(event, index);
         if (action === 'archive-current') return archiveNote(currentEditingNoteIndex);
         if (action === 'duplicate-current') return duplicateNote(currentEditingNoteIndex);
-        if (action === 'share-current') return shareNote(currentEditingNoteIndex, event);
+        if (action === 'share-current') return shareCurrentEditorDraft(event);
+        if (action === 'pin-current') return pinCurrentEditorDraft();
     }
 
     const card = event.target.closest('.note-card');
@@ -317,7 +435,13 @@ async function loadCampaignNotes() {
         try {
             const notasSalvas = await window.api.loadNote();
             if (notasSalvas && notasSalvas.trim() !== '') {
-                campaignNotes = JSON.parse(notasSalvas).map(normalizeNote);
+                const parsed = JSON.parse(notasSalvas);
+                const rawNotes = Array.isArray(parsed)
+                    ? parsed
+                    : Array.isArray(parsed.notes)
+                        ? parsed.notes
+                        : Object.values(parsed || {});
+                campaignNotes = rawNotes.filter(note => note && typeof note === 'object').map(normalizeNote);
             }
         } catch(e) {
             console.error('Erro ao carregar notas', e);
@@ -340,3 +464,56 @@ window.addEventListener('DOMContentLoaded', () => {
 
     loadCampaignNotes();
 });
+
+function setCurrentSceneContext(sceneName, sceneId) {
+    window.currentSceneName = sceneName || '';
+    window.currentSceneId = sceneId || createSceneId(sceneName);
+    syncNotesGlobals();
+    renderNotesList();
+    if (typeof renderDirectorPinnedNotes === 'function') renderDirectorPinnedNotes();
+}
+
+function restoreSceneNotesFromBoardState(state) {
+    if (!state) return;
+    setCurrentSceneContext(state.sceneName || state.sceneDirector?.sceneName || '', state.sceneId);
+    const incoming = [
+        ...(Array.isArray(state.pinnedNotes) ? state.pinnedNotes : []),
+        ...(Array.isArray(state.revealedNotes) ? state.revealedNotes : []),
+        ...(Array.isArray(state.sceneNotes) ? state.sceneNotes : []),
+        ...(Array.isArray(state.sceneDirector?.pinnedNotes) ? state.sceneDirector.pinnedNotes : [])
+    ];
+    if (incoming.length === 0) return;
+
+    incoming.forEach(rawNote => {
+        const note = normalizeNote(rawNote);
+        const existingIndex = campaignNotes.findIndex(item => item.id === note.id);
+        if (existingIndex >= 0) {
+            campaignNotes[existingIndex] = normalizeNote({
+                ...campaignNotes[existingIndex],
+                sceneId: note.sceneId || getCurrentSceneId(),
+                sceneName: note.sceneName || getCurrentSceneName(),
+                isPinned: campaignNotes[existingIndex].isPinned || note.isPinned,
+                isRevealed: campaignNotes[existingIndex].isRevealed || note.isRevealed,
+                updatedAt: campaignNotes[existingIndex].updatedAt || note.updatedAt
+            });
+        } else {
+            campaignNotes.push(note);
+        }
+    });
+    persistNotes();
+}
+
+function revealNoteById(noteId) {
+    const index = campaignNotes.findIndex(note => note.id === noteId);
+    if (index >= 0) shareNote(index);
+}
+
+function unpinNoteById(noteId) {
+    const note = campaignNotes.find(item => item.id === noteId);
+    if (!note) return;
+    note.isPinned = false;
+    note.updatedAt = new Date().toISOString();
+    persistNotes();
+    renderNotesList();
+    if (typeof renderDirectorPinnedNotes === 'function') renderDirectorPinnedNotes();
+}

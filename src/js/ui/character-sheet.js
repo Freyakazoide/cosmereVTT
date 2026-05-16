@@ -1072,6 +1072,14 @@ container.innerHTML += `
             const hpMax = fichasSalvas[charId].hpMax;
             const pctHp = hpMax > 0 ? (hpAtual / hpMax) * 100 : 0;
             const corHp = pctHp > 50 ? '#22c55e' : (pctHp > 20 ? '#eab308' : '#ef4444');
+            const hpFill = document.getElementById('sheet-hp-fill');
+            if (hpFill) hpFill.style.width = `${Math.max(0, Math.min(100, pctHp))}%`;
+            const hpPill = document.getElementById('sheet-hp-pill');
+            if (hpPill) {
+                hpPill.innerHTML = `<i class="fas fa-heart"></i> Vida ${hpAtual}/${hpMax}`;
+                hpPill.style.borderColor = corHp;
+                hpPill.style.color = corHp;
+            }
             
             // Aplica a cor diretamente no input principal da Ficha
             const hpAtualInput = document.getElementById('hp-atual-input');

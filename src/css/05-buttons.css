@@ -1,10 +1,11 @@
 .ui-btn,
-.glass-btn {
+.glass-btn,
+.btn-create-new {
   min-height: 38px;
   padding: 0 14px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-soft);
-  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.025));
+  background: linear-gradient(180deg, var(--color-glass-1), var(--color-glass-3));
   color: var(--color-text-soft);
   display: inline-flex;
   align-items: center;
@@ -15,7 +16,8 @@
 }
 
 .ui-btn:hover,
-.glass-btn:hover {
+.glass-btn:hover,
+.btn-create-new:hover {
   transform: translateY(-1px);
   border-color: var(--color-accent-border);
   background: var(--color-accent-soft);
@@ -24,18 +26,24 @@
 
 .ui-btn--primary,
 .glass-btn.primary,
-.glass-btn.success {
+.glass-btn.success,
+.btn-create-new {
   background: linear-gradient(135deg, var(--color-accent), var(--color-accent-2));
-  border-color: rgba(255,255,255,0.18);
-  color: #111827;
+  border-color: var(--color-glass-border);
+  color: var(--color-dark-text);
   font-weight: 800;
 }
 
 .ui-btn--danger,
 .glass-btn.danger {
   background: var(--color-danger-soft);
-  border-color: rgba(239,68,68,0.35);
-  color: #fecaca;
+  border-color: var(--color-danger);
+  color: var(--color-danger-text);
+}
+
+.ui-btn--ghost {
+  background: transparent;
+  color: var(--color-text-muted);
 }
 
 .ui-icon-btn,
@@ -58,7 +66,7 @@
 .tool-btn:hover,
 .nav-btn:hover {
   color: var(--color-text);
-  background: rgba(255,255,255,0.075);
+  background: var(--color-card-hover);
 }
 
 .ui-icon-btn.is-active,
@@ -67,7 +75,7 @@
   color: var(--color-accent);
   border-color: var(--color-accent-border);
   background: var(--color-accent-soft);
-  box-shadow: inset 0 0 18px rgba(0,0,0,0.45), 0 0 18px rgba(251,191,36,0.12);
+  box-shadow: inset 0 0 18px var(--color-overlay-soft), var(--shadow-glow);
 }
 
 .tool-btn[data-tooltip] {
@@ -86,7 +94,7 @@
   padding: 6px 9px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-soft);
-  background: rgba(2,6,23,0.92);
+  background: var(--color-panel);
   color: var(--color-text-soft);
   font-size: 12px;
   transition: opacity var(--motion-fast), transform var(--motion-fast);
@@ -95,6 +103,30 @@
 .tool-btn[data-tooltip]:hover::after {
   opacity: 1;
   transform: translateY(-50%) translateX(2px);
+}
+
+.tool-btn.tool-btn--accent {
+  color: var(--color-accent);
+}
+
+.tool-btn.tool-btn--success {
+  color: var(--color-success);
+}
+
+.tool-btn.tool-btn--info {
+  color: var(--color-info);
+}
+
+.tool-btn.tool-btn--danger {
+  color: var(--color-danger);
+}
+
+.tool-btn.tool-btn--purple {
+  color: var(--color-purple);
+}
+
+.tool-btn.tool-btn--pink {
+  color: var(--color-pink);
 }
 
 .handout-list-item {

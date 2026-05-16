@@ -6,14 +6,20 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/00-tokens.css">
     <link rel="stylesheet" href="css/01-base.css">
-    <link rel="stylesheet" href="css/legacy-index.css">
+    <link rel="stylesheet" href="css/02-themes.css">
+    <link rel="stylesheet" href="css/03-layout.css">
     <link rel="stylesheet" href="css/04-toolbar.css">
     <link rel="stylesheet" href="css/05-buttons.css">
+    <link rel="stylesheet" href="css/06-components.css">
     <link rel="stylesheet" href="css/07-character-sheet.css">
+    <link rel="stylesheet" href="css/08-roster.css">
     <link rel="stylesheet" href="css/09-notes.css">
-    <link rel="stylesheet" href="css/13-scene-director.css">
+    <link rel="stylesheet" href="css/10-dice.css">
     <link rel="stylesheet" href="css/11-player-view.css">
+    <link rel="stylesheet" href="css/12-effects.css">
+    <link rel="stylesheet" href="css/13-scene-director.css">
     <link rel="stylesheet" href="css/14-dock-flyout.css">
+    <link rel="stylesheet" href="css/99-legacy.css">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://unpkg.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com data:; img-src 'self' file: data: blob: https://unpkg.com; worker-src blob: 'self';">
 </head>
 <body>
@@ -91,17 +97,17 @@
     </div>
     
     <div id="tokens-content" class="content-area hidden">
-        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-            <button class="btn-create-new" onclick="criarNovoPersonagem()" style="margin-bottom: 0; flex: 1;">
+        <div class="sidebar-action-row">
+            <button class="ui-btn ui-btn--primary btn-create-new" onclick="criarNovoPersonagem()">
                 <i class="fas fa-user-plus"></i> Nova Ficha
             </button>
-            <button class="btn-create-new" onclick="criarNovaPasta()" style="margin-bottom: 0; flex: 1;">
+            <button class="ui-btn ui-btn--primary btn-create-new" onclick="criarNovaPasta()">
                 <i class="fas fa-folder-plus"></i> Nova Pasta
             </button>
         </div>
-        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-            <input type="text" id="search-actor" placeholder="Buscar ator..." onkeyup="renderizarListaTokens()" style="flex: 2; padding: 8px; background: rgba(0,0,0,0.5); border: 1px solid var(--accent); color: white; border-radius: 5px; outline: none; font-family: 'Segoe UI', sans-serif; font-size: 12px;">
-            <select id="filter-actor-type" onchange="renderizarListaTokens()" style="flex: 1; padding: 8px; background: rgba(0,0,0,0.5); border: 1px solid var(--accent); color: white; border-radius: 5px; outline: none; font-size: 12px;">
+        <div class="sidebar-filter-row">
+            <input class="vtt-input sidebar-search actor-search-input" type="text" id="search-actor" placeholder="Buscar ator..." onkeyup="renderizarListaTokens()">
+            <select class="vtt-select sidebar-select" id="filter-actor-type" onchange="renderizarListaTokens()">
                 <option value="all">Todos</option>
                 <option value="PC">Jogadores</option>
                 <option value="NPC">NPCs</option>
@@ -111,24 +117,24 @@
         <div id="token-list" class="token-grid"></div>
     </div>
 
-    <div id="chat-content" class="content-area hidden" style="display: flex; flex-direction: column; height: 100%;">
-        <div id="chat-log" style="flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; font-size: 13px;">
-            <div style="color: var(--accent); font-style: italic; opacity: 0.7;">Bem-vindo ao Cosmere VTT...</div>
+    <div id="chat-content" class="content-area hidden chat-panel">
+        <div id="chat-log" class="chat-log">
+            <div class="chat-welcome">Bem-vindo ao Cosmere VTT...</div>
         </div>
-        <div style="padding: 10px; border-top: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2);">
-            <div style="display:flex; gap:6px; margin-bottom:6px;">
-                <select id="chat-target" style="background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1); color:#fff; padding:4px 8px; border-radius:4px; outline:none; font-size:11px; flex:1;">
+        <div class="chat-composer">
+            <div class="chat-target-row">
+                <select class="vtt-select" id="chat-target">
                     <option value="todos">Todos</option>
                     <option value="mestre">Apenas Mestre</option>
                 </select>
             </div>
-            <input type="text" id="chat-input" placeholder="Digite algo ou /r 1d20..." style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 8px; border-radius: 4px; outline: none;">
+            <input class="vtt-input" type="text" id="chat-input" placeholder="Digite algo ou /r 1d20...">
         </div>
     </div>
 
     <div id="items-content" class="content-area hidden">
-        <input type="text" id="search-compendium" placeholder="Buscar no compêndio..." onkeyup="filtrarCompendio(this.value)" style="width:100%; padding:8px; background:rgba(0,0,0,0.5); border:1px solid var(--accent); color:white; border-radius:5px; outline:none; font-size:12px; margin-bottom:10px;">
-        <button class="btn-create-new" onclick="abrirModalItem()">
+        <input class="vtt-input compendium-search" type="text" id="search-compendium" placeholder="Buscar no compêndio..." onkeyup="filtrarCompendio(this.value)">
+        <button class="ui-btn ui-btn--primary btn-create-new" onclick="abrirModalItem()">
             <i class="fas fa-plus"></i> Criar Novo Item / Arma
         </button>
         <div class="category-header">Meu Compêndio</div>
@@ -227,24 +233,24 @@
     </div>
 
     <div id="playlists-content" class="content-area hidden">
-       <div id="audio-player-ui" style="background: rgba(0,0,0,0.4); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 15px; backdrop-filter: blur(5px);">
-            <div id="current-track-name" style="font-size: 11px; color: var(--accent); margin-bottom: 8px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Nenhuma faixa tocando</div>
+       <div id="audio-player-ui" class="media-player-panel">
+            <div id="current-track-name" class="current-track-name">Nenhuma faixa tocando</div>
             
-            <input type="range" id="audio-progress" value="0" min="0" max="100" style="width: 100%; margin-bottom: 10px; accent-color: var(--accent);">
+            <input class="vtt-range vtt-range--progress" type="range" id="audio-progress" value="0" min="0" max="100">
             
-            <div style="display: flex; justify-content: center; gap: 15px; align-items: center; margin-bottom: 10px;">
-                <button onclick="togglePauseMusic()" class="tool-btn" style="border: 1px solid var(--accent); color: var(--accent);"><i id="play-pause-icon" class="fas fa-pause"></i></button>
-                <button onclick="stopMusic()" class="tool-btn" style="border: 1px solid #ef4444; color: #ef4444;"><i class="fas fa-stop"></i></button>
+            <div class="media-control-row">
+                <button onclick="togglePauseMusic()" class="tool-btn media-icon-btn"><i id="play-pause-icon" class="fas fa-pause"></i></button>
+                <button onclick="stopMusic()" class="tool-btn media-icon-btn--danger"><i class="fas fa-stop"></i></button>
             </div>
 
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <i class="fas fa-volume-down" style="font-size: 10px; color: var(--text-dim);"></i>
-                <input type="range" id="audio-volume" min="0" max="1" step="0.01" value="0.4" oninput="updateVolume(this.value)" style="flex: 1; accent-color: var(--accent);">
-                <i class="fas fa-volume-up" style="font-size: 10px; color: var(--text-dim);"></i>
+            <div class="vtt-range-row">
+                <i class="fas fa-volume-down vtt-helper-icon"></i>
+                <input class="vtt-range" type="range" id="audio-volume" min="0" max="1" step="0.01" value="0.4" oninput="updateVolume(this.value)">
+                <i class="fas fa-volume-up vtt-helper-icon"></i>
             </div>
         </div>
         
-        <div id="active-tracks-ui" style="margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px;"></div>
+        <div id="active-tracks-ui" class="active-tracks-list"></div>
         
         <div id="audio-list"></div>
     </div>
@@ -252,104 +258,92 @@
     <div id="settings-content" class="content-area hidden">
 
     <div class="category-header">Aparência</div>
+    <div class="vtt-control-panel">
+        <label class="vtt-control-label">
+            <i class="fas fa-globe"></i>Mundo do Cosmere
+        </label>
+
+        <div class="theme-option-list">
+            <label class="theme-option">
+                <input class="theme-radio" type="radio" name="tema-cosmere" value="default" onchange="aplicarTema(this.value)">
+                <div>
+                    <div class="theme-name">Cosmere (Padrão)</div>
+                    <div class="theme-description">Dourado neutro — sem planeta específico</div>
+                </div>
+            </label>
+
+            <label class="theme-option theme-option--roshar">
+                <input class="theme-radio" type="radio" name="tema-cosmere" value="roshar" onchange="aplicarTema(this.value)">
+                <div>
+                    <div class="theme-name">Roshar</div>
+                    <div class="theme-description">Luz Tempestuosa — azul cristalino</div>
+                </div>
+            </label>
+
+            <label class="theme-option theme-option--scadrial">
+                <input class="theme-radio" type="radio" name="tema-cosmere" value="scadrial" onchange="aplicarTema(this.value)">
+                <div>
+                    <div class="theme-name">Scadrial</div>
+                    <div class="theme-description">Cinzas e bronze — Era Mistborn</div>
+                </div>
+            </label>
+        </div>
+    </div>
 
     <div class="category-header">Áudio</div>
-    <div style="padding: 12px; background: rgba(0,0,0,0.3); border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 15px;">
-        <label style="font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 10px;">
-            <i class="fas fa-volume-up" style="margin-right: 6px;"></i>Volume Mestre
+    <div class="vtt-control-panel">
+        <label class="vtt-control-label">
+            <i class="fas fa-volume-up"></i>Volume Mestre
         </label>
-        <div style="display:flex; align-items:center; gap:10px;">
-            <i class="fas fa-volume-down" style="font-size:10px; color:var(--text-dim);"></i>
-            <input type="range" id="master-volume" value="1.0" min="0" max="1" step="0.01" style="flex:1; accent-color:var(--accent);">
-            <i class="fas fa-volume-up" style="font-size:10px; color:var(--text-dim);"></i>
-            <span id="master-volume-display" style="font-size:11px; color:var(--text-dim); min-width:35px;">100%</span>
+        <div class="vtt-range-row">
+            <i class="fas fa-volume-down vtt-helper-icon"></i>
+            <input class="vtt-range" type="range" id="master-volume" value="1.0" min="0" max="1" step="0.01">
+            <i class="fas fa-volume-up vtt-helper-icon"></i>
+            <span id="master-volume-display" class="vtt-meter-value">100%</span>
         </div>
     </div>
 
-    <div class="category-header">Aparência</div>
-
-    <div style="padding: 12px; background: rgba(0,0,0,0.3); border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 10px;">
-        <label style="font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 10px;">
-            <i class="fas fa-globe" style="margin-right: 6px;"></i>Mundo do Cosmere
+    <div class="category-header">Dados</div>
+    <div class="vtt-control-panel">
+        <label class="vtt-control-label">
+            <i class="fas fa-dice-d20"></i>Cor dos Dados
         </label>
-
-        <div style="display: flex; flex-direction: column; gap: 8px;">
-            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; border-radius: 5px; border: 1px solid var(--border-color); transition: 0.2s;"
-                   onmouseover="this.style.background='rgba(255,255,255,0.05)'"
-                   onmouseout="this.style.background='transparent'">
-                <input type="radio" name="tema-cosmere" value="default" onchange="aplicarTema(this.value)"
-                       style="accent-color: var(--accent);">
-                <div>
-                    <div style="font-size: 13px; font-weight: bold;">⭐ Cosmere (Padrão)</div>
-                    <div style="font-size: 11px; color: var(--text-dim);">Dourado neutro — sem planeta específico</div>
-                </div>
-            </label>
-
-            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; border-radius: 5px; border: 1px solid var(--border-color); transition: 0.2s;"
-                   onmouseover="this.style.background='rgba(56,189,248,0.07)'"
-                   onmouseout="this.style.background='transparent'">
-                <input type="radio" name="tema-cosmere" value="roshar" onchange="aplicarTema(this.value)"
-                       style="accent-color: #38bdf8;">
-                <div>
-                    <div style="font-size: 13px; font-weight: bold; color: #38bdf8;">💎 Roshar</div>
-                    <div style="font-size: 11px; color: var(--text-dim);">Luz Tempestuosa — azul cristalino</div>
-                </div>
-            </label>
-
-            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; border-radius: 5px; border: 1px solid var(--border-color); transition: 0.2s;"
-                   onmouseover="this.style.background='rgba(180,120,60,0.07)'"
-                   onmouseout="this.style.background='transparent'">
-                <input type="radio" name="tema-cosmere" value="scadrial" onchange="aplicarTema(this.value)"
-                       style="accent-color: #b4783c;">
-                <div>
-                    <div style="font-size: 13px; font-weight: bold; color: #b4783c;">🏭 Scadrial</div>
-                    <div style="font-size: 11px; color: var(--text-dim);">Cinzas e bronze — Era Mistborn</div>
-                </div>
-            </label>
+        <div class="vtt-range-row">
+            <input class="vtt-color-input" type="color" id="player-dice-color" value="#fbbf24" onchange="localStorage.setItem('dice-color', this.value)">
+            <span class="vtt-help-text">Cor do dado ao rolar</span>
         </div>
     </div>
 
-    <div style="padding: 12px; background: rgba(0,0,0,0.3); border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 15px;">
-        <label style="font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 10px;">
-            <i class="fas fa-dice-d20" style="margin-right: 6px;"></i>Cor dos Dados
-        </label>
-        <div style="display:flex; align-items:center; gap:10px;">
-            <input type="color" id="player-dice-color" value="#fbbf24" onchange="localStorage.setItem('dice-color', this.value)" style="width:40px; height:30px; border:none; border-radius:4px; cursor:pointer; background:transparent;">
-            <span style="font-size:11px; color:var(--text-dim);">Cor do dado ao rolar</span>
-        </div>
-    </div>
-
-    <div class="category-header" style="margin-top: 15px;">Investidura</div>
-    <div style="padding: 12px; background: rgba(0,0,0,0.3); border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 15px;">
-        <label style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+    <div class="category-header">Investidura</div>
+    <div class="vtt-control-panel">
+        <label class="vtt-checkbox-row">
             Partículas ao rolar crítico
             <input type="checkbox" id="toggle-particulas" checked
-                   style="accent-color: var(--accent); width: 16px; height: 16px; cursor: pointer;"
+                   class="vtt-checkbox"
                    onchange="localStorage.setItem('cosmere-particulas', this.checked)">
         </label>
-        <div style="font-size: 11px; color: var(--text-dim); margin-top: 6px;">
+        <div class="vtt-help-text">
             Efeito de Luz Tempestuosa vazando ao acionar poderes e críticos.
         </div>
     </div>
 
     <div class="category-header">Neblina de Guerra</div>
-    <div style="padding: 12px; background: rgba(0,0,0,0.3); border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 15px;">
-        <label style="font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 10px;">
-            <i class="fas fa-cloud" style="margin-right: 6px;"></i>Transparência da Névoa (GM)
+    <div class="vtt-control-panel">
+        <label class="vtt-control-label">
+            <i class="fas fa-cloud"></i>Transparência da Névoa (GM)
         </label>
-        <div style="display:flex; align-items:center; gap:10px;">
-            <i class="fas fa-eye-slash" style="font-size:10px; color:var(--text-dim);"></i>
-            <input type="range" id="fog-opacity" min="0.2" max="1" step="0.05" value="0.9" style="flex:1; accent-color:var(--accent);" oninput="if(window.phaserScene) window.phaserScene.setFogOpacity(this.value)">
-            <i class="fas fa-eye" style="font-size:10px; color:var(--text-dim);"></i>
-            <span id="fog-opacity-display" style="font-size:11px; color:var(--text-dim); min-width:35px;">90%</span>
+        <div class="vtt-range-row">
+            <i class="fas fa-eye-slash vtt-helper-icon"></i>
+            <input class="vtt-range" type="range" id="fog-opacity" min="0.2" max="1" step="0.05" value="0.9" oninput="if(window.phaserScene) window.phaserScene.setFogOpacity(this.value)">
+            <i class="fas fa-eye vtt-helper-icon"></i>
+            <span id="fog-opacity-display" class="vtt-meter-value">90%</span>
         </div>
-        <div style="font-size: 10px; color: var(--text-dim); margin-top: 4px;">
+        <div class="vtt-help-text vtt-help-text--compact">
             Ajusta a opacidade da neblina na tela do Mestre. Jogadores sempre veem 100% preto.
         </div>
     </div>
 
 </div>
-
     <div id="images-content" class="content-area hidden">
         <div id="images-list"></div>
     </div>
@@ -382,6 +376,8 @@
                 <select id="note-type" class="note-input note-select"></select>
                 <input type="text" id="note-category" class="note-input" placeholder="Pasta (ex: Geral, Missoes, Lore...)" value="Geral">
                 <input type="text" id="note-tags" class="note-input" placeholder="Tags separadas por virgula">
+                <input type="text" id="note-scene-id" class="note-input" placeholder="Cena vinculada (auto ao fixar)">
+                <input type="text" id="note-character-id" class="note-input" placeholder="Personagem vinculado (opcional)">
             </div>
 
             <div class="note-status-row">
@@ -390,6 +386,7 @@
             </div>
 
             <div class="note-editor-actions">
+                <button class="ui-btn ui-btn--ghost" data-note-action="pin-current"><i class="fas fa-thumbtack"></i> Fixar na cena</button>
                 <button class="ui-btn ui-btn--ghost" data-note-action="share-current"><i class="fas fa-share-alt"></i> Mostrar</button>
                 <button class="ui-btn ui-btn--ghost" data-note-action="duplicate-current"><i class="fas fa-copy"></i> Duplicar</button>
                 <button class="ui-btn ui-btn--danger" data-note-action="archive-current"><i class="fas fa-box-archive"></i> Arquivar</button>
@@ -410,10 +407,10 @@
 </aside>
 
    <div id="char-sheet-modal" class="hidden">
-        <div class="sheet-glass">
+        <div class="sheet-glass character-dashboard">
             <button class="btn-close-sheet" onclick="fecharFicha()"><i class="fas fa-times"></i></button>
             
-            <div class="sheet-sidebar">
+            <aside class="sheet-sidebar">
                 <div class="portrait-wrapper">
                     <img id="char-portrait" src="" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100%\' height=\'100%\'><rect width=\'100%\' height=\'100%\' fill=\'%23111827\'/><text x=\'50%\' y=\'50%\' fill=\'%23374151\' font-size=\'48\' text-anchor=\'middle\' dy=\'.3em\' font-family=\'Arial\'>?</text></svg>'">
                     <div class="portrait-overlay"></div>
@@ -429,50 +426,66 @@
                     </div>
                 </div>
                 
-                <input type="text" class="char-title-input" id="char-name" placeholder="Nome do Radiante" style="margin-bottom: 5px;">
-                
-                <select id="char-type" style="background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: var(--accent); padding: 6px; border-radius: 4px; outline: none; margin-bottom: 5px; width: 100%; font-size: 13px; font-weight: bold; text-align: center;">
-                    <option value="PC">⚔️ Personagem Jogador (PC)</option>
-                    <option value="NPC">🤝 NPC / Aliado</option>
-                    <option value="Monster">👹 Monstro / Inimigo</option>
-                </select>
-                
-                <select id="char-folder" style="background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; padding: 6px; border-radius: 4px; outline: none; margin-bottom: 15px; width: 100%; font-size: 13px; font-weight: bold; text-align: center;">
-                    <option value="default">📁 Pasta: Atores</option>
-                </select>
-
                 <div class="vital-box hp card-vida">
                     <div class="vital-label"><i class="fas fa-heart"></i> Vida (Atual/Max)</div>
                     <div class="vital-inputs"><input type="text" id="hp-atual-input" value="10" onchange="atualizarHPSalvo()" style="transition: color 0.3s, text-shadow 0.3s;"> / <input type="text" id="hp-max-input" value="10" onchange="atualizarHPSalvo()"></div>
+                    <div class="resource-bar"><div class="resource-fill resource-fill--hp" id="sheet-hp-fill"></div></div>
                 </div>
                 <div class="vital-box focus card-foco">
                     <div class="vital-label"><i class="fas fa-eye"></i> Foco (Max/Atual)</div>
                     <div class="vital-inputs"><input type="text" value="3"> / <input type="text" value="3"></div>
+                    <div class="resource-bar"><div class="resource-fill resource-fill--focus" style="width: 100%;"></div></div>
                 </div>
                 <div class="vital-box invest card-investidura">
                     <div class="vital-label"><i class="fas fa-sun"></i> Investidura (Max/Atual)</div>
                     <div class="vital-inputs"><input type="text" value="0"> / <input type="text" value="0"></div>
+                    <div class="resource-bar"><div class="resource-fill resource-fill--investidura" style="width: 18%;"></div></div>
                 </div>
 
-                <button class="glass-btn success" onclick="salvarFichaCompleta(true); addChatMessage('Sistema', 'Ficha salva manualmente!', '#22c55e');" style="margin-top: auto; width: 100%; padding: 15px;">
-                    <i class="fas fa-save"></i> SALVAR ALTERAÇÕES
-                </button>
-                <button class="glass-btn primary" onclick="openCombatSheet()" style="width: 100%; padding: 12px;">
-                    <i class="fas fa-khanda"></i> COMBATE RAPIDO
-                </button>
-                <button class="glass-btn primary" onclick="exportarFichaJSON()" style="width: 100%; padding: 12px;">
-                    <i class="fas fa-download"></i> EXPORTAR JSON
-                </button>
-            </div>
-
-            <div class="sheet-main">
-                <div class="sheet-nav">
-                    <button class="nav-btn active" onclick="switchSheetTab('tab-stats', this)" title="Estatísticas & Perícias"><i class="fas fa-dna"></i></button>
-                    <button class="nav-btn" onclick="switchSheetTab('tab-combat', this)" title="Equipamento & Combate"><i class="fas fa-khanda"></i></button>
-                    <button class="nav-btn" onclick="switchSheetTab('tab-magic', this)" title="Surgebinding & Magia"><i class="fas fa-magic"></i></button>
-                    <button class="nav-btn" onclick="switchSheetTab('tab-lore', this)" title="Narrativa & Conexões"><i class="fas fa-book-journal-whills"></i></button>
-                    <button class="nav-btn" onclick="switchSheetTab('tab-gm', this)" title="Anotações do Mestre"><i class="fas fa-user-secret"></i></button>
+                <div class="sheet-actions">
+                    <button class="rpg-button rpg-button--save" onclick="salvarFichaCompleta(true); addChatMessage('Sistema', 'Ficha salva manualmente!', '#22c55e');">
+                        <i class="fas fa-save"></i> Salvar alteracoes
+                    </button>
+                    <button class="rpg-button" onclick="openCombatSheet()">
+                        <i class="fas fa-khanda"></i> Combate rapido
+                    </button>
+                    <button class="rpg-button" onclick="exportarFichaJSON()">
+                        <i class="fas fa-download"></i> Exportar JSON
+                    </button>
                 </div>
+            </aside>
+
+            <section class="sheet-main">
+                <header class="character-header">
+                    <div class="character-title">
+                        <span class="sheet-kicker">Ficha de Personagem</span>
+                        <input type="text" class="char-title-input" id="char-name" placeholder="Nome do Radiante">
+                        <div class="character-meta">
+                            <select id="char-type">
+                                <option value="PC">Personagem Jogador (PC)</option>
+                                <option value="NPC">NPC / Aliado</option>
+                                <option value="Monster">Monstro / Inimigo</option>
+                            </select>
+                            
+                            <select id="char-folder">
+                                <option value="default">Pasta: Atores</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="status-row">
+                        <span class="status-pill" id="sheet-hp-pill"><i class="fas fa-heart"></i> Vida 10/10</span>
+                        <span class="status-pill"><i class="fas fa-bolt"></i> Investidura</span>
+                        <span class="status-pill"><i class="fas fa-scroll"></i> Pronto para mesa</span>
+                    </div>
+                </header>
+
+                <nav class="sheet-nav" aria-label="Secoes da ficha">
+                    <button class="nav-btn active" onclick="switchSheetTab('tab-stats', this)" title="Estatisticas & Pericias"><i class="fas fa-dna"></i><span>Status</span></button>
+                    <button class="nav-btn" onclick="switchSheetTab('tab-combat', this)" title="Equipamento & Combate"><i class="fas fa-khanda"></i><span>Combate</span></button>
+                    <button class="nav-btn" onclick="switchSheetTab('tab-magic', this)" title="Surgebinding & Magia"><i class="fas fa-magic"></i><span>Magia</span></button>
+                    <button class="nav-btn" onclick="switchSheetTab('tab-lore', this)" title="Narrativa & Conexoes"><i class="fas fa-book-journal-whills"></i><span>Historia</span></button>
+                    <button class="nav-btn" onclick="switchSheetTab('tab-gm', this)" title="Anotacoes do Mestre"><i class="fas fa-user-secret"></i><span>GM</span></button>
+                </nav>
                 
                 <div class="sheet-content-area">
                     
@@ -665,7 +678,7 @@
                     </div>
 
                 </div>
-            </div>
+            </section>
         </div>
     </div>
 
@@ -681,24 +694,24 @@
         <div class="viewer-close-hint">Clique fora para fechar</div>
     </div>
 
-    <div id="save-scene-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 3000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
-        <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent); padding: 20px; border-radius: 8px; width: 300px; box-shadow: 0 0 20px rgba(0,0,0,0.8);">
-            <h3 style="color: var(--accent); margin-top: 0; font-family: 'Georgia', serif;">Nome da Cena</h3>
-            <input type="text" id="scene-name-input" placeholder="Ex: Acampamento Skaa" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 10px; border-radius: 4px; margin-bottom: 15px; outline: none; box-sizing: border-box; font-family: monospace;">
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+    <div id="save-scene-modal" class="vtt-modal-backdrop hidden">
+        <div class="vtt-modal vtt-modal--compact">
+            <h3 class="vtt-modal-title">Nome da Cena</h3>
+            <input class="vtt-input scene-name-input" type="text" id="scene-name-input" placeholder="Ex: Acampamento Skaa">
+            <div class="modal-actions-end">
                 <button class="glass-btn danger" onclick="document.getElementById('save-scene-modal').classList.add('hidden')">Cancelar</button>
                 <button class="glass-btn success" onclick="confirmSaveScene()">Salvar Mesa</button>
             </div>
         </div>
     </div>
 
-    <div id="load-scene-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 3000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
-        <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent); padding: 20px; border-radius: 8px; width: 350px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 0 20px rgba(0,0,0,0.8);">
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(251,191,36,0.3); padding-bottom: 10px; margin-bottom: 15px;">
-                <h3 style="color: var(--accent); margin: 0; font-family: 'Georgia', serif;">Carregar Cena</h3>
-                <button onclick="document.getElementById('load-scene-modal').classList.add('hidden')" style="background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:16px;"><i class="fas fa-times"></i></button>
+    <div id="load-scene-modal" class="vtt-modal-backdrop hidden">
+        <div class="vtt-modal vtt-modal--scene">
+            <div class="vtt-modal-header">
+                <h3 class="vtt-modal-title">Carregar Cena</h3>
+                <button class="ui-icon-btn" onclick="document.getElementById('load-scene-modal').classList.add('hidden')"><i class="fas fa-times"></i></button>
             </div>
-            <div id="scene-list-container" style="overflow-y: auto; display: flex; flex-direction: column; gap: 8px;"></div>
+            <div id="scene-list-container" class="vtt-modal-body scene-list-container"></div>
         </div>
     </div>
 
@@ -707,21 +720,21 @@
    <div id="init-tracker" class="hidden">
         <div class="init-header">
             <span><i class="fas fa-list-ol"></i> Ordem de Combate</span>
-            <span id="round-counter" style="font-size:11px; color:var(--text-dim);">Round: 1</span>
-            <button onclick="sortInitiative()" title="Ordenar por iniciativa" style="background:none;border:none;color:#22c55e;cursor:pointer;margin-right:5px;"><i class="fas fa-sort-amount-down"></i></button>
-            <button onclick="collapseInitiative()" title="Minimizar" style="background:none;border:none;color:var(--accent);cursor:pointer;margin-right:5px;"><i class="fas fa-minus"></i></button>
-            <button onclick="toggleInitiative()" style="background:none;border:none;color:var(--text-dim);cursor:pointer;"><i class="fas fa-times"></i></button>
+            <span id="round-counter" class="round-counter">Round: 1</span>
+            <button class="init-action-btn init-action-btn--success" onclick="sortInitiative()" title="Ordenar por iniciativa"><i class="fas fa-sort-amount-down"></i></button>
+            <button class="init-action-btn init-action-btn--accent" onclick="collapseInitiative()" title="Minimizar"><i class="fas fa-minus"></i></button>
+            <button class="init-action-btn" onclick="toggleInitiative()"><i class="fas fa-times"></i></button>
         </div>
         <ul class="init-list" id="init-list">
             </ul>
        <div class="init-controls">
             <div class="init-input-row">
-                <input type="text" id="init-name" placeholder="Nome" style="width: 100px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 6px; border-radius: 4px;">
-                <input type="number" id="init-val" placeholder="Iniciativa" style="width: 70px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 6px; border-radius: 4px; text-align: center;">
-                <button onclick="addInitiative()" class="glass-btn primary" style="width: 60px; padding: 6px;">+ ADD</button>
+                <input class="vtt-input init-name-input" type="text" id="init-name" placeholder="Nome">
+                <input class="vtt-input init-value-input" type="number" id="init-val" placeholder="Iniciativa">
+                <button onclick="addInitiative()" class="glass-btn primary init-add-btn">+ ADD</button>
             </div>
-            <button onclick="nextTurn()" class="glass-btn primary" style="margin-top:5px; padding: 8px;"><i class="fas fa-forward"></i> Próximo Turno</button>
-            <button onclick="clearInitiative()" class="glass-btn danger" style="margin-top:5px; padding: 5px; font-size: 10px;">Limpar Combate</button>
+            <button onclick="nextTurn()" class="glass-btn primary init-next-btn"><i class="fas fa-forward"></i> Próximo Turno</button>
+            <button onclick="clearInitiative()" class="glass-btn danger init-clear-btn">Limpar Combate</button>
         </div>
     </div>
 
@@ -731,12 +744,12 @@
         <div class="ctx-item" onclick="ativarRedimensionamento()"><i class="fas fa-crop-alt"></i> Redimensionar (Enter p/ Confirmar)</div>
         <div class="ctx-item" onclick="setContextElevation()"><i class="fas fa-sort-amount-up-alt"></i> Definir Elevação</div>
         <div class="ctx-item" onclick="contextTrazerFrente()"><i class="fas fa-layer-group"></i> Trazer pra Frente</div>
-        <div class="ctx-item" onclick="contextEnviarTras()"><i class="fas fa-layer-group" style="opacity:0.5;"></i> Enviar pra Trás</div>
-        <div class="ctx-item" style="color: #ef4444; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 5px;" onclick="setContextAura('#ef4444', 'Sangrando', '🩸')"><i class="fas fa-tint"></i> Sangrando</div>
-        <div class="ctx-item" style="color: #f59e0b;" onclick="setContextAura('#f59e0b', 'Queimando', '🔥')"><i class="fas fa-fire"></i> Queimando</div>
-        <div class="ctx-item" style="color: #3b82f6;" onclick="setContextAura('#3b82f6', 'Investido', '⚡')"><i class="fas fa-shield-alt"></i> Investido</div>
-        <div class="ctx-item" style="color: #ef4444; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 5px;" onclick="deleteContextToken()"><i class="fas fa-trash"></i> Remover do Mapa</div>
-        <div class="ctx-item" style="border-top: 1px solid rgba(255,255,255,0.05); margin-top: 5px; color: #94a3b8;" onclick="clearContextAuras()"><i class="fas fa-eraser"></i> Limpar Condições</div>
+        <div class="ctx-item" onclick="contextEnviarTras()"><i class="fas fa-layer-group ctx-icon-muted"></i> Enviar pra Trás</div>
+        <div class="ctx-item ctx-item--danger ctx-item--separated" onclick="setContextAura('#ef4444', 'Sangrando', '🩸')"><i class="fas fa-tint"></i> Sangrando</div>
+        <div class="ctx-item ctx-item--warning" onclick="setContextAura('#f59e0b', 'Queimando', '🔥')"><i class="fas fa-fire"></i> Queimando</div>
+        <div class="ctx-item ctx-item--info" onclick="setContextAura('#3b82f6', 'Investido', '⚡')"><i class="fas fa-shield-alt"></i> Investido</div>
+        <div class="ctx-item ctx-item--danger ctx-item--separated" onclick="deleteContextToken()"><i class="fas fa-trash"></i> Remover do Mapa</div>
+        <div class="ctx-item ctx-item--muted ctx-item--separated" onclick="clearContextAuras()"><i class="fas fa-eraser"></i> Limpar Condições</div>
     </div>
 
     <div id="map-context-menu" class="hidden">
@@ -746,83 +759,76 @@
         <div class="ctx-item" onclick="clearDraw()"><i class="fas fa-eraser"></i> Limpar Desenhos</div>
     </div>
 
-    <div id="help-modal" class="hidden" style="position: absolute; bottom: 70px; right: 20px; z-index: 20; background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent); border-radius: 8px; padding: 15px 20px; color: #fff; font-size: 13px; box-shadow: 0 5px 20px rgba(0,0,0,0.8); backdrop-filter: blur(5px);">
-        <h4 style="margin: 0 0 10px 0; color: var(--accent); border-bottom: 1px solid rgba(251,191,36,0.3); padding-bottom: 5px; font-family: 'Georgia', serif;">Atalhos e Comandos</h4>
-        <ul style="list-style: none; padding: 0; margin: 0; line-height: 2;">
-            <li><b style="color: var(--accent); display: inline-block; width: 75px;">Tecla I</b> Abrir Combate (Iniciativa)</li>
-            <li><b style="color: var(--accent); display: inline-block; width: 75px;">ALT + Esq</b> Ping de Radar no mapa</li>
-            <li><b style="color: var(--accent); display: inline-block; width: 75px;">Bot. Direito</b> no Token = Menu Z/Auras</li>
-            <li><b style="color: var(--accent); display: inline-block; width: 75px;">Tecla S</b> Mover Tokens | <b style="color: var(--accent);">M</b> Mover Mapas</li>
-            <li><b style="color: var(--accent); display: inline-block; width: 75px;">Tecla R</b> Régua | <b style="color: var(--accent);">D</b> Lápis | <b style="color: var(--accent);">A</b> Área de Efeito</li>
-            <li><b style="color: var(--accent); display: inline-block; width: 75px;">Tecla N</b> Neblina | <b style="color: var(--accent);">W</b> Clima | <b style="color: var(--accent);">G</b> Dados</li>
-            <li><b style="color: var(--accent); display: inline-block; width: 75px;">Tecla E</b> Borracha | <b style="color: var(--accent);">C</b> Limpar Desenhos</li>
-            <li><b style="color: var(--accent); display: inline-block; width: 75px;">ESC</b> Fechar Fichas/Menus</li>
+    <div id="help-modal" class="help-modal hidden">
+        <h4 class="help-modal-title">Atalhos e Comandos</h4>
+        <ul class="help-shortcut-list">
+            <li><b class="help-key">Tecla I</b> Abrir Combate (Iniciativa)</li>
+            <li><b class="help-key">ALT + Esq</b> Ping de Radar no mapa</li>
+            <li><b class="help-key">Bot. Direito</b> no Token = Menu Z/Auras</li>
+            <li><b class="help-key">Tecla S</b> Mover Tokens | <b class="help-key">M</b> Mover Mapas</li>
+            <li><b class="help-key">Tecla R</b> Régua | <b class="help-key">D</b> Lápis | <b class="help-key">A</b> Área de Efeito</li>
+            <li><b class="help-key">Tecla N</b> Neblina | <b class="help-key">W</b> Clima | <b class="help-key">G</b> Dados</li>
+            <li><b class="help-key">Tecla E</b> Borracha | <b class="help-key">C</b> Limpar Desenhos</li>
+            <li><b class="help-key">ESC</b> Fechar Fichas/Menus</li>
         </ul>
     </div>
 
-    <div id="clone-confirm-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 3000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
-        <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent); padding: 25px; border-radius: 8px; width: 320px; box-shadow: 0 0 30px rgba(251, 191, 36, 0.4); text-align: center;">
-            <i class="fas fa-clone" style="font-size: 30px; color: var(--accent); margin-bottom: 15px;"></i>
-            <h3 style="color: #fff; margin-top: 0; font-family: 'Segoe UI', sans-serif;">Clonar Personagem</h3>
-            <p style="color: var(--text-dim); font-size: 13px; margin-bottom: 20px;">Tem certeza que deseja criar uma cópia exata deste personagem?</p>
-            <div style="display: flex; gap: 10px; justify-content: center;">
+    <div id="clone-confirm-modal" class="vtt-modal-backdrop hidden">
+        <div class="vtt-modal vtt-modal--compact">
+            <i class="fas fa-clone modal-icon"></i>
+            <h3 class="vtt-modal-title">Clonar Personagem</h3>
+            <p class="modal-copy">Tem certeza que deseja criar uma cópia exata deste personagem?</p>
+            <div class="modal-actions-centered">
                 <button class="glass-btn danger" onclick="document.getElementById('clone-confirm-modal').classList.add('hidden')">Cancelar</button>
                 <button class="glass-btn success" onclick="executarClone()">Sim, Clonar</button>
             </div>
         </div>
     </div>
-
-    <div id="delete-confirm-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 3000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
-        <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid #ef4444; padding: 25px; border-radius: 8px; width: 320px; box-shadow: 0 0 30px rgba(239, 68, 68, 0.4); text-align: center;">
-            <i class="fas fa-exclamation-triangle" style="font-size: 30px; color: #ef4444; margin-bottom: 15px;"></i>
-            <h3 style="color: #fff; margin-top: 0; font-family: 'Segoe UI', sans-serif;">Tem certeza?</h3>
-            <p style="color: var(--text-dim); font-size: 13px; margin-bottom: 20px;">Você está prestes a apagar este item permanentemente da sua ficha.</p>
-            <div style="display: flex; gap: 10px; justify-content: center;">
+    <div id="delete-confirm-modal" class="vtt-modal-backdrop hidden">
+        <div class="vtt-modal vtt-modal--compact vtt-modal--danger">
+            <i class="fas fa-exclamation-triangle modal-icon modal-icon--danger"></i>
+            <h3 class="vtt-modal-title">Tem certeza?</h3>
+            <p class="modal-copy">Você está prestes a apagar este item permanentemente da sua ficha.</p>
+            <div class="modal-actions-centered">
                 <button class="glass-btn primary" onclick="document.getElementById('delete-confirm-modal').classList.add('hidden')">Cancelar</button>
                 <button class="glass-btn danger" onclick="executarDelecao()">Sim, Apagar</button>
             </div>
         </div>
     </div>
-
-<div id="create-folder-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 3000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
-        <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent); padding: 25px; border-radius: 8px; width: 320px; box-shadow: 0 0 30px rgba(0,0,0,0.8); text-align: center;">
-            <i class="fas fa-folder-plus" style="font-size: 30px; color: var(--accent); margin-bottom: 15px;"></i>
-            <h3 style="color: #fff; margin-top: 0; font-family: 'Georgia', serif;">Nova Pasta</h3>
-            <input type="text" id="new-folder-name-input" placeholder="Ex: Heróis, Inimigos..." style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 4px; margin-bottom: 20px; outline: none; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; text-align: center; font-size: 16px;">
-            <div style="display: flex; gap: 10px; justify-content: center;">
+<div id="create-folder-modal" class="vtt-modal-backdrop hidden">
+        <div class="vtt-modal vtt-modal--compact">
+            <i class="fas fa-folder-plus modal-icon"></i>
+            <h3 class="vtt-modal-title">Nova Pasta</h3>
+            <input class="vtt-input" type="text" id="new-folder-name-input" placeholder="Ex: Heróis, Inimigos...">
+            <div class="modal-actions-centered">
                 <button class="glass-btn danger" onclick="document.getElementById('create-folder-modal').classList.add('hidden')">Cancelar</button>
                 <button class="glass-btn success" onclick="confirmarNovaPasta()">Criar Pasta</button>
             </div>
         </div>
     </div>
-
-    <div id="create-char-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 3000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
-            <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent); padding: 25px; border-radius: 8px; width: 320px; box-shadow: 0 0 30px rgba(0,0,0,0.8); text-align: center;">
-            <i class="fas fa-user-plus" style="font-size: 30px; color: var(--accent); margin-bottom: 15px;"></i>
-            <h3 style="color: #fff; margin-top: 0; font-family: 'Georgia', serif;">Nova Ficha</h3>
-            <p style="color: var(--text-dim); font-size: 13px; margin-bottom: 15px;">Qual o nome do personagem?</p>
-            
-            <input type="text" id="new-char-name-input" placeholder="Ex: Kaladin" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 4px; margin-bottom: 20px; outline: none; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; text-align: center; font-size: 16px;">
-            
-            <div style="display: flex; gap: 10px; justify-content: center;">
+    <div id="create-char-modal" class="vtt-modal-backdrop hidden">
+            <div class="vtt-modal vtt-modal--compact">
+            <i class="fas fa-user-plus modal-icon"></i>
+            <h3 class="vtt-modal-title">Nova Ficha</h3>
+            <p class="modal-copy">Qual o nome do personagem?</p>
+            <input class="vtt-input" type="text" id="new-char-name-input" placeholder="Ex: Kaladin">
+            <div class="modal-actions-centered">
                 <button class="glass-btn danger" onclick="fecharModalCriacao()">Cancelar</button>
                 <button class="glass-btn success" onclick="confirmarCriacaoPersonagem()">Criar Ficha</button>
             </div>
         </div>
     </div>
-
-    <div id="add-skill-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 3000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
-        <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent); padding: 25px; border-radius: 8px; width: 320px; box-shadow: 0 0 30px rgba(0,0,0,0.8); text-align: center;">
-            <i class="fas fa-plus-circle" style="font-size: 30px; color: var(--accent); margin-bottom: 15px;"></i>
-            <h3 style="color: #fff; margin-top: 0; font-family: 'Georgia', serif;">Nova Perícia</h3>
-            <input type="text" id="new-skill-name-input" placeholder="Ex: Armamento Leve" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 4px; margin-bottom: 20px; outline: none; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; text-align: center; font-size: 16px;">
-            <div style="display: flex; gap: 10px; justify-content: center;">
+    <div id="add-skill-modal" class="vtt-modal-backdrop hidden">
+        <div class="vtt-modal vtt-modal--compact">
+            <i class="fas fa-plus-circle modal-icon"></i>
+            <h3 class="vtt-modal-title">Nova Perícia</h3>
+            <input class="vtt-input" type="text" id="new-skill-name-input" placeholder="Ex: Armamento Leve">
+            <div class="modal-actions-centered">
                 <button class="glass-btn danger" onclick="fecharModalNovaPericia()">Cancelar</button>
                 <button class="glass-btn success" onclick="confirmarNovaPericia()">Adicionar</button>
             </div>
         </div>
     </div>
-
     <!-- MODAL DE ITEM COMPÊNDIO -->
     <div id="item-compendium-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 4000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
         <div class="sheet-glass" style="width: 600px; height: 450px; display: flex; flex-direction: row; padding: 0;">
