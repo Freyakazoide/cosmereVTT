@@ -192,6 +192,7 @@ function getVttTooltipDescription(label) {
         'Diretor de Cena': 'Prepare cenas completas com mapa, música, clima, handout e notas.',
         'Mapas': 'Carregue cenários, mapas de batalha e ambientes da campanha.',
         'Atores e Tokens': 'Gerencie personagens, NPCs, criaturas e tokens da mesa.',
+        'Combate': 'Controle iniciativa, rodadas, turnos, HP e condicoes dos tokens.',
         'Chat': 'Registro da mesa, rolagens, mensagens e eventos importantes.',
         'Notas': 'Diário, pistas, lore, segredos e anotações da campanha.',
         'Compendio': 'Itens, armas, regras rápidas e conteúdos reutilizáveis.',

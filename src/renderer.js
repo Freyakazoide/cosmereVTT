@@ -197,6 +197,9 @@ class MainScene extends Phaser.Scene {
         this.isDrawing = false;
         this.interactionStart = { x: 0, y: 0 };
         this.mapLocked = false;
+        this.sceneSettings = { ...(window.sceneSettings || {}) };
+        window.sceneSettings = this.sceneSettings;
+        this.currentTurnMarker = null;
         this.drawingHistory = [];
         this.redoHistory = [];
 
@@ -320,8 +323,9 @@ class MainScene extends Phaser.Scene {
             else if (this.ferramentaAtual === 'ruler') {
                 this.graficosRegua.clear().lineStyle(2, 0xff6400, 1);
                 this.graficosRegua.strokeLineShape(new Phaser.Geom.Line(this.interactionStart.x, this.interactionStart.y, pMundo.x, pMundo.y));
-                const distMetros = (Phaser.Math.Distance.Between(this.interactionStart.x, this.interactionStart.y, pMundo.x, pMundo.y) / PIXELS_POR_UNIDADE) * METROS_POR_QUADRADO;
-                this.textoRegua.setVisible(true).setPosition(pMundo.x, pMundo.y - 20).setText(`${distMetros.toFixed(1)} m`);
+                const settings = this.getSceneSettings();
+                const distance = (Phaser.Math.Distance.Between(this.interactionStart.x, this.interactionStart.y, pMundo.x, pMundo.y) / this.getSceneGridSize()) * settings.distancePerCell;
+                this.textoRegua.setVisible(true).setPosition(pMundo.x, pMundo.y - 20).setText(`${distance.toFixed(1)} ${settings.distanceUnit || 'm'}`);
             }
             else if (this.ferramentaAtual === 'aoe') {
                 const cfg = window.toolConfig;
@@ -400,6 +404,10 @@ class MainScene extends Phaser.Scene {
        // Adiciona evento global de duplo clique para Tokens abrirem a Ficha
         this.input.on('gameobjectdown', (pointer, gameObject) => {
             if (this.ferramentaAtual !== 'select') return;
+            if (gameObject.texture && gameObject.texture.key.startsWith('tk_')) {
+                window.selectedToken = gameObject;
+                if (typeof window.showTokenQuickBar === 'function') window.showTokenQuickBar(gameObject);
+            }
             
             const timeNow = pointer.time;
             if (gameObject.lastClickTime && timeNow - gameObject.lastClickTime < 300) {
@@ -658,6 +666,76 @@ class MainScene extends Phaser.Scene {
     coverFog() {
         this.resetFogArea(true);
     }
+
+    getSceneSettings() {
+        this.sceneSettings = {
+            gridEnabled: true,
+            gridSize: PIXELS_POR_UNIDADE,
+            snapToGrid: true,
+            distancePerCell: METROS_POR_QUADRADO,
+            distanceUnit: 'm',
+            ...(window.sceneSettings || {}),
+            ...(this.sceneSettings || {})
+        };
+        window.sceneSettings = this.sceneSettings;
+        return this.sceneSettings;
+    }
+
+    getSceneGridSize() {
+        return Number(this.getSceneSettings().gridSize) || PIXELS_POR_UNIDADE;
+    }
+
+    applySceneSettings(settings = {}) {
+        const normalized = {
+            ...settings,
+            gridSize: settings.gridSize || settings.size || this.getSceneSettings().gridSize,
+            gridEnabled: settings.gridEnabled ?? settings.visible ?? this.getSceneSettings().gridEnabled,
+            distancePerCell: settings.distancePerCell || settings.metersPerSquare || this.getSceneSettings().distancePerCell
+        };
+        this.sceneSettings = { ...this.getSceneSettings(), ...normalized };
+        window.sceneSettings = this.sceneSettings;
+
+        if (this.grid) this.grid.destroy();
+        if (this.sceneSettings.gridEnabled !== false) {
+            const gridSize = this.getSceneGridSize();
+            this.grid = this.add.grid(0, 0, 30000, 30000, gridSize, gridSize, 0, 0, 0x888888, 0.3);
+            this.camadaGrid.add(this.grid);
+        } else {
+            this.grid = null;
+        }
+        if (typeof window.syncSceneSettingsControls === 'function') window.syncSceneSettingsControls();
+    }
+
+    toggleGrid() {
+        this.applySceneSettings({ gridEnabled: this.getSceneSettings().gridEnabled === false });
+    }
+
+    setGridSize(size) {
+        const gridSize = Math.max(20, parseInt(size, 10) || PIXELS_POR_UNIDADE);
+        this.applySceneSettings({ gridSize });
+    }
+
+    toggleSnapToGrid() {
+        this.sceneSettings = { ...this.getSceneSettings(), snapToGrid: !this.getSceneSettings().snapToGrid };
+        window.sceneSettings = this.sceneSettings;
+    }
+
+    snapTokenToGrid(token) {
+        if (!token || this.getSceneSettings().snapToGrid === false) return;
+        const gridSize = this.getSceneGridSize();
+        const offset = (token.gridSize % 2 === 0) ? 0 : (gridSize / 2);
+        token.x = Math.round(token.x / gridSize) * gridSize + offset;
+        token.y = Math.round(token.y / gridSize) * gridSize + offset;
+    }
+
+    saveSceneGridSettings() {
+        window.sceneSettings = { ...this.getSceneSettings() };
+        return window.sceneSettings;
+    }
+
+    loadSceneGridSettings(settings) {
+        this.applySceneSettings(settings || {});
+    }
     
     clearFog() {
         if (this.fogRT) this.fogRT.clear();
@@ -706,8 +784,13 @@ class MainScene extends Phaser.Scene {
             },
             grid: {
                 visible: this.grid ? this.grid.visible : true,
-                size: PIXELS_POR_UNIDADE,
-                metersPerSquare: METROS_POR_QUADRADO
+                size: this.getSceneGridSize(),
+                metersPerSquare: this.getSceneSettings().distancePerCell
+            },
+            sceneSettings: this.saveSceneGridSettings(),
+            combatState: {
+                ...(window.combatState || { active: false, round: 1, currentTurnIndex: 0, participants: [] }),
+                participants: (window.combatState?.participants || []).map(({ tokenRef, ...participant }) => participant)
             },
             weather: this.currentWeather || null,
             fog: {
@@ -775,7 +858,8 @@ class MainScene extends Phaser.Scene {
                     hpMax: ficha ? ficha.hpMax : t.hpMax,
                     visibleToPlayers: t.visibleToPlayers !== false,
                     locked: !!t.locked,
-                    notes: t.notes || ''
+                    notes: t.notes || '',
+                    conditions: Array.isArray(t.conditions) ? [...t.conditions] : []
                 });
             });
         }
@@ -791,6 +875,7 @@ class MainScene extends Phaser.Scene {
         if (!state) return;
         state.mapas = state.mapas || state.maps || [];
         state.tokens = state.tokens || [];
+        this.loadSceneGridSettings(state.sceneSettings || state.grid || {});
         this.camadaMapa.removeAll(true);
         this.camadaTokens.removeAll(true);
         this.camadaTatico.removeAll(true);
@@ -862,7 +947,11 @@ class MainScene extends Phaser.Scene {
                 novoMapa.caminhoAbsoluto = m.path;
                 this.input.setDraggable(novoMapa, this.ferramentaAtual === 'map-edit');
                 novoMapa.on('drag', (p, dx, dy) => { if(this.ferramentaAtual==='map-edit'){ novoMapa.x=dx; novoMapa.y=dy;} });
-                novoMapa.on('dragend', () => { novoMapa.x = Math.round(novoMapa.x / PIXELS_POR_UNIDADE) * PIXELS_POR_UNIDADE; novoMapa.y = Math.round(novoMapa.y / PIXELS_POR_UNIDADE) * PIXELS_POR_UNIDADE; });
+                novoMapa.on('dragend', () => {
+                    const gridSize = this.getSceneGridSize();
+                    novoMapa.x = Math.round(novoMapa.x / gridSize) * gridSize;
+                    novoMapa.y = Math.round(novoMapa.y / gridSize) * gridSize;
+                });
                 if (m.scaleX) novoMapa.setScale(m.scaleX, m.scaleY || m.scaleX);
                 this.mapasAtivos.push(novoMapa);
                 this.camadaMapa.add(novoMapa);
@@ -891,6 +980,9 @@ class MainScene extends Phaser.Scene {
             }
         });
         this.load.start();
+        window.setTimeout(() => {
+            if (typeof window.restoreCombatState === 'function') window.restoreCombatState(state.combatState);
+        }, 120);
     }
 
     recordDrawing(obj) {
@@ -1165,7 +1257,8 @@ class MainScene extends Phaser.Scene {
         
         this.load.once('complete', () => {
             if (!this.grid) {
-                this.grid = this.add.grid(0, 0, 30000, 30000, PIXELS_POR_UNIDADE, PIXELS_POR_UNIDADE, 0, 0, 0x888888, 0.3);
+                const gridSize = this.getSceneGridSize();
+                this.grid = this.add.grid(0, 0, 30000, 30000, gridSize, gridSize, 0, 0, 0x888888, 0.3);
                 this.camadaGrid.add(this.grid);
             }
             const mapView = this.cameras.main.worldView;
@@ -1181,7 +1274,11 @@ class MainScene extends Phaser.Scene {
             novoMapa.caminhoAbsoluto = caminhoAbsoluto;
             this.input.setDraggable(novoMapa, this.ferramentaAtual === 'map-edit');
             novoMapa.on('drag', (pointer, dragX, dragY) => { if (this.ferramentaAtual !== 'map-edit') return; novoMapa.x = dragX; novoMapa.y = dragY; });
-            novoMapa.on('dragend', () => { novoMapa.x = Math.round(novoMapa.x / PIXELS_POR_UNIDADE) * PIXELS_POR_UNIDADE; novoMapa.y = Math.round(novoMapa.y / PIXELS_POR_UNIDADE) * PIXELS_POR_UNIDADE; });
+            novoMapa.on('dragend', () => {
+                const gridSize = this.getSceneGridSize();
+                novoMapa.x = Math.round(novoMapa.x / gridSize) * gridSize;
+                novoMapa.y = Math.round(novoMapa.y / gridSize) * gridSize;
+            });
             
             if (!this.mapasAtivos) this.mapasAtivos = [];
             this.mapasAtivos.push(novoMapa);
@@ -1232,7 +1329,7 @@ class MainScene extends Phaser.Scene {
 
         this.input.setDraggable(token, this.ferramentaAtual === 'select');
         token.gridSize = savedState?.gridSize || 1;
-        token.displayWidth = PIXELS_POR_UNIDADE * token.gridSize; 
+        token.displayWidth = this.getSceneGridSize() * token.gridSize; 
         token.scaleY = token.scaleX;
         if (savedState?.scaleX) {
             token.setScale(savedState.scaleX, savedState.scaleY || savedState.scaleX);
@@ -1240,6 +1337,7 @@ class MainScene extends Phaser.Scene {
         token.visibleToPlayers = savedState?.visibleToPlayers !== false;
         token.locked = !!savedState?.locked;
         token.notes = savedState?.notes || '';
+        token.conditions = Array.isArray(savedState?.conditions) ? [...savedState.conditions] : [];
         token.hpAtual = savedState?.hp;
         token.hpMax = savedState?.hpMax;
         
@@ -1273,6 +1371,14 @@ class MainScene extends Phaser.Scene {
             let offsetElev = (PIXELS_POR_UNIDADE/2) * token.gridSize;
             token.elevText.setPosition(token.x, token.y - offsetElev - 10); 
             if (token.statusText) token.statusText.setPosition(token.x + 20, token.y - 20);
+            if (token.conditionGroup) token.conditionGroup.setPosition(token.x, token.y);
+            const currentCombatant = window.combatState?.participants?.[window.combatState.currentTurnIndex];
+            if (this.currentTurnMarker && currentCombatant?.id === token.tokenId) {
+                this.currentTurnMarker.setPosition(token.x, token.y);
+            }
+            if (window.selectedToken === token && typeof window.positionTokenQuickBar === 'function') {
+                window.positionTokenQuickBar(token);
+            }
         };
         syncExtras();
         if (savedState?.aura) {
@@ -1281,8 +1387,10 @@ class MainScene extends Phaser.Scene {
         if (savedState?.hp !== undefined && savedState?.hpMax !== undefined) {
             this.updateTokenHP(token.tokenId, savedState.hp, savedState.hpMax);
         }
+        this.renderTokenConditions(token);
 
         token.on('pointerdown', (pointer) => {
+            window.selectedToken = token;
             if (pointer.button === 2 && window.showTokenContextMenu) {
                 window.showTokenContextMenu(token, pointer.event.clientX, pointer.event.clientY);
             }
@@ -1301,9 +1409,14 @@ class MainScene extends Phaser.Scene {
         });
 
         token.on('dragend', () => {
-            let offset = (token.gridSize % 2 === 0) ? 0 : (PIXELS_POR_UNIDADE / 2);
-            let targetX = Math.round(token.x / PIXELS_POR_UNIDADE) * PIXELS_POR_UNIDADE + offset;
-            let targetY = Math.round(token.y / PIXELS_POR_UNIDADE) * PIXELS_POR_UNIDADE + offset;
+            const gridSize = this.getSceneGridSize();
+            let offset = (token.gridSize % 2 === 0) ? 0 : (gridSize / 2);
+            let targetX = Math.round(token.x / gridSize) * gridSize + offset;
+            let targetY = Math.round(token.y / gridSize) * gridSize + offset;
+            if (this.getSceneSettings().snapToGrid === false) {
+                targetX = token.x;
+                targetY = token.y;
+            }
 
             // Deslize suave (Tween) em vez de teleporte instantâneo
             this.tweens.add({
@@ -1322,6 +1435,7 @@ class MainScene extends Phaser.Scene {
             if(token.elevText) token.elevText.destroy();
             if(token.hpGraphics) token.hpGraphics.destroy();
             if(token.statusText) token.statusText.destroy();
+            if(token.conditionGroup) token.conditionGroup.destroy(true);
         });
     }
 
@@ -1357,14 +1471,44 @@ class MainScene extends Phaser.Scene {
         }
     }
 
+    renderTokenConditions(token) {
+        if (!token) return;
+        if (token.conditionGroup) token.conditionGroup.destroy(true);
+
+        token.conditionGroup = this.add.container(token.x, token.y);
+        this.camadaUI.add(token.conditionGroup);
+
+        const conditions = Array.isArray(token.conditions) ? token.conditions : [];
+        conditions.slice(0, 5).forEach((condition, index) => {
+            const label = String(condition || '').trim();
+            const badge = this.add.text(
+                -((conditions.length - 1) * 13) + index * 26,
+                -(token.displayHeight / 2) - 22,
+                label.charAt(0).toUpperCase(),
+                {
+                    font: 'bold 12px Arial',
+                    fill: '#fbbf24',
+                    backgroundColor: '#05070bee',
+                    padding: { x: 5, y: 3 }
+                }
+            ).setOrigin(0.5);
+            token.conditionGroup.add(badge);
+        });
+    }
+
     updateTokenHP(tokenId, hpAtual, hpMax) {
         const token = this.camadaTokens.list.find(t => t.tokenId === tokenId);
         if (!token || !token.hpGraphics) return;
         token.hpAtual = hpAtual;
         token.hpMax = hpMax;
+        const participant = window.combatState?.participants?.find(p => p.id === tokenId);
+        if (participant) {
+            participant.hpAtual = hpAtual;
+            participant.hpMax = hpMax;
+        }
         
         token.hpGraphics.clear();
-        if (hpAtual >= hpMax && hpMax > 0) return; // Esconde se estiver full vida
+        if (!hpMax || hpMax <= 0) return;
 
         const w = PIXELS_POR_UNIDADE * 0.8;
         const h = 6;
@@ -1375,9 +1519,41 @@ class MainScene extends Phaser.Scene {
         token.hpGraphics.fillRect(offsetX, offsetY, w, h);
         
         const pct = Math.max(0, Math.min(1, hpAtual / hpMax));
-        const color = pct > 0.5 ? 0x22c55e : (pct > 0.2 ? 0xeab308 : 0xef4444); // Verde -> Amarelo -> Vermelho
+        const color = pct > 0.5 ? 0x22c55e : (pct > 0.25 ? 0xeab308 : 0xef4444); // Saudavel -> Ferido -> Critico
         token.hpGraphics.fillStyle(color, 1);
         token.hpGraphics.fillRect(offsetX, offsetY, w * pct, h);
+        if (typeof window.renderCombatTracker === 'function') window.renderCombatTracker();
+    }
+
+    clearCurrentTurnHighlight() {
+        if (this.currentTurnMarker) {
+            this.currentTurnMarker.destroy();
+            this.currentTurnMarker = null;
+        }
+    }
+
+    highlightCurrentTurnToken(token) {
+        this.clearCurrentTurnHighlight();
+        if (!token) return;
+
+        const radius = Math.max(token.displayWidth || PIXELS_POR_UNIDADE, token.displayHeight || PIXELS_POR_UNIDADE) * 0.62;
+        const marker = this.add.graphics();
+        marker.lineStyle(5, 0xfbbf24, 0.95);
+        marker.strokeCircle(0, 0, radius);
+        marker.setPosition(token.x, token.y);
+        this.camadaUI.add(marker);
+        this.currentTurnMarker = marker;
+
+        this.tweens.add({
+            targets: marker,
+            alpha: 0.35,
+            scaleX: 1.12,
+            scaleY: 1.12,
+            duration: 720,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
     }
 
     bringTokenToFront(token) {

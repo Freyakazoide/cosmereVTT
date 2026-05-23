@@ -66,6 +66,7 @@
             <button class="tool-btn tab-btn" data-target-id="director-content" data-title="Diretor de Cena" title="Diretor de Cena"><i class="fas fa-clapperboard"></i></button>
             <button class="tool-btn tab-btn" data-target-id="maps-content" data-title="Mapas" title="Mapas e Cenarios"><i class="fas fa-map-marked-alt"></i></button>
             <button class="tool-btn tab-btn" data-target-id="tokens-content" data-title="Atores e Tokens" title="Atores / NPCs"><i class="fas fa-users"></i></button>
+            <button class="tool-btn tab-btn" data-target-id="combat-content" data-title="Combate" title="Combate"><i class="fas fa-khanda"></i></button>
             <button class="tool-btn tab-btn" data-target-id="chat-content" data-title="Chat" title="Chat Log"><i class="fas fa-comments"></i></button>
             <button class="tool-btn tab-btn" data-target-id="notes-content" data-title="Notas" title="Diarios / Anotacoes"><i class="fas fa-book-journal-whills"></i></button>
             <button class="tool-btn tab-btn" data-target-id="items-content" data-title="Compendio" title="Compendio e Monstros"><i class="fas fa-book-open"></i></button>
@@ -129,6 +130,26 @@
                 </select>
             </div>
             <input class="vtt-input" type="text" id="chat-input" placeholder="Digite algo ou /r 1d20...">
+        </div>
+    </div>
+
+    <div id="combat-content" class="content-area hidden">
+        <div class="combat-panel">
+            <div class="combat-panel__header">
+                <div>
+                    <div class="director-kicker">Turnos</div>
+                    <h2>Combate</h2>
+                </div>
+                <span id="combat-round-value" class="combat-round-pill">Inativo</span>
+            </div>
+            <div class="combat-actions">
+                <button class="ui-btn ui-btn--primary" onclick="startCombat()"><i class="fas fa-play"></i> Iniciar</button>
+                <button class="ui-btn" onclick="addSelectedTokenToCombat()"><i class="fas fa-user-plus"></i> Add token</button>
+                <button class="ui-btn" onclick="rollInitiativeForCombat()"><i class="fas fa-dice-d20"></i> Iniciativa</button>
+                <button class="ui-btn" onclick="nextTurn()"><i class="fas fa-forward"></i> Proximo</button>
+                <button class="ui-btn ui-btn--danger" onclick="endCombat()"><i class="fas fa-stop"></i> Encerrar</button>
+            </div>
+            <div id="combat-tracker-list" class="combat-tracker-list"></div>
         </div>
     </div>
 
@@ -324,6 +345,35 @@
         </label>
         <div class="vtt-help-text">
             Efeito de Luz Tempestuosa vazando ao acionar poderes e críticos.
+        </div>
+    </div>
+
+    <div class="category-header">Grid e Escala</div>
+    <div class="vtt-control-panel">
+        <label class="vtt-control-label">
+            <i class="fas fa-border-all"></i>Configuracao da cena
+        </label>
+        <label class="vtt-checkbox-row">
+            Grid ligado
+            <input type="checkbox" id="scene-grid-enabled" class="vtt-checkbox" checked onchange="toggleGrid()">
+        </label>
+        <label class="vtt-checkbox-row">
+            Snap ligado
+            <input type="checkbox" id="scene-grid-snap" class="vtt-checkbox" checked onchange="toggleSnapToGrid()">
+        </label>
+        <div class="vtt-range-row">
+            <span class="vtt-help-text">Quadrado</span>
+            <input class="vtt-input" type="number" id="scene-grid-size" value="70" min="20" max="240" onchange="setGridSize(this.value)">
+            <span class="vtt-help-text">px</span>
+        </div>
+        <div class="vtt-range-row">
+            <span class="vtt-help-text">Distancia</span>
+            <input class="vtt-input" type="number" id="scene-distance-cell" value="2" min="0.1" step="0.1" onchange="setSceneDistancePerCell(this.value)">
+            <select class="vtt-select" id="scene-distance-unit" onchange="setSceneDistanceUnit(this.value)">
+                <option value="m">m</option>
+                <option value="ft">ft</option>
+                <option value="q">q</option>
+            </select>
         </div>
     </div>
 
@@ -861,6 +911,7 @@
     <script src="js/ui/audio.js"></script>
     <script src="js/ui/dice.js"></script>
     <script src="js/ui/initiative.js"></script>
+    <script src="js/ui/combat.js"></script>
     <script src="js/ui/notes.js"></script>
     <script src="js/ui/toast.js"></script>
     <script src="js/ui/character-sheet.js"></script>

@@ -224,3 +224,158 @@ body.player-view #tool-options {
 .token-info-panel__actions {
   justify-content: flex-end;
 }
+
+.combat-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.combat-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.combat-panel__header h2 {
+  margin: 0;
+  color: var(--text-main);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 22px;
+}
+
+.combat-round-pill {
+  display: inline-grid;
+  place-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(216, 167, 57, 0.24);
+  border-radius: 999px;
+  background: rgba(216, 167, 57, 0.10);
+  color: var(--mistborn-amber);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.combat-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.combat-actions .ui-btn {
+  min-width: 0;
+}
+
+.combat-tracker-list {
+  display: grid;
+  gap: 9px;
+}
+
+.combat-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 9px;
+  padding: 9px;
+  border: 1px solid rgba(154, 163, 173, 0.14);
+  border-left: 3px solid rgba(216, 167, 57, 0.30);
+  border-radius: var(--radius-sm);
+  background: rgba(10, 13, 18, 0.74);
+}
+
+.combat-row.is-current {
+  border-color: rgba(216, 167, 57, 0.56);
+  border-left-color: var(--mistborn-gold);
+  box-shadow: 0 0 18px rgba(216, 167, 57, 0.14);
+}
+
+.combat-row__turn {
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(216, 167, 57, 0.22);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.26);
+  color: var(--mistborn-gold);
+  font-weight: 900;
+}
+
+.combat-row__main {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.combat-row__main strong,
+.combat-row__main span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combat-row__main strong {
+  color: var(--text-main);
+  font-size: 13px;
+}
+
+.combat-row__main span,
+.combat-row__conditions em {
+  color: rgba(199, 205, 212, 0.68);
+  font-size: 11px;
+  font-style: normal;
+}
+
+.combat-row__conditions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.combat-condition-badge,
+.token-condition-badge {
+  display: inline-grid;
+  place-items: center;
+  min-height: 20px;
+  padding: 0 7px;
+  border: 1px solid rgba(216, 167, 57, 0.20);
+  border-radius: 999px;
+  background: rgba(216, 167, 57, 0.09);
+  color: var(--mistborn-gold);
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.token-quick-bar,
+.condition-menu {
+  position: fixed;
+  z-index: 2300;
+  display: flex;
+  gap: 6px;
+  padding: 7px;
+  border: 1px solid rgba(216, 167, 57, 0.28);
+  border-radius: var(--radius-sm);
+  background: rgba(4, 6, 10, 0.94);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(12px);
+}
+
+.token-quick-bar button,
+.condition-menu button {
+  min-width: 32px;
+  min-height: 32px;
+  border: 1px solid rgba(216, 167, 57, 0.16);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--text-main);
+  cursor: pointer;
+}
+
+.token-quick-bar button:hover,
+.condition-menu button:hover {
+  border-color: rgba(216, 167, 57, 0.42);
+  color: var(--mistborn-amber);
+}
+
+.condition-menu {
+  flex-direction: column;
+}
