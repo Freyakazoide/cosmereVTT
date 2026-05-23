@@ -45,7 +45,7 @@
 <aside id="vtt-dock-shell" class="vtt-dock-shell">
     <nav id="vtt-dock" class="tools-bar vtt-dock glass-dock" aria-label="Ferramentas e paineis">
         <div class="tool-group-wrapper">
-            <button id="master-tool-btn" class="tool-btn master-tool-btn active" type="button" onclick="toggleToolSubmenu()" title="Ferramenta atual"><i class="fas fa-hand-pointer"></i></button>
+            <button id="master-tool-btn" class="tool-btn master-tool-btn active" type="button" onclick="toggleToolSubmenu(event)" title="Ferramenta atual" aria-expanded="false"><i class="fas fa-hand-pointer"></i></button>
             <div class="tool-submenu" aria-label="Ferramentas de canvas">
                 <button class="tool-btn active" onclick="setTool('select', this)" title="Mover Tokens (S)"><i class="fas fa-hand-pointer"></i></button>
                 <button class="tool-btn" onclick="setTool('map-edit', this)" title="Mover Mapas (M)"><i class="fas fa-map"></i></button>
@@ -419,6 +419,10 @@
                         <i class="fas fa-user-circle"></i>
                     </button>
 
+                    <button class="portrait-preview-btn" onclick="openCharacterPortraitPreview()" title="Ampliar retrato">
+                        <i class="fas fa-eye"></i>
+                    </button>
+
                     <!-- Token para o Mapa (Flutuante dentro do retrato para poupar espaco) -->
                     <div class="portrait-token" onclick="abrirSeletorRetrato('token')" title="Trocar Arte do Token do Mapa">
                         <img id="char-token-img" src="" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100%\' height=\'100%\'><rect width=\'100%\' height=\'100%\' fill=\'%23111827\'/><text x=\'50%\' y=\'50%\' fill=\'%23374151\' font-size=\'20\' text-anchor=\'middle\' dy=\'.3em\' font-family=\'Arial\'>T</text></svg>'">
@@ -428,7 +432,7 @@
                 
                 <div class="vital-box hp card-vida">
                     <div class="vital-label"><i class="fas fa-heart"></i> Vida (Atual/Max)</div>
-                    <div class="vital-inputs"><input type="text" id="hp-atual-input" value="10" onchange="atualizarHPSalvo()" style="transition: color 0.3s, text-shadow 0.3s;"> / <input type="text" id="hp-max-input" value="10" onchange="atualizarHPSalvo()"></div>
+                    <div class="vital-inputs"><input type="text" id="hp-atual-input" value="10" onchange="atualizarHPSalvo()"> / <input type="text" id="hp-max-input" value="10" onchange="atualizarHPSalvo()"></div>
                     <div class="resource-bar"><div class="resource-fill resource-fill--hp" id="sheet-hp-fill"></div></div>
                 </div>
                 <div class="vital-box focus card-foco">
@@ -521,20 +525,20 @@
                     </div>
 
                     <div id="tab-combat" class="tab-content">
-                        <div class="grid-header" style="grid-template-columns: 1fr 1fr;">
+                        <div class="grid-header grid-header--two">
                             <div class="char-card card-fisico"><label>Armadura</label><input type="text" id="char-armor" placeholder="Ex: Armadura Fragmentada"></div>
                             <div class="char-card card-espiritual"><label>Deflexão</label><input type="text" id="char-deflection" placeholder="Valor de Deflexão"></div>
                         </div>
                         
                         <div class="section-title">
                             <i class="fas fa-khanda"></i> Equipamento
-                            <span id="peso-total-display" style="font-size:11px; color:var(--text-dim); font-weight:normal; margin-left:8px;">Peso Total: 0</span>
-                            <button class="btn-add-item" onclick="addEquipamento()"><i class="fas fa-plus"></i></button>
+                            <span id="peso-total-display" class="equipment-weight-total">Peso Total: 0</span>
+                            <button class="btn-add-item" data-sheet-action="add-equipment"><i class="fas fa-plus"></i></button>
                         </div>
                         <div class="equipment-grid" id="equipment-container">
-                            <div class="char-card card-fisico slot-weapon"><label><i class="fas fa-khanda"></i> Mão Principal</label><input type="text" placeholder="Arma 1"><input type="number" class="item-weight" placeholder="Peso" min="0" step="0.1" oninput="calcularPeso()" style="width:60px; margin:4px auto 0; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:var(--accent); font-size:11px; padding:3px; text-align:center; border-radius:4px;"><div class="slot-desc">1d8 + Força</div></div>
-                            <div class="char-card card-fisico slot-weapon"><label><i class="fas fa-shield-alt"></i> Mão Secundária</label><input type="text" placeholder="Arma 2 / Escudo"><input type="number" class="item-weight" placeholder="Peso" min="0" step="0.1" oninput="calcularPeso()" style="width:60px; margin:4px auto 0; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:var(--accent); font-size:11px; padding:3px; text-align:center; border-radius:4px;"><div class="slot-desc">-</div></div>
-                            <div class="char-card card-espiritual slot-relic"><label><i class="fas fa-ring"></i> Relíquia / Foco</label><input type="text" placeholder="Ex: Frasco"><input type="number" class="item-weight" placeholder="Peso" min="0" step="0.1" oninput="calcularPeso()" style="width:60px; margin:4px auto 0; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:var(--accent); font-size:11px; padding:3px; text-align:center; border-radius:4px;"><div class="slot-desc">Cargas: 3/3</div></div>
+                            <div class="char-card card-fisico slot-weapon"><label><i class="fas fa-khanda"></i> Mão Principal</label><input type="text" placeholder="Arma 1"><input type="number" class="item-weight" placeholder="Peso" min="0" step="0.1"><div class="slot-desc">1d8 + Força</div></div>
+                            <div class="char-card card-fisico slot-weapon"><label><i class="fas fa-shield-alt"></i> Mão Secundária</label><input type="text" placeholder="Arma 2 / Escudo"><input type="number" class="item-weight" placeholder="Peso" min="0" step="0.1"><div class="slot-desc">-</div></div>
+                            <div class="char-card card-espiritual slot-relic"><label><i class="fas fa-ring"></i> Relíquia / Foco</label><input type="text" placeholder="Ex: Frasco"><input type="number" class="item-weight" placeholder="Peso" min="0" step="0.1"><div class="slot-desc">Cargas: 3/3</div></div>
                         </div>
 
                         <div class="section-title">
@@ -740,6 +744,7 @@
 
    <div id="token-sound-menu" class="hidden"></div>
     <div id="context-menu" class="hidden">
+        <div class="ctx-item" onclick="openTokenInfoPanel()"><i class="fas fa-circle-info"></i> Informacoes do Token</div>
         <div class="ctx-item" onclick="abrirSonsToken()"><i class="fas fa-volume-up"></i> Sons do Personagem</div>
         <div class="ctx-item" onclick="ativarRedimensionamento()"><i class="fas fa-crop-alt"></i> Redimensionar (Enter p/ Confirmar)</div>
         <div class="ctx-item" onclick="setContextElevation()"><i class="fas fa-sort-amount-up-alt"></i> Definir Elevação</div>

@@ -112,6 +112,43 @@ function renderVttCategoryHeader(title, count = null) {
     `;
 }
 
+function renderVttLibraryOverview({ icon = 'fa-solid fa-layer-group', title = 'Biblioteca', subtitle = '', count = 0 } = {}) {
+    return `
+        <div class="vtt-library-overview">
+            <span class="vtt-library-overview__icon"><i class="${escaparHtmlVtt(icon)}"></i></span>
+            <span class="vtt-library-overview__copy">
+                <strong>${escaparHtmlVtt(title)}</strong>
+                ${subtitle ? `<small>${escaparHtmlVtt(subtitle)}</small>` : ''}
+            </span>
+            <span class="vtt-library-overview__count">${Number(count) || 0}</span>
+        </div>
+    `;
+}
+
+function renderVttEmptyState(message = 'Nenhum recurso encontrado.') {
+    return `
+        <div class="vtt-empty-state vtt-empty-state--library">
+            <i class="fas fa-folder-open"></i>
+            <span>${escaparHtmlVtt(message)}</span>
+        </div>
+    `;
+}
+
+function renderVttGroupedLibrary(groups, renderItem, emptyMessage) {
+    const entries = Object.keys(groups || {}).sort((a, b) => a.localeCompare(b));
+    if (entries.length === 0) return renderVttEmptyState(emptyMessage);
+
+    return entries.map(cat => {
+        const items = [...(groups[cat] || [])].sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+        return `
+            ${renderVttCategoryHeader(cat, items.length)}
+            <div class="vtt-library-stack">
+                ${items.map(item => renderItem(item, cat)).join('') || renderVttEmptyState(emptyMessage)}
+            </div>
+        `;
+    }).join('');
+}
+
 
 
 class MainScene extends Phaser.Scene {
@@ -127,8 +164,9 @@ class MainScene extends Phaser.Scene {
         
         // --- CAMADA DA NEBLINA DE GUERRA (FOG) ---
         this.camadaFog = this.add.layer();
-        this.fogRT = this.add.renderTexture(0, 0, 4096, 4096).setOrigin(0.5).setAlpha(0.9); 
-        this.camadaFog.add(this.fogRT);
+        this.isFogCovered = false;
+        const initialFogSize = this.getMaxFogTextureSize();
+        this.createFogRenderTexture(-initialFogSize / 2, -initialFogSize / 2, initialFogSize, initialFogSize);
         
         this.fogBrush = this.add.graphics().fillStyle(0xffffff, 1).fillCircle(0, 0, PIXELS_POR_UNIDADE * 1.5).setVisible(false);
         this.fogBrushDark = this.add.graphics().fillStyle(0x000000, 1).fillCircle(0, 0, PIXELS_POR_UNIDADE * 1.5).setVisible(false);
@@ -204,7 +242,7 @@ class MainScene extends Phaser.Scene {
                 });
 
                 if (window.api && window.api.syncPing) {
-                    window.api.syncPing(pMundo.x, pMundo.y);
+                    window.api.syncPing({ x: pMundo.x, y: pMundo.y });
                 }
                 return;
             }
@@ -225,7 +263,7 @@ class MainScene extends Phaser.Scene {
                 this.currentDrawingPath.moveTo(pMundo.x, pMundo.y);
                 this.camadaTatico.add(this.currentDrawingPath);
             } else if (this.ferramentaAtual === 'fog') {
-                this.fogRT.erase(this.fogBrush, pMundo.x - this.fogRT.x, pMundo.y - this.fogRT.y);
+                this.applyFogAt(pMundo);
             }
         });
 
@@ -265,6 +303,8 @@ class MainScene extends Phaser.Scene {
                 this.currentDrawingPath.strokePath();
             }
             else if (this.ferramentaAtual === 'fog') {
+                this.applyFogAt(pMundo);
+                /*
                 const relX = pMundo.x - this.fogRT.x + (this.fogRT.width / 2);
                 const relY = pMundo.y - this.fogRT.y + (this.fogRT.height / 2);
                 
@@ -275,6 +315,7 @@ class MainScene extends Phaser.Scene {
                 } else {
                     this.fogRT.draw(this.fogBrushDark, relX, relY); 
                 }
+                */
             }
             else if (this.ferramentaAtual === 'ruler') {
                 this.graficosRegua.clear().lineStyle(2, 0xff6400, 1);
@@ -381,6 +422,210 @@ class MainScene extends Phaser.Scene {
         this.refreshLibrary();
     }
 
+    getMaxFogTextureSize() {
+        const gl = this.game?.renderer?.gl;
+        const gpuLimit = gl ? gl.getParameter(gl.MAX_TEXTURE_SIZE) : 8192;
+        return Math.max(2048, Math.min(gpuLimit || 8192, 8192));
+    }
+
+    createFogRenderTexture(x, y, width, height) {
+        const alpha = this.fogRT ? this.fogRT.alpha : 0.9;
+        if (this.fogRT) {
+            this.camadaFog.remove(this.fogRT, true);
+        }
+
+        this.fogRT = this.add.renderTexture(x, y, width, height).setOrigin(0).setAlpha(alpha);
+        this.camadaFog.add(this.fogRT);
+        return this.fogRT;
+    }
+
+    createFogSnapshot() {
+        if (!this.fogRT?.texture) return null;
+
+        const texture = this.fogRT.texture;
+        const width = Math.floor(texture.width || this.fogRT.width || 0);
+        const height = Math.floor(texture.height || this.fogRT.height || 0);
+
+        if (width <= 0 || height <= 0) return null;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+        if (!ctx) return null;
+
+        if (texture.drawingContext?.framebuffer && this.game?.renderer?.gl) {
+            const renderer = this.game.renderer;
+            const gl = renderer.gl;
+            const framebuffer = texture.drawingContext.framebuffer;
+            const previousFramebuffer = renderer.glWrapper.state.bindings.framebuffer;
+
+            renderer.glWrapper.updateBindingsFramebuffer({ bindings: { framebuffer } });
+
+            const pixels = new Uint8Array(width * height * 4);
+            gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+
+            const imageData = ctx.createImageData(width, height);
+            const data = imageData.data;
+
+            for (let py = 0; py < height; py++) {
+                for (let px = 0; px < width; px++) {
+                    const sourceIndex = ((height - py - 1) * width + px) * 4;
+                    const destIndex = (py * width + px) * 4;
+
+                    data[destIndex] = pixels[sourceIndex];
+                    data[destIndex + 1] = pixels[sourceIndex + 1];
+                    data[destIndex + 2] = pixels[sourceIndex + 2];
+                    data[destIndex + 3] = pixels[sourceIndex + 3];
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+            renderer.glWrapper.updateBindingsFramebuffer({ bindings: { framebuffer: previousFramebuffer } });
+        } else if (texture.canvas) {
+            ctx.drawImage(texture.canvas, 0, 0);
+        } else {
+            return null;
+        }
+
+        return {
+            format: 'renderTexturePng',
+            dataUrl: canvas.toDataURL('image/png'),
+            x: this.fogRT.x,
+            y: this.fogRT.y,
+            width,
+            height,
+            covered: !!this.isFogCovered
+        };
+    }
+
+    restoreFogState(state) {
+        const fogState = state?.fog || {};
+        const alpha = fogState.alpha ?? state?.fogOpacity ?? 0.9;
+        const mode = fogState.mode || 'reveal';
+        const snapshot = fogState.snapshot || null;
+
+        if (window.toolConfig) {
+            window.toolConfig.fogMode = mode;
+        }
+
+        if (!this.fogRT) return;
+
+        if (!snapshot?.dataUrl) {
+            this.fogRT.setAlpha(alpha);
+            this.fogRT.clear();
+            this.isFogCovered = false;
+            return;
+        }
+
+        const width = Math.floor(snapshot.width || 0);
+        const height = Math.floor(snapshot.height || 0);
+
+        if (width <= 0 || height <= 0) {
+            this.fogRT.setAlpha(alpha);
+            this.isFogCovered = !!snapshot.covered;
+            return;
+        }
+
+        const x = Number.isFinite(snapshot.x) ? snapshot.x : this.fogRT.x;
+        const y = Number.isFinite(snapshot.y) ? snapshot.y : this.fogRT.y;
+        const key = `fog_snapshot_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+
+        this.createFogRenderTexture(x, y, width, height);
+        this.fogRT.setAlpha(alpha);
+        this.fogRT.clear();
+        this.isFogCovered = !!snapshot.covered;
+
+        const drawSnapshot = () => {
+            if (!this.textures.exists(key) || !this.fogRT) return;
+
+            this.fogRT.clear();
+            this.fogRT.draw(key, width / 2, height / 2);
+            this.fogRT.setAlpha(alpha);
+            this.textures.remove(key);
+        };
+        const handleSnapshotLoad = (loadedKey) => {
+            if (loadedKey !== key) return;
+            this.textures.off('onload', handleSnapshotLoad);
+            this.textures.off('onerror', handleSnapshotError);
+            drawSnapshot();
+        };
+        const handleSnapshotError = (loadedKey) => {
+            if (loadedKey !== key) return;
+            this.textures.off('onload', handleSnapshotLoad);
+            this.textures.off('onerror', handleSnapshotError);
+            if (this.fogRT) this.fogRT.setAlpha(alpha);
+        };
+
+        this.textures.on('onload', handleSnapshotLoad);
+        this.textures.on('onerror', handleSnapshotError);
+        this.textures.addBase64(key, snapshot.dataUrl);
+    }
+
+    getFogBounds() {
+        const padding = 1024;
+        const maxSize = this.getMaxFogTextureSize();
+        const maps = Array.isArray(this.mapasAtivos) ? this.mapasAtivos.filter(m => m?.getBounds) : [];
+
+        if (!maps.length) {
+            const view = this.cameras.main.worldView;
+            return {
+                x: view.centerX - maxSize / 2,
+                y: view.centerY - maxSize / 2,
+                width: maxSize,
+                height: maxSize
+            };
+        }
+
+        const union = maps.reduce((bounds, map) => {
+            const rect = map.getBounds();
+            return bounds ? Phaser.Geom.Rectangle.Union(bounds, rect) : rect;
+        }, null);
+        const width = Math.min(maxSize, Math.max(2048, Math.ceil(union.width + padding * 2)));
+        const height = Math.min(maxSize, Math.max(2048, Math.ceil(union.height + padding * 2)));
+
+        return {
+            x: Math.floor(union.centerX - width / 2),
+            y: Math.floor(union.centerY - height / 2),
+            width,
+            height
+        };
+    }
+
+    resetFogArea(covered = this.isFogCovered) {
+        const bounds = this.getFogBounds();
+        this.createFogRenderTexture(bounds.x, bounds.y, bounds.width, bounds.height);
+        this.fogRT.clear();
+
+        if (covered) {
+            this.fogRT.fill(0x000000, 1);
+        }
+
+        this.isFogCovered = !!covered;
+    }
+
+    getFogLocalPoint(worldPoint) {
+        return {
+            x: worldPoint.x - this.fogRT.x,
+            y: worldPoint.y - this.fogRT.y
+        };
+    }
+
+    applyFogAt(worldPoint) {
+        if (!this.fogRT) return;
+
+        const localPoint = this.getFogLocalPoint(worldPoint);
+        const mode = window.toolConfig?.fogMode || 'reveal';
+
+        if (mode === 'reveal') {
+            this.fogRT.erase(this.fogBrush, localPoint.x, localPoint.y);
+        } else {
+            this.fogRT.draw(this.fogBrushDark, localPoint.x, localPoint.y);
+            this.isFogCovered = true;
+        }
+    }
+
     mudarFerramenta(nome) {
         this.ferramentaAtual = nome;
         
@@ -411,12 +656,12 @@ class MainScene extends Phaser.Scene {
 
     // --- CONTROLES DA NEBLINA ---
     coverFog() {
-        this.fogRT.clear();
-        this.fogRT.fill(0x000000, 1); // Preto total
+        this.resetFogArea(true);
     }
     
     clearFog() {
-        this.fogRT.clear(); 
+        if (this.fogRT) this.fogRT.clear();
+        this.isFogCovered = false;
     }
 
 // --- CONTROLES DE CLIMA DINÂMICO ---
@@ -467,7 +712,8 @@ class MainScene extends Phaser.Scene {
             weather: this.currentWeather || null,
             fog: {
                 alpha: this.fogRT ? this.fogRT.alpha : 0.9,
-                mode: window.toolConfig ? window.toolConfig.fogMode : 'reveal'
+                mode: window.toolConfig ? window.toolConfig.fogMode : 'reveal',
+                snapshot: this.createFogSnapshot()
             },
             fogOpacity: this.fogRT ? this.fogRT.alpha : 0.9,
             mapas: [],
@@ -482,7 +728,7 @@ class MainScene extends Phaser.Scene {
             },
             pinnedNotes: notesState.pinnedNotes || [],
             revealedNotes: notesState.revealedNotes || [],
-            sceneNotes: [
+            sceneNotes: notesState.sceneNotes || [
                 ...(notesState.pinnedNotes || []),
                 ...(notesState.revealedNotes || []).filter(note => !(notesState.pinnedNotes || []).some(pinned => pinned.id === note.id))
             ],
@@ -560,6 +806,7 @@ class MainScene extends Phaser.Scene {
         }
         if (this.fogRT) {
             this.fogRT.setAlpha(state.fog?.alpha ?? state.fogOpacity ?? 0.9);
+            if (window.toolConfig && state.fog?.mode) window.toolConfig.fogMode = state.fog.mode;
         }
         if (state.weather && this.setAdvancedWeather) {
             this.setAdvancedWeather(state.weather);
@@ -594,6 +841,8 @@ class MainScene extends Phaser.Scene {
             state.drawings.forEach(d => this.restoreDrawing(d));
         }
         
+        const restoreFogAfterAssets = () => this.restoreFogState(state);
+
         state.mapas.forEach(m => {
             const ext = m.path.split('.').pop().toLowerCase();
             const isVideo = ['webm', 'mp4'].includes(ext);
@@ -617,8 +866,14 @@ class MainScene extends Phaser.Scene {
                 if (m.scaleX) novoMapa.setScale(m.scaleX, m.scaleY || m.scaleX);
                 this.mapasAtivos.push(novoMapa);
                 this.camadaMapa.add(novoMapa);
+                this.resetFogArea(this.isFogCovered);
             });
         });
+        if (state.mapas.length > 0) {
+            this.load.once('complete', restoreFogAfterAssets);
+        } else {
+            restoreFogAfterAssets();
+        }
         this.load.start();
 
         state.tokens.forEach(t => {
@@ -729,11 +984,16 @@ class MainScene extends Phaser.Scene {
         // Renderizar Vídeos Dinâmicos com preview + nome exato do arquivo
         if (videoList && window.api.getVideos) {
             const videos = ordenarPorNome(await window.api.getVideos());
+            const videosByCat = agruparPorCategoria(videos);
 
             videoList.innerHTML = `
-                ${renderVttCategoryHeader('Cenas e vídeos', videos.length)}
-                <div class="vtt-library-stack">
-                    ${videos.map(v => {
+                ${renderVttLibraryOverview({
+                    icon: 'fa-solid fa-film',
+                    title: 'Cenas e videos',
+                    subtitle: 'Cinematicas, loops e referencias visuais',
+                    count: videos.length
+                })}
+                ${renderVttGroupedLibrary(videosByCat, v => {
                         const path = normalizarCaminhoVtt(v.path);
                         const fileName = nomeArquivoVtt(v, 'video-sem-nome');
                         const title = limparExtensaoVtt(fileName);
@@ -757,19 +1017,23 @@ class MainScene extends Phaser.Scene {
                                 </button>
                             `
                         });
-                    }).join('')}
-                </div>
+                    }, 'Nenhum video cadastrado.')}
             `;
         }
 
         // Renderizar Imagens Dinâmicas com preview + nome exato do arquivo
         if (imgList && window.api.getImages) {
             const imagens = ordenarPorNome(await window.api.getImages());
+            const imagensByCat = agruparPorCategoria(imagens);
 
             imgList.innerHTML = `
-                ${renderVttCategoryHeader('Handouts visuais', imagens.length)}
-                <div class="vtt-library-stack">
-                    ${imagens.map(i => {
+                ${renderVttLibraryOverview({
+                    icon: 'fa-solid fa-image',
+                    title: 'Handouts visuais',
+                    subtitle: 'Pistas, retratos, props e imagens para revelar',
+                    count: imagens.length
+                })}
+                ${renderVttGroupedLibrary(imagensByCat, i => {
                         const path = normalizarCaminhoVtt(i.path);
                         const fileName = nomeArquivoVtt(i, 'imagem-sem-nome');
                         const title = limparExtensaoVtt(fileName);
@@ -793,8 +1057,7 @@ class MainScene extends Phaser.Scene {
                                 </button>
                             `
                         });
-                    }).join('')}
-                </div>
+                    }, 'Nenhuma imagem cadastrada.')}
             `;
         }
 
@@ -802,13 +1065,14 @@ class MainScene extends Phaser.Scene {
         if (audioList && audios) {
             const audiosByCat = agruparPorCategoria(audios);
 
-            audioList.innerHTML = Object.keys(audiosByCat).sort().map(cat => {
-                const itensDaCategoria = ordenarPorNome(audiosByCat[cat]);
-
-                return `
-                    ${renderVttCategoryHeader(cat, itensDaCategoria.length)}
-                    <div class="vtt-library-stack">
-                        ${itensDaCategoria.map(a => {
+            audioList.innerHTML = `
+                ${renderVttLibraryOverview({
+                    icon: 'fa-solid fa-music',
+                    title: 'Audio da mesa',
+                    subtitle: 'Musicas, ambientes e efeitos por pasta',
+                    count: audios.length
+                })}
+                ${renderVttGroupedLibrary(audiosByCat, (a, cat) => {
                             const path = normalizarCaminhoVtt(a.path);
                             const fileName = nomeArquivoVtt(a, 'audio-sem-nome');
                             const title = limparExtensaoVtt(fileName);
@@ -834,10 +1098,8 @@ class MainScene extends Phaser.Scene {
                                     </button>
                                 `
                             });
-                        }).join('')}
-                    </div>
-                `;
-            }).join('');
+                        }, 'Nenhum audio cadastrado.')}
+            `;
         }
 
         const mapsByCat = agruparPorCategoria(maps);
@@ -847,13 +1109,14 @@ class MainScene extends Phaser.Scene {
 
         // 2. DEPOIS RENDERIZAMOS OS MAPAS com preview + nome exato do arquivo
         if (mapList) {
-            mapList.innerHTML = Object.keys(mapsByCat).sort().map(cat => {
-                const itensDaCategoria = ordenarPorNome(mapsByCat[cat]);
-
-                return `
-                    ${renderVttCategoryHeader(cat, itensDaCategoria.length)}
-                    <div class="vtt-library-stack">
-                        ${itensDaCategoria.map(m => {
+            mapList.innerHTML = `
+                ${renderVttLibraryOverview({
+                    icon: 'fa-solid fa-map-location-dot',
+                    title: 'Mapas e cenarios',
+                    subtitle: 'Cenarios estaticos e mapas animados agrupados por pasta',
+                    count: maps.length
+                })}
+                ${renderVttGroupedLibrary(mapsByCat, (m, cat) => {
                             const path = normalizarCaminhoVtt(m.path);
                             const fileName = nomeArquivoVtt(m, 'mapa-sem-nome');
                             const title = limparExtensaoVtt(fileName);
@@ -874,10 +1137,8 @@ class MainScene extends Phaser.Scene {
                                 variant: 'map',
                                 onClick: `phaserScene.carregarMapa('${jsPath}', '${jsFileName}')`
                             });
-                        }).join('')}
-                    </div>
-                `;
-            }).join('');
+                        }, 'Nenhum mapa cadastrado.')}
+            `;
         }
 
         // 3. Chama a função oficial do HTML para gerenciar a lista de atores/tokens,
@@ -925,6 +1186,7 @@ class MainScene extends Phaser.Scene {
             if (!this.mapasAtivos) this.mapasAtivos = [];
             this.mapasAtivos.push(novoMapa);
             this.camadaMapa.add(novoMapa);
+            this.resetFogArea(this.isFogCovered);
         });
         this.load.start();
     }
@@ -1034,9 +1296,8 @@ class MainScene extends Phaser.Scene {
             token.x = dragX;
             token.y = dragY;
             syncExtras();
-            const relX = token.x - this.fogRT.x + (this.fogRT.width / 2);
-            const relY = token.y - this.fogRT.y + (this.fogRT.height / 2);
-            this.fogRT.erase(this.fogBrush, relX, relY);
+            const fogPoint = this.getFogLocalPoint(token);
+            this.fogRT.erase(this.fogBrush, fogPoint.x, fogPoint.y);
         });
 
         token.on('dragend', () => {
@@ -1253,12 +1514,12 @@ class MainScene extends Phaser.Scene {
     }
 
     clearFog() {
-        this.fogRT.clear();
+        if (this.fogRT) this.fogRT.clear();
+        this.isFogCovered = false;
     }
 
     coverFog() {
-        this.fogRT.clear();
-        this.fogRT.fill(0x000000, 1);
+        this.resetFogArea(true);
     }
 
     handleAltClickPing(pointer) {

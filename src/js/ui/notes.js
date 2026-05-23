@@ -75,6 +75,10 @@ function getSceneRevealedNotes(sceneId = getCurrentSceneId()) {
     return campaignNotes.filter(note => note.isRevealed && !note.isArchived && noteBelongsToScene(note, sceneId));
 }
 
+function getSceneNotes(sceneId = getCurrentSceneId()) {
+    return campaignNotes.filter(note => !note.isArchived && noteBelongsToScene(note, sceneId));
+}
+
 function buildNotePayload(note) {
     return {
         id: note.id,
@@ -98,7 +102,8 @@ function getSceneAwareNotesState(sceneId = getCurrentSceneId()) {
         sceneId,
         sceneName: getCurrentSceneName(),
         pinnedNotes: getScenePinnedNotes(sceneId).map(buildNotePayload),
-        revealedNotes: getSceneRevealedNotes(sceneId).map(buildNotePayload)
+        revealedNotes: getSceneRevealedNotes(sceneId).map(buildNotePayload),
+        sceneNotes: getSceneNotes(sceneId).map(buildNotePayload)
     };
 }
 
@@ -476,28 +481,83 @@ function setCurrentSceneContext(sceneName, sceneId) {
 function restoreSceneNotesFromBoardState(state) {
     if (!state) return;
     setCurrentSceneContext(state.sceneName || state.sceneDirector?.sceneName || '', state.sceneId);
-    const incoming = [
-        ...(Array.isArray(state.pinnedNotes) ? state.pinnedNotes : []),
-        ...(Array.isArray(state.revealedNotes) ? state.revealedNotes : []),
-        ...(Array.isArray(state.sceneNotes) ? state.sceneNotes : []),
-        ...(Array.isArray(state.sceneDirector?.pinnedNotes) ? state.sceneDirector.pinnedNotes : [])
-    ];
-    if (incoming.length === 0) return;
+    const sceneId = getCurrentSceneId();
+    const sceneName = getCurrentSceneName();
+    const hasPinnedState = Array.isArray(state.pinnedNotes);
+    const hasRevealedState = Array.isArray(state.revealedNotes);
+    const pinnedIds = new Set();
+    const revealedIds = new Set();
+    const notesById = new Map();
 
-    incoming.forEach(rawNote => {
-        const note = normalizeNote(rawNote);
+    function rememberNote(rawNote, overrides = {}) {
+        if (!rawNote || typeof rawNote !== 'object') return;
+        const note = normalizeNote({
+            ...rawNote,
+            ...overrides,
+            sceneId: rawNote.sceneId || sceneId,
+            sceneName: rawNote.sceneName || sceneName
+        });
+        const existing = notesById.get(note.id);
+        notesById.set(note.id, existing ? normalizeNote({
+            ...existing,
+            ...note,
+            isPinned: existing.isPinned || note.isPinned,
+            isRevealed: existing.isRevealed || note.isRevealed
+        }) : note);
+    }
+
+    if (hasPinnedState) {
+        state.pinnedNotes.forEach(rawNote => {
+            if (rawNote?.id) pinnedIds.add(rawNote.id);
+            rememberNote(rawNote, { isPinned: true });
+        });
+    }
+
+    if (hasRevealedState) {
+        state.revealedNotes.forEach(rawNote => {
+            if (rawNote?.id) revealedIds.add(rawNote.id);
+            rememberNote(rawNote, { isRevealed: true });
+        });
+    }
+
+    if (Array.isArray(state.sceneNotes)) {
+        state.sceneNotes.forEach(rawNote => rememberNote(rawNote));
+    }
+
+    if (Array.isArray(state.sceneDirector?.pinnedNotes)) {
+        state.sceneDirector.pinnedNotes.forEach(rawNote => rememberNote(rawNote, { isPinned: true }));
+    }
+
+    if (hasPinnedState || hasRevealedState) {
+        campaignNotes = campaignNotes.map(rawNote => {
+            const note = normalizeNote(rawNote);
+            if (!noteBelongsToScene(note, sceneId)) return note;
+            return normalizeNote({
+                ...note,
+                isPinned: hasPinnedState ? pinnedIds.has(note.id) : note.isPinned,
+                isRevealed: hasRevealedState ? revealedIds.has(note.id) : note.isRevealed
+            });
+        });
+    }
+
+    if (notesById.size === 0 && !hasPinnedState && !hasRevealedState) return;
+
+    notesById.forEach(note => {
         const existingIndex = campaignNotes.findIndex(item => item.id === note.id);
         if (existingIndex >= 0) {
             campaignNotes[existingIndex] = normalizeNote({
                 ...campaignNotes[existingIndex],
-                sceneId: note.sceneId || getCurrentSceneId(),
-                sceneName: note.sceneName || getCurrentSceneName(),
-                isPinned: campaignNotes[existingIndex].isPinned || note.isPinned,
-                isRevealed: campaignNotes[existingIndex].isRevealed || note.isRevealed,
-                updatedAt: campaignNotes[existingIndex].updatedAt || note.updatedAt
+                ...note,
+                isPinned: hasPinnedState ? pinnedIds.has(note.id) : note.isPinned,
+                isRevealed: hasRevealedState ? revealedIds.has(note.id) : note.isRevealed,
+                updatedAt: note.updatedAt || campaignNotes[existingIndex].updatedAt
             });
         } else {
-            campaignNotes.push(note);
+            campaignNotes.push(normalizeNote({
+                ...note,
+                isPinned: hasPinnedState ? pinnedIds.has(note.id) : note.isPinned,
+                isRevealed: hasRevealedState ? revealedIds.has(note.id) : note.isRevealed
+            }));
         }
     });
     persistNotes();

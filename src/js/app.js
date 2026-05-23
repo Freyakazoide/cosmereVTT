@@ -72,9 +72,54 @@
             openFlyoutPanel(targetId, btn?.dataset.title || btn?.title || tab);
         }
 
-        function toggleToolSubmenu() {
+        function toggleToolSubmenu(event) {
+            if (event) event.stopPropagation();
             const submenu = document.querySelector('.tool-group-wrapper .tool-submenu');
-            if (submenu) submenu.classList.toggle('is-open');
+            const wrapper = submenu?.closest('.tool-group-wrapper');
+            if (!submenu || !wrapper) return;
+
+            wrapper.classList.remove('is-hover-open');
+            const shouldOpen = !submenu.classList.contains('is-open');
+            submenu.classList.toggle('is-open', shouldOpen);
+            wrapper.classList.toggle('is-click-open', shouldOpen);
+            document.getElementById('master-tool-btn')?.setAttribute('aria-expanded', String(shouldOpen));
+        }
+
+        function setupToolSubmenuHoverDelay() {
+            const wrapper = document.querySelector('.tool-group-wrapper');
+            const submenu = wrapper?.querySelector('.tool-submenu');
+            if (!wrapper || !submenu || wrapper.dataset.hoverDelayReady === 'true') return;
+
+            let hoverTimer = null;
+            const openDelay = 350;
+
+            wrapper.addEventListener('mouseenter', () => {
+                if (wrapper.classList.contains('is-click-open')) return;
+                window.clearTimeout(hoverTimer);
+                hoverTimer = window.setTimeout(() => {
+                    wrapper.classList.add('is-hover-open');
+                }, openDelay);
+            });
+
+            wrapper.addEventListener('mouseleave', () => {
+                window.clearTimeout(hoverTimer);
+                if (wrapper.classList.contains('is-click-open')) return;
+                wrapper.classList.remove('is-hover-open');
+                submenu.classList.remove('is-open');
+            });
+
+            wrapper.addEventListener('click', (event) => {
+                event.stopPropagation();
+            });
+
+            document.addEventListener('click', (event) => {
+                if (event.target.closest('.tool-group-wrapper')) return;
+                wrapper.classList.remove('is-hover-open', 'is-click-open');
+                submenu.classList.remove('is-open');
+                document.getElementById('master-tool-btn')?.setAttribute('aria-expanded', 'false');
+            });
+
+            wrapper.dataset.hoverDelayReady = 'true';
         }
 
         function setupVttTooltips() {
@@ -98,35 +143,46 @@
     document.querySelectorAll('.tool-btn, .tab-btn, .master-tool-btn').forEach(btn => {
         const nativeTitle = btn.getAttribute('title');
         const dataTitle = btn.dataset.title;
-        const label = btn.dataset.vttTooltip || dataTitle || nativeTitle || btn.getAttribute('aria-label');
+        const label = btn.dataset.vttTooltip || btn.dataset.tooltip || dataTitle || nativeTitle || btn.getAttribute('aria-label');
 
         if (!label) return;
 
         btn.dataset.vttTooltip = label;
         btn.setAttribute('aria-label', label);
         btn.removeAttribute('title');
+        delete btn.dataset.tooltip;
 
         if (!btn.dataset.vttDesc) {
             btn.dataset.vttDesc = getVttTooltipDescription(label);
         }
 
+        if (btn.dataset.vttTooltipReady === 'true') return;
+
+        let tooltipTimer = null;
+
         btn.addEventListener('mouseenter', () => {
+            window.clearTimeout(tooltipTimer);
             tooltipTitle.textContent = btn.dataset.vttTooltip || '';
             tooltipDesc.textContent = btn.dataset.vttDesc || '';
             tooltipKicker.textContent = btn.closest('.tool-submenu') ? 'Ferramenta' : 'Painel';
-
-            tooltip.classList.add('is-visible');
 
             const rect = btn.getBoundingClientRect();
             const top = rect.top + rect.height / 2;
 
             tooltip.style.left = `${rect.right + 14}px`;
             tooltip.style.top = `${top}px`;
+
+            tooltipTimer = window.setTimeout(() => {
+                tooltip.classList.add('is-visible');
+            }, 450);
         });
 
         btn.addEventListener('mouseleave', () => {
+            window.clearTimeout(tooltipTimer);
             tooltip.classList.remove('is-visible');
         });
+
+        btn.dataset.vttTooltipReady = 'true';
     });
 }
 
@@ -253,6 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     setupVttTooltips();
+    setupToolSubmenuHoverDelay();
     setupFlyoutItemEnhancer();
     closeFlyoutPanel();
 });
@@ -293,7 +350,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 masterToolBtn.removeAttribute('title');
             }
             const submenu = btnElement?.closest('.tool-submenu');
-            if (submenu) submenu.classList.remove('is-open');
+            if (submenu) {
+                submenu.classList.remove('is-open');
+                submenu.closest('.tool-group-wrapper')?.classList.remove('is-hover-open', 'is-click-open');
+                document.getElementById('master-tool-btn')?.setAttribute('aria-expanded', 'false');
+            }
             
             const optionsPanel = document.getElementById('tool-options');
             optionsPanel.innerHTML = '';
@@ -521,6 +582,95 @@ document.addEventListener('DOMContentLoaded', () => {
             if(window.phaserScene && activeTokenForContext) window.phaserScene.setTokenElevation(activeTokenForContext, val);
             document.getElementById('context-menu').classList.add('hidden');
         }
+        function escapeTokenInfoHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char]));
+        }
+
+        function openTokenInfoPanel() {
+            if (!activeTokenForContext) return;
+
+            document.getElementById('context-menu')?.classList.add('hidden');
+            document.querySelector('.token-info-panel')?.remove();
+
+            const token = activeTokenForContext;
+            const hpAtual = Number.isFinite(Number(token.hpAtual)) ? Number(token.hpAtual) : '';
+            const hpMax = Number.isFinite(Number(token.hpMax)) ? Number(token.hpMax) : '';
+            const elevation = token.elevText?.text ? String(token.elevText.text).replace(/m$/i, '') : '';
+            const panel = document.createElement('aside');
+            panel.className = 'token-info-panel';
+            panel.innerHTML = `
+                <header class="token-info-panel__header">
+                    <strong>Token</strong>
+                    <button class="ui-icon-btn" type="button" data-token-info-action="close" title="Fechar"><i class="fas fa-times"></i></button>
+                </header>
+                <label class="token-info-field">
+                    <span>Nome</span>
+                    <input class="vtt-input" id="token-info-name" type="text" value="${escapeTokenInfoHtml(token.charName || '')}">
+                </label>
+                <div class="token-info-grid">
+                    <label class="token-info-field">
+                        <span>HP atual</span>
+                        <input class="vtt-input" id="token-info-hp" type="number" value="${escapeTokenInfoHtml(hpAtual)}">
+                    </label>
+                    <label class="token-info-field">
+                        <span>HP max</span>
+                        <input class="vtt-input" id="token-info-hpmax" type="number" value="${escapeTokenInfoHtml(hpMax)}">
+                    </label>
+                    <label class="token-info-field">
+                        <span>Elevacao</span>
+                        <input class="vtt-input" id="token-info-elevation" type="text" value="${escapeTokenInfoHtml(elevation)}" placeholder="Ex: 3">
+                    </label>
+                </div>
+                <label class="token-info-field">
+                    <span>Notas</span>
+                    <textarea class="vtt-textarea" id="token-info-notes" placeholder="Informacoes rapidas deste token...">${escapeTokenInfoHtml(token.notes || '')}</textarea>
+                </label>
+                <div class="token-info-panel__actions">
+                    <button class="ui-btn" type="button" data-token-info-action="close">Cancelar</button>
+                    <button class="ui-btn ui-btn--primary" type="button" data-token-info-action="save"><i class="fas fa-save"></i> Salvar</button>
+                </div>
+            `;
+
+            panel.addEventListener('click', event => {
+                const action = event.target.closest('[data-token-info-action]')?.dataset.tokenInfoAction;
+                if (!action) return;
+
+                if (action === 'close') {
+                    panel.remove();
+                    return;
+                }
+
+                if (action === 'save') {
+                    const name = document.getElementById('token-info-name')?.value.trim();
+                    const hp = parseInt(document.getElementById('token-info-hp')?.value, 10);
+                    const hpMaximum = parseInt(document.getElementById('token-info-hpmax')?.value, 10);
+                    const elev = document.getElementById('token-info-elevation')?.value.trim();
+                    const notes = document.getElementById('token-info-notes')?.value || '';
+
+                    if (name) token.charName = name;
+                    token.notes = notes;
+                    if (window.phaserScene) {
+                        window.phaserScene.setTokenElevation(token, elev || '');
+                        if (Number.isFinite(hp) && Number.isFinite(hpMaximum)) {
+                            window.phaserScene.updateTokenHP(token.tokenId, hp, hpMaximum);
+                        }
+                    }
+                    if (typeof addChatMessage === 'function') {
+                        addChatMessage('Sistema', `Token <strong>${escapeTokenInfoHtml(token.charName || 'sem nome')}</strong> atualizado.`, '#94a3b8');
+                    }
+                    panel.remove();
+                }
+            });
+
+            document.body.appendChild(panel);
+        }
+
         function setContextAura(hexColor, condicaoLabel, emoji) {
     if (!window.phaserScene || !activeTokenForContext) return;
 

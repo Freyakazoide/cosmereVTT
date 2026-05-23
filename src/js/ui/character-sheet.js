@@ -15,34 +15,71 @@
             { nome: "PRESENÇA", pericias: ["Dissimulação", "Liderança", "Persuasão"], classe: "attr-presenca" }
         ];
 
+        function escapeSheetHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char]));
+        }
+
+        function renderSkillDots(rank = 0) {
+            let dots = '';
+            for (let i = 0; i < 9; i++) {
+                dots += `<button type="button" class="skill-dot ${i < rank ? 'filled' : ''}" data-action="toggle-skill-dot" aria-label="Nivel ${i + 1}"></button>`;
+            }
+            return dots;
+        }
+
+        function renderSkillRow(name, rank = 0, rollable = false) {
+            const safeName = escapeSheetHtml(name);
+            const rollClass = rollable ? ' rollable' : '';
+            const rollAttrs = rollable ? ` data-action="roll-skill" title="Clique para rolar ${safeName}"` : '';
+
+            return `
+                <div class="skill-row">
+                    <span class="skill-name">
+                        <span class="s-text${rollClass}"${rollAttrs}>${safeName}</span>
+                        <button type="button" class="skill-delete-btn" data-action="delete-skill" title="Remover pericia" aria-label="Remover pericia">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </span>
+                    <div class="skill-rank">${renderSkillDots(rank)}</div>
+                </div>
+            `;
+        }
+
+        function renderAttrHeader(attrName, value = 10, includeRoll = false) {
+            const safeName = escapeSheetHtml(attrName);
+            return `
+                <div class="attr-header">
+                    <span class="attr-title">
+                        ${safeName}
+                        <button type="button" class="attr-add-skill" data-action="add-skill" data-attr-name="${safeName}" title="Adicionar pericia" aria-label="Adicionar pericia">
+                            <i class="fas fa-plus-circle"></i>
+                        </button>
+                        ${includeRoll ? `<button type="button" class="attr-roll-btn" data-action="roll-attr" data-attr-name="${safeName}" title="Rolar teste de ${safeName}">1d20</button>` : ''}
+                    </span>
+                    <input type="text" class="attr-value-input" value="${escapeSheetHtml(value)}">
+                    <span class="attr-mod"></span>
+                </div>
+            `;
+        }
+
         function renderizarAtributosEPericias() {
             const container = document.getElementById('dynamic-skills-container');
             container.innerHTML = '';
             
             atributos_rpg.forEach(attr => {
                 let periciasHTML = attr.pericias.map(pericia => {
-                    let dots = '';
-                    for(let i=1; i<=9; i++) { // 9 Pontos
-                        dots += `<div class="skill-dot" onclick="toggleDot(this)"></div>`;
-                    }
-                    return `
-                        <div class="skill-row">
-                            <span class="skill-name" style="display:flex; align-items:center; gap:5px;">
-                                <span class="s-text">${pericia}</span>
-                                <i class="fas fa-trash" style="font-size:10px; color:#ef4444; cursor:pointer; opacity:0.3;" onclick="this.parentElement.parentElement.remove();"></i>
-                            </span>
-                            <div class="skill-rank">${dots}</div>
-                        </div>
-                    `;
+                    return renderSkillRow(pericia);
                 }).join('');
 
                 container.innerHTML += `
                     <div class="attr-block ${attr.classe}" data-attr-name="${attr.nome}">
-                        <div class="attr-header">
-                            <span style="display:flex; align-items:center; gap:8px;">${attr.nome} <i class="fas fa-plus-circle" style="cursor:pointer; font-size:14px; color:var(--accent)" onclick="addNovaPericiaInput('${attr.nome}')"></i></span>
-                            <input type="text" value="10" oninput="atualizarModAtributo(this)">
-                            <span class="attr-mod" style="font-size:12px; color:var(--accent); font-weight:bold; margin-left:4px;"></span>
-                        </div>
+                        ${renderAttrHeader(attr.nome)}
                         <div class="attr-skills">${periciasHTML}</div>
                     </div>
                 `;
@@ -69,18 +106,8 @@
             // CORREÇÃO: data-attr-name
             const block = document.querySelector(`.attr-block[data-attr-name="${atributoAlvoParaPericia}"] .attr-skills`);
             if(block) {
-                let dots = '';
-                for(let i=0; i<9; i++) {
-                    dots += `<div class="skill-dot" onclick="toggleDot(this)"></div>`;
-                }
-                const div = document.createElement('div');
-                div.className = 'skill-row';
                 // CORREÇÃO: removido o salvarFichaCompleta() da lixeira
-                div.innerHTML = `
-                    <span class="skill-name" style="display:flex; align-items:center; gap:5px;"><span class="s-text">${nome}</span> <i class="fas fa-trash" style="font-size:10px; color:#ef4444; cursor:pointer; opacity:0.3;" onclick="this.parentElement.parentElement.remove();"></i></span>
-                    <div class="skill-rank">${dots}</div>
-                `;
-                block.appendChild(div);
+                block.insertAdjacentHTML('beforeend', renderSkillRow(nome));
             }
             fecharModalNovaPericia();
         }
@@ -90,6 +117,152 @@
             if (e.key === 'Enter') confirmarNovaPericia();
             else if (e.key === 'Escape') fecharModalNovaPericia();
         });
+
+        function getHpStateClass(hpPct) {
+            if (hpPct > 50) return 'hp-state-good';
+            if (hpPct > 20) return 'hp-state-warning';
+            return 'hp-state-danger';
+        }
+
+        function installCharacterSheetDelegates() {
+            if (window.characterSheetDelegatesReady) return;
+            window.characterSheetDelegatesReady = true;
+
+            document.addEventListener('click', (event) => {
+                const skillDot = event.target.closest('.skill-dot[data-action="toggle-skill-dot"]');
+                if (skillDot) {
+                    toggleDot(skillDot);
+                    return;
+                }
+
+                const skillDelete = event.target.closest('[data-action="delete-skill"]');
+                if (skillDelete) {
+                    skillDelete.closest('.skill-row')?.remove();
+                    return;
+                }
+
+                const skillRoll = event.target.closest('[data-action="roll-skill"]');
+                if (skillRoll) {
+                    const row = skillRoll.closest('.skill-row');
+                    rollFromSheet('1d20', getModPericia(row), skillRoll.textContent.trim(), 'pericia');
+                    return;
+                }
+
+                const attrAdd = event.target.closest('[data-action="add-skill"]');
+                if (attrAdd) {
+                    addNovaPericiaInput(attrAdd.dataset.attrName);
+                    return;
+                }
+
+                const attrRoll = event.target.closest('[data-action="roll-attr"]');
+                if (attrRoll) {
+                    rollFromSheet('1d20', getModAtributo(attrRoll.dataset.attrName), attrRoll.dataset.attrName, 'atributo');
+                    return;
+                }
+
+                const deleteItem = event.target.closest('[data-action="delete-sheet-item"]');
+                if (deleteItem) {
+                    prepararDelecao(deleteItem);
+                    return;
+                }
+
+                const equipmentRoll = event.target.closest('[data-action="equipment-roll"]');
+                if (equipmentRoll) {
+                    const mod = equipmentRoll.dataset.rollModAttr ? getModAtributo(equipmentRoll.dataset.rollModAttr) : 0;
+                    rollFromSheet(equipmentRoll.dataset.rollDice, mod, equipmentRoll.dataset.rollLabel, equipmentRoll.dataset.rollType || 'arma');
+                    return;
+                }
+
+                const sheetAction = event.target.closest('[data-sheet-action]');
+                if (sheetAction) {
+                    if (sheetAction.dataset.sheetAction === 'add-equipment') addEquipamento();
+                    return;
+                }
+
+                if (event.target.closest('.roster-hp-input')) return;
+
+                const rosterHp = event.target.closest('[data-roster-action="edit-hp"]');
+                if (rosterHp) {
+                    editarHPInline(event, rosterHp.dataset.characterId);
+                    return;
+                }
+
+                const rosterAction = event.target.closest('[data-roster-action]');
+                if (rosterAction) {
+                    const id = rosterAction.dataset.characterId;
+                    switch (rosterAction.dataset.rosterAction) {
+                        case 'add-token':
+                            if (window.phaserScene) window.phaserScene.adicionarToken(rosterAction.dataset.characterName, rosterAction.dataset.tokenPath || '');
+                            break;
+                        case 'edit':
+                            abrirFicha(rosterAction.dataset.characterName, id);
+                            break;
+                        case 'clone':
+                            duplicateCharacter(id);
+                            break;
+                        case 'delete':
+                            deletarPersonagemBanco(id);
+                            break;
+                    }
+                    return;
+                }
+
+                const combatAction = event.target.closest('[data-combat-action]');
+                if (combatAction) {
+                    const id = combatAction.dataset.characterId;
+                    switch (combatAction.dataset.combatAction) {
+                        case 'close':
+                            closeCombatSheet();
+                            break;
+                        case 'damage':
+                            applyDamage(id, prompt('Dano recebido:', '1'));
+                            break;
+                        case 'healing':
+                            applyHealing(id, prompt('Cura recebida:', '1'));
+                            break;
+                        case 'save':
+                            salvarFichaCompleta(true);
+                            break;
+                        case 'roll-defense':
+                            rollFromSheet('1d20', 0, `Defesa ${combatAction.dataset.label}`, 'atributo');
+                            break;
+                        case 'quick-action':
+                            rollCharacterAction(id, parseInt(combatAction.dataset.actionIndex, 10));
+                            break;
+                        case 'condition':
+                            toggleCondition(id, combatAction.dataset.conditionName);
+                            break;
+                    }
+                }
+            });
+
+            document.addEventListener('input', (event) => {
+                if (event.target.matches('.attr-value-input')) atualizarModAtributo(event.target);
+                if (event.target.matches('.item-weight')) calcularPeso();
+            });
+
+            document.addEventListener('change', (event) => {
+                if (event.target.matches('.combat-notes[data-character-id]')) {
+                    const id = event.target.dataset.characterId;
+                    if (fichasSalvas[id]) {
+                        fichasSalvas[id].combatNotes = event.target.value;
+                        salvarFichaCompleta(true);
+                    }
+                }
+            });
+
+            document.addEventListener('focusout', (event) => {
+                if (event.target.matches('.roster-hp-input')) {
+                    salvarHPInline(event.target, event.target.dataset.characterId);
+                }
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.target.matches('.roster-hp-input') && event.key === 'Enter') event.target.blur();
+            });
+        }
+
+        installCharacterSheetDelegates();
 
         function toggleDot(elemento) {
             const parent = elemento.parentElement;
@@ -220,13 +393,33 @@
             const container = document.getElementById('token-list');
             const termoBusca = document.getElementById('search-actor').value.toLowerCase();
             const tipoFiltro = document.getElementById('filter-actor-type').value;
+            const fichasEntries = Object.entries(fichasSalvas);
+            const atoresFiltrados = fichasEntries.filter(([id, ficha]) => {
+                const nome = ficha.nome || '';
+                const matchBusca = termoBusca === '' || nome.toLowerCase().includes(termoBusca);
+                const matchTipo = tipoFiltro === 'all' || ficha.type === tipoFiltro || (!ficha.type && tipoFiltro === 'PC');
+                return matchBusca && matchTipo;
+            });
 
             container.innerHTML = '';
+            container.insertAdjacentHTML('beforeend', `
+                <div class="vtt-library-overview actor-library-overview">
+                    <span class="vtt-library-overview__icon"><i class="fas fa-users"></i></span>
+                    <span class="vtt-library-overview__copy">
+                        <strong>Fichas e tokens</strong>
+                        <small>${atoresFiltrados.length} visiveis de ${fichasEntries.length} cadastradas</small>
+                    </span>
+                    <span class="vtt-library-overview__count">${atoresFiltrados.length}</span>
+                </div>
+            `);
+
+            let renderedActors = 0;
 
             pastasAtores.forEach(pasta => {
-                const atoresNaPasta = Object.entries(fichasSalvas).filter(([id, ficha]) => {
+                const atoresNaPasta = fichasEntries.filter(([id, ficha]) => {
                     const matchPasta = (ficha.folderId || 'default') === pasta.id;
-                    const matchBusca = termoBusca === '' || ficha.nome.toLowerCase().includes(termoBusca);
+                    const nome = ficha.nome || '';
+                    const matchBusca = termoBusca === '' || nome.toLowerCase().includes(termoBusca);
                     const matchTipo = tipoFiltro === 'all' || ficha.type === tipoFiltro || (!ficha.type && tipoFiltro === 'PC');
                     return matchPasta && matchBusca && matchTipo;
                 });
@@ -234,9 +427,11 @@
                 if (atoresNaPasta.length === 0 && termoBusca !== '') return;
 
                 const header = document.createElement('div');
-                header.className = 'category-header';
-                header.style.cursor = 'pointer';
-                header.innerHTML = `<i class="fas fa-folder${pasta.aberta ? '-open' : ''}" style="margin-right:5px;"></i> ${pasta.nome} (${atoresNaPasta.length})`;
+                header.className = 'category-header actor-folder-header';
+                header.innerHTML = `
+                    <strong><i class="fas fa-folder${pasta.aberta ? '-open' : ''} category-header__icon"></i> ${escapeSheetHtml(pasta.nome)}</strong>
+                    <span>${atoresNaPasta.length}</span>
+                `;
                 header.onclick = () => toggleFolder(pasta.id);
                 container.appendChild(header);
 
@@ -253,42 +448,67 @@
                         };
 
                         const hpPct = ficha.hpMax > 0 ? (ficha.hpAtual / ficha.hpMax) * 100 : 0;
-                        const hpColor = hpPct > 50 ? '#22c55e' : (hpPct > 20 ? '#eab308' : '#ef4444');
+                        const hpStateClass = getHpStateClass(hpPct);
                         const eyeIcon = ficha.isVisibleToPlayers ? 'fa-eye' : 'fa-eye-slash';
                         const eyeColor = ficha.isVisibleToPlayers ? '#22c55e' : '#94a3b8';
+                        const safeName = escapeSheetHtml(ficha.nome);
+                        const safeTrilha = escapeSheetHtml(ficha.trilha || 'Nenhuma Trilha');
+                        const safeTokenPath = escapeSheetHtml((ficha.tokenPath || ficha.portraitPath || '').replace(/\\/g, '/'));
 
                         card.innerHTML = `
-                            <img class="roster-img" src="file://${ficha.portraitPath || ''}" onerror="this.src='../assets/persons/default.png'" style="object-position: ${ficha.portraitPos || '50% 50%'};">
+                            <img class="roster-img" src="file://${escapeSheetHtml(ficha.portraitPath || '')}" onerror="this.src='../assets/persons/default.png'">
                             
                             <div class="roster-info">
-                                <div class="roster-name">${ficha.nome}</div>
-                                <div class="roster-class">${ficha.trilha || 'Nenhuma Trilha'}</div>
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
-                                    <div class="roster-hp-text" onclick="editarHPInline(event, '${id}')" style="font-size:11px; font-weight:bold; color:${hpColor}; cursor:pointer;" title="Clique para editar HP">${ficha.hpAtual}/${ficha.hpMax}</div>
+                                <div class="roster-name">${safeName}</div>
+                                <div class="roster-class">${safeTrilha}</div>
+                                <div class="roster-hp-row">
+                                    <div class="roster-hp-text ${hpStateClass}" data-roster-action="edit-hp" data-character-id="${escapeSheetHtml(id)}" title="Clique para editar HP">${ficha.hpAtual}/${ficha.hpMax}</div>
                                 </div>
-                                <div class="roster-hp-bar"><div class="roster-hp-fill" style="width:${hpPct}%; background:${hpColor};"></div></div>
+                                <div class="roster-hp-bar"><div class="roster-hp-fill ${hpStateClass}"></div></div>
                             </div>
 
                             <div class="roster-actions">
-                                <button class="roster-btn" onclick="if(window.phaserScene) window.phaserScene.adicionarToken('${ficha.nome}', '${(ficha.tokenPath || ficha.portraitPath || '').replace(/\\/g, '/')}')" title="Adicionar ao Mapa" style="background: rgba(34, 197, 94, 0.2); border-color: #22c55e; color: #22c55e;"><i class="fas fa-map-marker-alt"></i></button>
-                                <button class="roster-btn edit" onclick="abrirFicha('${ficha.nome}', '${id}')" title="Editar Ficha"><i class="fas fa-edit"></i></button>
-                                <button class="roster-btn spawn" onclick="duplicateCharacter('${id}')" title="Clonar Ator"><i class="fas fa-clone"></i></button>
-                                <button class="roster-btn delete" onclick="deletarPersonagemBanco('${id}')" title="Deletar"><i class="fas fa-trash"></i></button>
+                                <button class="roster-btn add-token" data-roster-action="add-token" data-character-name="${safeName}" data-token-path="${safeTokenPath}" title="Adicionar ao Mapa"><i class="fas fa-map-marker-alt"></i></button>
+                                <button class="roster-btn edit" data-roster-action="edit" data-character-id="${escapeSheetHtml(id)}" data-character-name="${safeName}" title="Editar Ficha"><i class="fas fa-edit"></i></button>
+                                <button class="roster-btn spawn" data-roster-action="clone" data-character-id="${escapeSheetHtml(id)}" title="Clonar Ator"><i class="fas fa-clone"></i></button>
+                                <button class="roster-btn delete" data-roster-action="delete" data-character-id="${escapeSheetHtml(id)}" title="Deletar"><i class="fas fa-trash"></i></button>
                             </div>
                         `;
+                        const rosterImg = card.querySelector('.roster-img');
+                        if (rosterImg) rosterImg.style.objectPosition = ficha.portraitPos || '50% 50%';
+                        const hpFill = card.querySelector('.roster-hp-fill');
+                        if (hpFill) hpFill.style.width = `${Math.max(0, Math.min(100, hpPct))}%`;
 
                         grid.appendChild(card);
+                        renderedActors++;
                     });
+
+                    if (atoresNaPasta.length === 0) {
+                        grid.innerHTML = `
+                            <div class="vtt-empty-state vtt-empty-state--library">
+                                <i class="fas fa-user-slash"></i>
+                                <span>Nenhuma ficha nesta pasta.</span>
+                            </div>
+                        `;
+                    }
                     container.appendChild(grid);
                 }
             });
+
+            if (renderedActors === 0 && atoresFiltrados.length === 0) {
+                container.insertAdjacentHTML('beforeend', `
+                    <div class="vtt-empty-state vtt-empty-state--library">
+                        <i class="fas fa-magnifying-glass"></i>
+                        <span>Nenhuma ficha encontrada para este filtro.</span>
+                    </div>
+                `);
+            }
         }
 
         function editarHPInline(e, id) {
             e.stopPropagation();
             const div = e.target;
-            const originalVal = div.innerText;
-            div.innerHTML = `<input type="number" value="${fichasSalvas[id].hpAtual}" style="width:50px; font-size:11px; background:rgba(0,0,0,0.8); color:#fff; border:1px solid var(--accent); outline:none; text-align:center; border-radius:3px;" onblur="salvarHPInline(this, '${id}')" onkeydown="if(event.key==='Enter') this.blur();">`;
+            div.innerHTML = `<input type="number" class="roster-hp-input" data-character-id="${escapeSheetHtml(id)}" value="${fichasSalvas[id].hpAtual}">`;
             const input = div.querySelector('input');
             input.focus();
             input.select();
@@ -449,36 +669,13 @@
                 const attrBase = atributos_rpg.find(a => a.nome === attr.nome);
                 const classeAttr = attrBase ? attrBase.classe : 'card-fisico';
                 let pHTML = (attr.pericias || []).map(p => {
-                    let dots = '';
-                    for(let i=0; i<9; i++) {
-                        dots += `<div class="skill-dot ${i < p.rank ? 'filled' : ''}" onclick="toggleDot(this)"></div>`;
-                    }
                     // CORREÇÃO: removido o salvarFichaCompleta() da lixeira
-return `
-    <div class="skill-row">
-        <span class="skill-name" style="display:flex; align-items:center; gap:5px;">
-            <span class="s-text rollable"
-                  title="Clique para rolar ${p.name}"
-                  onclick="rollFromSheet('1d20', getModPericia(this.closest('.skill-row')), '${p.name}', 'pericia')">
-                ${p.name}
-            </span>
-            <i class="fas fa-trash" style="font-size:10px; color:#ef4444; cursor:pointer; opacity:0.3;" onclick="this.parentElement.parentElement.remove();"></i>
-        </span>
-        <div class="skill-rank">${dots}</div>
-    </div>`;
+return renderSkillRow(p.name, p.rank, true);
                 }).join('');
 
 container.innerHTML += `
     <div class="attr-block ${classeAttr}" data-attr-name="${attr.nome}">
-        <div class="attr-header">
-            <span style="display:flex; align-items:center; gap:8px;">
-                ${attr.nome}
-                <i class="fas fa-plus-circle" style="cursor:pointer; font-size:14px; color:var(--accent)" onclick="addNovaPericiaInput('${attr.nome}')"></i>
-                <button class="attr-roll-btn" title="Rolar teste de ${attr.nome}" onclick="rollFromSheet('1d20', getModAtributo('${attr.nome}'), '${attr.nome}', 'atributo')">1d20</button>
-            </span>
-            <input type="text" value="${attr.valor || 10}" oninput="atualizarModAtributo(this)">
-            <span class="attr-mod" style="font-size:12px; color:var(--accent); font-weight:bold; margin-left:4px;"></span>
-        </div>
+        ${renderAttrHeader(attr.nome, attr.valor || 10, true)}
         <div class="attr-skills">${pHTML}</div>
     </div>`;    
     });
@@ -494,17 +691,18 @@ container.innerHTML += `
                 const diceMatch = (e.desc || '').match(/(\d+d\d+)/i);
                 const diceNotation = diceMatch ? diceMatch[1] : '1d6';
                 const nomeArma = e.nome || e.label || 'Arma';
+                const safeNomeArma = escapeSheetHtml(nomeArma);
 
                 div.innerHTML = `
-                    <button class="btn-delete-item" onclick="prepararDelecao(this)"><i class="fas fa-trash"></i></button>
-                    <label>${e.label}</label>
-                    <input type="text" value="${e.nome}" class="item-name">
-                    <div class="slot-desc"><input type="text" value="${e.desc}" style="font-size:12px; color:var(--accent); font-family: 'Segoe UI', sans-serif;"></div>
+                    <button type="button" class="btn-delete-item" data-action="delete-sheet-item"><i class="fas fa-trash"></i></button>
+                    <label>${escapeSheetHtml(e.label)}</label>
+                    <input type="text" value="${escapeSheetHtml(e.nome)}" class="item-name">
+                    <div class="slot-desc"><input type="text" value="${escapeSheetHtml(e.desc)}" class="slot-desc-input"></div>
                     <div class="slot-roll-bar">
-                        <button onclick="rollFromSheet('${diceNotation}', getModAtributo('FORÇA'), '${nomeArma}', 'arma')" title="Rolar dano">
+                        <button type="button" data-action="equipment-roll" data-roll-dice="${escapeSheetHtml(diceNotation)}" data-roll-mod-attr="FORÇA" data-roll-label="${safeNomeArma}" data-roll-type="arma" title="Rolar dano">
                             ⚔ ${diceNotation}+FOR
                         </button>
-                        <button onclick="rollFromSheet('1d20', getModAtributo('VELOCIDADE'), 'Ataque — ${nomeArma}', 'arma')" title="Rolar ataque">
+                        <button type="button" data-action="equipment-roll" data-roll-dice="1d20" data-roll-mod-attr="VELOCIDADE" data-roll-label="Ataque — ${safeNomeArma}" data-roll-type="arma" title="Rolar ataque">
                             🎯 Ataque
                         </button>
                     </div>
@@ -629,15 +827,16 @@ container.innerHTML += `
                 ['Espiritual', document.querySelectorAll('#tab-stats .char-card input')[5]?.value || ficha.defEspiritual || '10']
             ];
             const quickActions = (ficha.equipamentos || []).slice(0, 4);
+            const safeCharacterId = escapeSheetHtml(current.id);
 
             root.innerHTML = `
                 <div class="combat-sheet__header">
-                    <img class="combat-sheet__portrait" src="${portrait}" alt="">
+                    <img class="combat-sheet__portrait" src="${escapeSheetHtml(portrait)}" alt="">
                     <div>
-                        <h2 class="combat-sheet__name">${ficha.nome || 'Personagem'}</h2>
-                        <div class="combat-sheet__meta">${ficha.type || 'PC'} ${ficha.trilha ? ' / ' + ficha.trilha : ''}</div>
+                        <h2 class="combat-sheet__name">${escapeSheetHtml(ficha.nome || 'Personagem')}</h2>
+                        <div class="combat-sheet__meta">${escapeSheetHtml(ficha.type || 'PC')} ${ficha.trilha ? ' / ' + escapeSheetHtml(ficha.trilha) : ''}</div>
                     </div>
-                    <button class="ui-icon-btn" onclick="closeCombatSheet()" title="Fechar"><i class="fas fa-times"></i></button>
+                    <button type="button" class="ui-icon-btn" data-combat-action="close" title="Fechar"><i class="fas fa-times"></i></button>
                 </div>
                 <div class="combat-sheet__body">
                     <div class="combat-hp">
@@ -645,19 +844,19 @@ container.innerHTML += `
                             <span>HP</span>
                             <strong>${hpAtual} / ${hpMax}</strong>
                         </div>
-                        <div class="combat-hp__bar"><div style="width:${hpPct}%"></div></div>
+                        <div class="combat-hp__bar"><div class="combat-hp__fill"></div></div>
                         <div class="combat-actions">
-                            <button class="ui-btn ui-btn--danger" onclick="applyDamage('${current.id}', prompt('Dano recebido:', '1'))"><i class="fas fa-minus"></i> Dano</button>
-                            <button class="ui-btn" onclick="applyHealing('${current.id}', prompt('Cura recebida:', '1'))"><i class="fas fa-plus"></i> Cura</button>
-                            <button class="ui-btn ui-btn--primary" onclick="salvarFichaCompleta(true)"><i class="fas fa-save"></i> Salvar</button>
+                            <button type="button" class="ui-btn ui-btn--danger" data-combat-action="damage" data-character-id="${safeCharacterId}"><i class="fas fa-minus"></i> Dano</button>
+                            <button type="button" class="ui-btn" data-combat-action="healing" data-character-id="${safeCharacterId}"><i class="fas fa-plus"></i> Cura</button>
+                            <button type="button" class="ui-btn ui-btn--primary" data-combat-action="save" data-character-id="${safeCharacterId}"><i class="fas fa-save"></i> Salvar</button>
                         </div>
                     </div>
 
                     <div class="combat-quick-grid">
                         ${defenses.map(([label, value]) => `
-                            <button class="combat-stat" onclick="rollFromSheet('1d20', 0, 'Defesa ${label}', 'atributo')">
-                                <span class="combat-stat__label">${label}</span>
-                                <span class="combat-stat__value">${value}</span>
+                            <button type="button" class="combat-stat" data-combat-action="roll-defense" data-label="${escapeSheetHtml(label)}">
+                                <span class="combat-stat__label">${escapeSheetHtml(label)}</span>
+                                <span class="combat-stat__value">${escapeSheetHtml(value)}</span>
                             </button>
                         `).join('')}
                     </div>
@@ -666,8 +865,8 @@ container.innerHTML += `
                         <div class="combat-section__title">Acoes rapidas</div>
                         <div class="combat-action-list">
                             ${quickActions.length ? quickActions.map((item, index) => `
-                                <button class="ui-btn ui-btn--ghost" onclick="rollCharacterAction('${current.id}', ${index})">
-                                    <i class="fas fa-dice-d20"></i> ${item.nome || item.name || 'Acao'}
+                                <button type="button" class="ui-btn ui-btn--ghost" data-combat-action="quick-action" data-character-id="${safeCharacterId}" data-action-index="${index}">
+                                    <i class="fas fa-dice-d20"></i> ${escapeSheetHtml(item.nome || item.name || 'Acao')}
                                 </button>
                             `).join('') : '<span class="combat-empty">Sem equipamentos cadastrados.</span>'}
                         </div>
@@ -677,14 +876,16 @@ container.innerHTML += `
                         <div class="combat-section__title">Condicoes</div>
                         <div class="combat-conditions">
                             ${['Abalado', 'Ferido', 'Caido', 'Marcado', 'Invisivel'].map(name => `
-                                <button class="combat-condition ${conditions.some(c => c.name === name) ? 'is-active' : ''}" onclick="toggleCondition('${current.id}', '${name}')">${name}</button>
+                                <button type="button" class="combat-condition ${conditions.some(c => c.name === name) ? 'is-active' : ''}" data-combat-action="condition" data-character-id="${safeCharacterId}" data-condition-name="${escapeSheetHtml(name)}">${escapeSheetHtml(name)}</button>
                             `).join('')}
                         </div>
                     </div>
 
-                    <textarea class="combat-notes" placeholder="Notas rapidas de combate" onchange="fichasSalvas['${current.id}'].combatNotes = this.value; salvarFichaCompleta(true);">${ficha.combatNotes || ''}</textarea>
+                    <textarea class="combat-notes" data-character-id="${safeCharacterId}" placeholder="Notas rapidas de combate">${escapeSheetHtml(ficha.combatNotes || '')}</textarea>
                 </div>
             `;
+            const hpFill = root.querySelector('.combat-hp__fill');
+            if (hpFill) hpFill.style.width = `${hpPct}%`;
         }
 
         function persistCombatCharacter(characterId) {
@@ -802,11 +1003,11 @@ container.innerHTML += `
             const div = document.createElement('div');
             div.className = 'char-card card-fisico slot-weapon';
             div.innerHTML = `
-                <button class="btn-delete-item" onclick="prepararDelecao(this)"><i class="fas fa-trash"></i></button>
+                <button type="button" class="btn-delete-item" data-action="delete-sheet-item"><i class="fas fa-trash"></i></button>
                 <label><i class="fas fa-box"></i> Slot Novo</label>
                 <input type="text" placeholder="Nome do Item" class="item-name">
-                <input type="number" class="item-weight" placeholder="Peso" min="0" step="0.1" oninput="calcularPeso()" style="width:60px; margin:4px auto 0; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:var(--accent); font-size:11px; padding:3px; text-align:center; border-radius:4px;">
-                <div class="slot-desc"><input type="text" placeholder="Dano/Efeito" style="font-size:12px; color:var(--accent); font-family: 'Segoe UI', sans-serif;"></div>
+                <input type="number" class="item-weight" placeholder="Peso" min="0" step="0.1">
+                <div class="slot-desc"><input type="text" class="slot-desc-input" placeholder="Dano/Efeito"></div>
             `;
             container.appendChild(div);
         }
@@ -1184,6 +1385,97 @@ function vincularRetrato(path) {
             // Apenas redireciona para abrir o modal bonitinho nativo sem usar o prompt do navegador
             abrirModalNovaPericia(attrNome);
         }
+
+function getCurrentCharacterPortraitPayload() {
+    const portraitImg = document.getElementById('char-portrait');
+    const ficha = fichaAtualId ? fichasSalvas[fichaAtualId] : null;
+    const pathFromSheet = ficha?.portraitPath || '';
+    const src = portraitImg?.src || '';
+    const path = pathFromSheet || src.replace(/^file:\/\//, '');
+    const title = ficha?.nome || document.getElementById('char-name')?.value || 'Retrato do personagem';
+
+    if (!path) return null;
+
+    return {
+        type: 'image',
+        path,
+        src: path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')
+            ? path
+            : (path.startsWith('file://') ? path : `file://${path}`),
+        title
+    };
+}
+
+function getCharacterPortraitPreviewModal() {
+    let modal = document.getElementById('character-portrait-preview-modal');
+    if (modal) return modal;
+
+    modal = document.createElement('div');
+    modal.id = 'character-portrait-preview-modal';
+    modal.className = 'hidden';
+    modal.innerHTML = `
+        <div class="character-portrait-preview" onclick="event.stopPropagation()">
+            <header class="character-portrait-preview__header">
+                <div>
+                    <span>Retrato</span>
+                    <h2 id="character-portrait-preview-title">Personagem</h2>
+                </div>
+                <button class="ui-icon-btn" type="button" onclick="closeCharacterPortraitPreview()" title="Fechar"><i class="fas fa-times"></i></button>
+            </header>
+            <div class="character-portrait-preview__stage">
+                <img id="character-portrait-preview-img" src="" alt="">
+            </div>
+            <footer class="character-portrait-preview__actions">
+                <button class="glass-btn primary" type="button" onclick="sendCharacterPortraitToPlayers()">
+                    <i class="fas fa-users"></i> Enviar para os players
+                </button>
+            </footer>
+        </div>
+    `;
+    modal.addEventListener('click', closeCharacterPortraitPreview);
+    document.body.appendChild(modal);
+    return modal;
+}
+
+function openCharacterPortraitPreview() {
+    const payload = getCurrentCharacterPortraitPayload();
+    if (!payload) {
+        if (typeof mostrarToast === 'function') mostrarToast('Nenhum retrato encontrado para ampliar.', 'warning');
+        return;
+    }
+
+    const modal = getCharacterPortraitPreviewModal();
+    const img = modal.querySelector('#character-portrait-preview-img');
+    const title = modal.querySelector('#character-portrait-preview-title');
+
+    img.src = payload.src;
+    img.alt = payload.title;
+    title.textContent = payload.title;
+    modal.classList.remove('hidden');
+}
+
+function closeCharacterPortraitPreview() {
+    const modal = document.getElementById('character-portrait-preview-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function sendCharacterPortraitToPlayers() {
+    const payload = getCurrentCharacterPortraitPayload();
+    if (!payload) {
+        if (typeof mostrarToast === 'function') mostrarToast('Nenhum retrato encontrado para enviar.', 'warning');
+        return;
+    }
+
+    if (typeof showHandoutPathToPlayers === 'function') {
+        showHandoutPathToPlayers(payload.path, 'image', payload.title);
+        return;
+    }
+
+    if (window.api?.showHandoutToPlayers) {
+        window.api.showHandoutToPlayers({ type: 'image', path: payload.path, title: payload.title });
+        if (typeof addChatMessage === 'function') addChatMessage('Sistema', 'Retrato enviado para os players.', '#38bdf8');
+    }
+}
 
 // --- Extracted block: rolls ---
 function rollFromSheet(notacao, mod, label, tipo) {

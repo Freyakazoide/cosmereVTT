@@ -8,12 +8,23 @@ if (isPlayerView) {
         const toolsBar = document.querySelector('.tools-bar');
         const btnToggle = document.getElementById('btn-toggle-menu');
         const btnHelp = document.getElementById('btn-help');
+        const globalActions = document.getElementById('global-actions');
         
         if(sidebar) sidebar.style.display = 'none';
-        if(toolsBar) toolsBar.style.display = 'none';
+        if(toolsBar) toolsBar.style.display = '';
         if(btnToggle) btnToggle.style.display = 'none';
         if(btnHelp) btnHelp.style.display = 'none';
+        if(globalActions) globalActions.style.display = 'none';
         document.body.classList.add('player-view');
+
+        document.querySelectorAll('.dock-section, .tool-separator').forEach(el => {
+            el.classList.add('player-hidden-panel');
+        });
+
+        const selectButton = document.querySelector('.tool-submenu .tool-btn');
+        if (selectButton && typeof setTool === 'function') {
+            setTool('select', selectButton);
+        }
     });
 
     // Escuta pacotes de sincronização mandados pelo Mestre
@@ -24,18 +35,13 @@ if (isPlayerView) {
                 return;
             }
 
+            if (state && state.type) return;
+            if (!state) return;
+
             if (window.phaserScene) {
                 window.phaserScene.loadBoardState(state);
                 renderPlayerSceneNotes(state);
                 if (state.weather) window.phaserScene.setAdvancedWeather(state.weather);
-                if (state.drawings && state.drawings.length > 0) {
-                    state.drawings.forEach(d => {
-                        const g = window.phaserScene.add.graphics();
-                        g.fillStyle(d.color, 0.6);
-                        g.fillRect(d.x, d.y, d.w, d.h);
-                        window.phaserScene.camadaTatico.add(g);
-                    });
-                }
             }
         });
     }
@@ -60,12 +66,13 @@ if (isPlayerView) {
 }
 
 function renderPlayerPing(payload) {
-    if (!window.phaserScene || !payload) return;
+    const point = normalizePlayerPingPayload(payload);
+    if (!window.phaserScene || !point) return;
     const scene = window.phaserScene;
     const ping = scene.add.graphics();
     ping.lineStyle(5, 0xfbbf24, 1);
     ping.strokeCircle(0, 0, 18);
-    ping.setPosition(payload.x, payload.y);
+    ping.setPosition(point.x, point.y);
     scene.camadaUI.add(ping);
     scene.tweens.add({
         targets: ping,
@@ -78,18 +85,32 @@ function renderPlayerPing(payload) {
     });
 }
 
+function normalizePlayerPingPayload(payload) {
+    if (!payload) return null;
+    const x = Number(payload.x);
+    const y = Number(payload.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    return { x, y };
+}
+
 function renderPlayerHandout(payload) {
     if (!payload || !payload.path) return;
     hidePlayerHandout();
 
     const overlay = document.createElement('div');
     overlay.className = 'player-handout-overlay';
-    const isVideo = /\.(mp4|webm|ogg)$/i.test(payload.path);
+    const source = payload.path.startsWith('file://') ||
+        payload.path.startsWith('http://') ||
+        payload.path.startsWith('https://') ||
+        payload.path.startsWith('data:')
+            ? payload.path
+            : `file://${payload.path}`;
+    const isVideo = payload.type === 'video' || /\.(mp4|webm|ogg)$/i.test(payload.path);
     overlay.innerHTML = `
         <div class="player-handout-card">
             ${isVideo
-                ? `<video src="file://${payload.path}" controls autoplay></video>`
-                : `<img src="file://${payload.path}" alt="${payload.title || 'Handout'}">`
+                ? `<video src="${source}" controls autoplay></video>`
+                : `<img src="${source}" alt="${payload.title || 'Handout'}">`
             }
         </div>
     `;

@@ -51,6 +51,8 @@
 
 .tool-group-wrapper {
   position: relative;
+  width: 44px;
+  min-height: 44px;
 }
 
 .dock-section {
@@ -155,10 +157,10 @@
 .tool-group-wrapper .master-tool-btn::after {
   content: "\f105";
   position: absolute;
-  right: -6px;
-  bottom: -5px;
-  width: 17px;
-  height: 17px;
+  right: -7px;
+  top: 50%;
+  width: 18px;
+  height: 18px;
   display: grid;
   place-items: center;
   border: 1px solid rgba(216, 167, 57, 0.34);
@@ -168,23 +170,29 @@
   font-family: "Font Awesome 6 Free";
   font-size: 9px;
   font-weight: 900;
-  transition: transform var(--motion-med), background var(--transition-fast);
+  line-height: 1;
+  transform: translateY(-50%);
+  transition: transform var(--motion-med), background var(--transition-fast), border-color var(--transition-fast);
 }
 
-.tool-group-wrapper:hover .master-tool-btn::after,
+.tool-group-wrapper.is-hover-open .master-tool-btn::after,
+.tool-group-wrapper.is-click-open .master-tool-btn::after,
 .tool-group-wrapper:has(.tool-submenu.is-open) .master-tool-btn::after {
-  transform: rotate(90deg);
+  transform: translateY(-50%) rotate(90deg);
   background: rgba(63, 52, 29, 0.96);
+  border-color: rgba(240, 199, 102, 0.68);
 }
 
 .tool-submenu {
   position: absolute;
-  top: 0;
-  left: calc(100% + 14px);
+  top: 50%;
+  left: 58px;
   z-index: 45;
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: 44px;
+  align-items: center;
+  justify-content: start;
   gap: 7px;
   padding: 10px;
   border: 1px solid rgba(216, 167, 57, 0.24);
@@ -198,7 +206,7 @@
   backdrop-filter: blur(14px);
   opacity: 0;
   pointer-events: none;
-  transform: translateX(-12px) scale(0.98);
+  transform: translate(-12px, -50%) scale(0.98);
   transform-origin: left center;
   transition:
     opacity var(--motion-med),
@@ -209,22 +217,25 @@
   content: "";
   position: absolute;
   left: -8px;
-  top: 16px;
+  top: 50%;
   width: 8px;
   height: 1px;
+  transform: translateY(-50%);
   background: rgba(216, 167, 57, 0.38);
 }
 
-.tool-group-wrapper:hover .tool-submenu,
+.tool-group-wrapper.is-hover-open .tool-submenu,
+.tool-group-wrapper.is-click-open .tool-submenu,
 .tool-submenu.is-open {
   opacity: 1;
   pointer-events: auto;
-  transform: translateX(0) scale(1);
+  transform: translate(0, -50%) scale(1);
 }
 
 .tool-submenu .tool-btn {
   width: 44px;
   height: 44px;
+  flex: 0 0 44px;
 }
 
 #sidebar.vtt-flyout {
@@ -460,11 +471,123 @@
   letter-spacing: 0;
 }
 
+.vtt-category-header strong,
+.actor-folder-header strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actor-folder-header {
+  cursor: pointer;
+  user-select: none;
+}
+
+.actor-folder-header:hover {
+  border-color: rgba(216, 167, 57, 0.34);
+  background:
+    linear-gradient(90deg, rgba(216, 167, 57, 0.16), rgba(255, 255, 255, 0.035)),
+    rgba(0, 0, 0, 0.28);
+}
+
 .vtt-library-stack,
 .note-folder-items,
 .director-note-list {
   display: grid;
   gap: 10px;
+}
+
+.vtt-library-overview {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid rgba(216, 167, 57, 0.22);
+  border-radius: var(--radius-sm);
+  background:
+    linear-gradient(135deg, rgba(216, 167, 57, 0.13), rgba(255, 255, 255, 0.035)),
+    rgba(0, 0, 0, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.055),
+    0 10px 26px rgba(0, 0, 0, 0.20);
+}
+
+.vtt-library-overview__icon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(216, 167, 57, 0.26);
+  border-radius: var(--radius-sm);
+  background:
+    radial-gradient(circle at top, rgba(216, 167, 57, 0.20), transparent 60%),
+    rgba(0, 0, 0, 0.28);
+  color: var(--mistborn-gold);
+  font-size: 18px;
+}
+
+.vtt-library-overview__copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.vtt-library-overview__copy strong {
+  overflow: hidden;
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vtt-library-overview__copy small {
+  overflow: hidden;
+  color: rgba(199, 205, 212, 0.68);
+  font-size: 11px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vtt-library-overview__count {
+  min-width: 34px;
+  height: 34px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 9px;
+  border: 1px solid rgba(216, 167, 57, 0.24);
+  border-radius: 999px;
+  background: rgba(216, 167, 57, 0.11);
+  color: var(--mistborn-amber);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.vtt-empty-state--library {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+  padding: 13px;
+  border-color: rgba(154, 163, 173, 0.22);
+  background: rgba(0, 0, 0, 0.20);
+  color: rgba(199, 205, 212, 0.72);
+  text-align: left;
+}
+
+.vtt-empty-state--library i {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(216, 167, 57, 0.16);
+  border-radius: var(--radius-sm);
+  color: var(--mistborn-gold);
 }
 
 .vtt-flyout .list-item,
@@ -866,9 +989,21 @@
   display: none;
 }
 
-body.player-view .vtt-dock-shell,
-body.player-view #global-actions {
+body.player-view #global-actions,
+body.player-view #sidebar,
+body.player-view .dock-section,
+body.player-view .tool-separator,
+body.player-view .player-hidden-panel {
   display: none;
+}
+
+body.player-view .vtt-dock-shell {
+  display: flex;
+}
+
+body.player-view .vtt-dock.tools-bar,
+body.player-view .glass-dock {
+  display: flex;
 }
 
 #vtt-custom-tooltip {
@@ -959,10 +1094,19 @@ body.player-view #global-actions {
   }
 
   .tool-submenu {
+    top: 0;
+    left: 54px;
     grid-auto-flow: row;
     grid-template-columns: repeat(2, 42px);
     max-height: calc(100vh - 24px);
     overflow-y: auto;
+    transform: translateX(-10px) scale(0.98);
+  }
+
+  .tool-group-wrapper.is-hover-open .tool-submenu,
+  .tool-group-wrapper.is-click-open .tool-submenu,
+  .tool-submenu.is-open {
+    transform: translateX(0) scale(1);
   }
 
   #global-actions {
