@@ -192,13 +192,16 @@
                     const id = rosterAction.dataset.characterId;
                     switch (rosterAction.dataset.rosterAction) {
                         case 'add-token':
-                            if (window.phaserScene) window.phaserScene.adicionarToken(rosterAction.dataset.characterName, rosterAction.dataset.tokenPath || '');
+                            if (window.phaserScene) window.phaserScene.adicionarToken(rosterAction.dataset.characterName, rosterAction.dataset.tokenPath || '', id);
                             break;
                         case 'edit':
                             abrirFicha(rosterAction.dataset.characterName, id);
                             break;
                         case 'clone':
                             duplicateCharacter(id);
+                            break;
+                        case 'visibility':
+                            togglePlayerVisibility(id);
                             break;
                         case 'delete':
                             deletarPersonagemBanco(id);
@@ -215,10 +218,12 @@
                             closeCombatSheet();
                             break;
                         case 'damage':
-                            applyDamage(id, prompt('Dano recebido:', '1'));
+                            if (typeof window.openHpAdjustModal === 'function') window.openHpAdjustModal('damage', amount => applyDamage(id, amount));
+                            else applyDamage(id, 1);
                             break;
                         case 'healing':
-                            applyHealing(id, prompt('Cura recebida:', '1'));
+                            if (typeof window.openHpAdjustModal === 'function') window.openHpAdjustModal('healing', amount => applyHealing(id, amount));
+                            else applyHealing(id, 1);
                             break;
                         case 'save':
                             salvarFichaCompleta(true);
@@ -451,27 +456,36 @@
                         const hpStateClass = getHpStateClass(hpPct);
                         const eyeIcon = ficha.isVisibleToPlayers ? 'fa-eye' : 'fa-eye-slash';
                         const eyeColor = ficha.isVisibleToPlayers ? '#22c55e' : '#94a3b8';
+                        const visibilityClass = ficha.isVisibleToPlayers ? 'is-visible' : 'is-hidden';
+                        const visibilityLabel = ficha.isVisibleToPlayers ? 'Visivel' : 'Oculto';
+                        const visibilityTitle = ficha.isVisibleToPlayers ? 'Visivel para jogadores' : 'Oculto dos jogadores';
+                        const safeId = escapeSheetHtml(id);
                         const safeName = escapeSheetHtml(ficha.nome);
                         const safeTrilha = escapeSheetHtml(ficha.trilha || 'Nenhuma Trilha');
                         const safeTokenPath = escapeSheetHtml((ficha.tokenPath || ficha.portraitPath || '').replace(/\\/g, '/'));
 
                         card.innerHTML = `
                             <img class="roster-img" src="file://${escapeSheetHtml(ficha.portraitPath || '')}" onerror="this.src='../assets/persons/default.png'">
+
+                            <button class="roster-visibility-toggle ${visibilityClass}" data-roster-action="visibility" data-character-id="${safeId}" title="${visibilityTitle}" aria-label="${visibilityTitle}" aria-pressed="${ficha.isVisibleToPlayers ? 'true' : 'false'}" style="--roster-visibility-color: ${eyeColor}">
+                                <i class="fas ${eyeIcon}"></i>
+                                <span>${visibilityLabel}</span>
+                            </button>
                             
                             <div class="roster-info">
                                 <div class="roster-name">${safeName}</div>
                                 <div class="roster-class">${safeTrilha}</div>
                                 <div class="roster-hp-row">
-                                    <div class="roster-hp-text ${hpStateClass}" data-roster-action="edit-hp" data-character-id="${escapeSheetHtml(id)}" title="Clique para editar HP">${ficha.hpAtual}/${ficha.hpMax}</div>
+                                    <div class="roster-hp-text ${hpStateClass}" data-roster-action="edit-hp" data-character-id="${safeId}" title="Clique para editar HP">${ficha.hpAtual}/${ficha.hpMax}</div>
                                 </div>
                                 <div class="roster-hp-bar"><div class="roster-hp-fill ${hpStateClass}"></div></div>
                             </div>
 
                             <div class="roster-actions">
-                                <button class="roster-btn add-token" data-roster-action="add-token" data-character-name="${safeName}" data-token-path="${safeTokenPath}" title="Adicionar ao Mapa"><i class="fas fa-map-marker-alt"></i></button>
-                                <button class="roster-btn edit" data-roster-action="edit" data-character-id="${escapeSheetHtml(id)}" data-character-name="${safeName}" title="Editar Ficha"><i class="fas fa-edit"></i></button>
-                                <button class="roster-btn spawn" data-roster-action="clone" data-character-id="${escapeSheetHtml(id)}" title="Clonar Ator"><i class="fas fa-clone"></i></button>
-                                <button class="roster-btn delete" data-roster-action="delete" data-character-id="${escapeSheetHtml(id)}" title="Deletar"><i class="fas fa-trash"></i></button>
+                                <button class="roster-btn add-token" data-roster-action="add-token" data-character-id="${safeId}" data-character-name="${safeName}" data-token-path="${safeTokenPath}" title="Adicionar ao Mapa"><i class="fas fa-map-marker-alt"></i></button>
+                                <button class="roster-btn edit" data-roster-action="edit" data-character-id="${safeId}" data-character-name="${safeName}" title="Editar Ficha"><i class="fas fa-edit"></i></button>
+                                <button class="roster-btn spawn" data-roster-action="clone" data-character-id="${safeId}" title="Clonar Ator"><i class="fas fa-clone"></i></button>
+                                <button class="roster-btn delete" data-roster-action="delete" data-character-id="${safeId}" title="Deletar"><i class="fas fa-trash"></i></button>
                             </div>
                         `;
                         const rosterImg = card.querySelector('.roster-img');
@@ -921,6 +935,13 @@ container.innerHTML += `
             const existing = conditions.findIndex(c => c.name === condition);
             if (existing >= 0) conditions.splice(existing, 1);
             else conditions.push({ id: `cond_${Date.now()}`, name: condition, icon: '', color: '#fbbf24', durationType: 'custom', remaining: null, description: '' });
+            const token = window.phaserScene?.camadaTokens?.list?.find(t => t.tokenId === characterId);
+            if (token) {
+                token.conditions = conditions.map(c => c.name || c).filter(Boolean);
+                window.phaserScene.renderTokenConditions?.(token);
+            }
+            const participant = window.combatState?.participants?.find(p => p.id === characterId);
+            if (participant) participant.conditions = conditions.map(c => c.name || c).filter(Boolean);
             persistCombatCharacter(characterId);
             renderCombatSheet(fichasSalvas[characterId]);
         }

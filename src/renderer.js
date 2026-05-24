@@ -965,7 +965,7 @@ class MainScene extends Phaser.Scene {
         }
         this.load.start();
 
-        state.tokens.forEach(t => {
+        const pendingTokenSpawns = state.tokens.map(t => new Promise(resolve => {
             const key = t.key || t.textureKey;
             const ext = t.path.split('.').pop().toLowerCase();
             const isVideo = ['webm', 'mp4'].includes(ext);
@@ -974,15 +974,20 @@ class MainScene extends Phaser.Scene {
                 if (isVideo) this.load.video(key, `file://${t.path}`);
                 else this.load.image(key, `file://${t.path}`);
                 
-                this.load.once('complete', () => this.spawnTokenAt(key, t.path, t.x, t.y, t.elev || t.elevation, t.tokenId, isVideo, t.charName, t));
+                this.load.once('complete', () => {
+                    this.spawnTokenAt(key, t.path, t.x, t.y, t.elev || t.elevation, t.tokenId, isVideo, t.charName, t);
+                    resolve();
+                });
             } else {
                 this.spawnTokenAt(key, t.path, t.x, t.y, t.elev || t.elevation, t.tokenId, isVideo, t.charName, t);
+                resolve();
             }
-        });
+        }));
         this.load.start();
-        window.setTimeout(() => {
-            if (typeof window.restoreCombatState === 'function') window.restoreCombatState(state.combatState);
-        }, 120);
+        Promise.all(pendingTokenSpawns).then(() => {
+            if (typeof window.restoreCombatAfterTokensLoaded === 'function') window.restoreCombatAfterTokensLoaded(state.combatState);
+            else if (typeof window.restoreCombatState === 'function') window.restoreCombatState(state.combatState);
+        });
     }
 
     recordDrawing(obj) {
@@ -1288,7 +1293,7 @@ class MainScene extends Phaser.Scene {
         this.load.start();
     }
 
-   adicionarToken(nome, path) {
+   adicionarToken(nome, path, characterId = null) {
         const ext = path.split('.').pop().toLowerCase();
         const isVideo = ['webm', 'mp4'].includes(ext);
         
@@ -1301,10 +1306,10 @@ class MainScene extends Phaser.Scene {
             if (isVideo) this.load.video(key, `file://${path}`);
             else this.load.image(key, `file://${path}`);
             
-            this.load.once('complete', () => this.spawnTokenAt(key, path, this.cameras.main.worldView.centerX, this.cameras.main.worldView.centerY, '', null, isVideo, nome));
+            this.load.once('complete', () => this.spawnTokenAt(key, path, this.cameras.main.worldView.centerX, this.cameras.main.worldView.centerY, '', characterId, isVideo, nome));
             this.load.start();
         } else {
-            this.spawnTokenAt(key, path, this.cameras.main.worldView.centerX, this.cameras.main.worldView.centerY, '', null, isVideo, nome);
+            this.spawnTokenAt(key, path, this.cameras.main.worldView.centerX, this.cameras.main.worldView.centerY, '', characterId, isVideo, nome);
         }
     }
 
@@ -1325,7 +1330,9 @@ class MainScene extends Phaser.Scene {
         token.caminhoAbsoluto = path;
         // Salva o nome real do personagem no próprio Token para não dependermos da chave do cache:
         token.charName = charName || key.replace('tk_', '').split('_')[0];
-        token.tokenId = savedTokenId || ('tk_' + Date.now() + '_' + Math.floor(Math.random() * 1000)); 
+        token.tokenId = savedTokenId || ('tk_' + Date.now() + '_' + Math.floor(Math.random() * 1000));
+        token.characterId = token.tokenId;
+        const linkedFicha = window.fichasSalvas?.[token.tokenId] || null;
 
         this.input.setDraggable(token, this.ferramentaAtual === 'select');
         token.gridSize = savedState?.gridSize || 1;
@@ -1337,9 +1344,11 @@ class MainScene extends Phaser.Scene {
         token.visibleToPlayers = savedState?.visibleToPlayers !== false;
         token.locked = !!savedState?.locked;
         token.notes = savedState?.notes || '';
-        token.conditions = Array.isArray(savedState?.conditions) ? [...savedState.conditions] : [];
-        token.hpAtual = savedState?.hp;
-        token.hpMax = savedState?.hpMax;
+        token.conditions = Array.isArray(linkedFicha?.conditions)
+            ? linkedFicha.conditions.map(condition => condition?.name || condition).filter(Boolean)
+            : (Array.isArray(savedState?.conditions) ? [...savedState.conditions] : []);
+        token.hpAtual = linkedFicha ? linkedFicha.hpAtual : savedState?.hp;
+        token.hpMax = linkedFicha ? linkedFicha.hpMax : savedState?.hpMax;
         
         // EFEITO DE RESPIRAÇÃO (PHASER TWEENS)
         // Só aplica se for PNG/JPG estático. Faz o token "respirar" distorcendo 3% a escala.
@@ -1384,8 +1393,8 @@ class MainScene extends Phaser.Scene {
         if (savedState?.aura) {
             this.setTokenAura(token, savedState.aura, savedState.auraEmoji || savedState.status);
         }
-        if (savedState?.hp !== undefined && savedState?.hpMax !== undefined) {
-            this.updateTokenHP(token.tokenId, savedState.hp, savedState.hpMax);
+        if (token.hpAtual !== undefined && token.hpMax !== undefined) {
+            this.updateTokenHP(token.tokenId, token.hpAtual, token.hpMax);
         }
         this.renderTokenConditions(token);
 
@@ -1510,10 +1519,10 @@ class MainScene extends Phaser.Scene {
         token.hpGraphics.clear();
         if (!hpMax || hpMax <= 0) return;
 
-        const w = PIXELS_POR_UNIDADE * 0.8;
+        const w = Math.max(36, (token.displayWidth || PIXELS_POR_UNIDADE) * 0.75);
         const h = 6;
         const offsetX = -w / 2;
-        const offsetY = (PIXELS_POR_UNIDADE / 2) + 4;
+        const offsetY = ((token.displayHeight || PIXELS_POR_UNIDADE) / 2) + 4;
         
         token.hpGraphics.fillStyle(0x000000, 0.8);
         token.hpGraphics.fillRect(offsetX, offsetY, w, h);
@@ -1622,6 +1631,7 @@ class MainScene extends Phaser.Scene {
                 if (window.phaserScene) window.phaserScene.setTokenAura(token, '#fbbf24', token.statusText.text);
             }
             token.hpGraphics.setPosition(token.x, token.y);
+            if (token.hpAtual !== undefined && token.hpMax !== undefined) this.updateTokenHP(token.tokenId, token.hpAtual, token.hpMax);
             token.elevText.setPosition(token.x, token.y - (token.displayHeight / 2) - 10);
         });
 
@@ -1658,10 +1668,21 @@ class MainScene extends Phaser.Scene {
 
     removeToken(token) {
         if (!token) return;
+        if (window.combatState?.participants) {
+            window.combatState.participants = window.combatState.participants.filter(p => p.id !== token.tokenId);
+            window.combatState.currentTurnIndex = Math.min(window.combatState.currentTurnIndex || 0, Math.max(0, window.combatState.participants.length - 1));
+        }
+        if (window.selectedToken === token) {
+            window.selectedToken = null;
+            if (typeof window.hideTokenQuickBar === 'function') window.hideTokenQuickBar();
+        }
+        if (typeof window.renderCombatTracker === 'function') window.renderCombatTracker();
+        if (typeof window.highlightCurrentTurnToken === 'function') window.highlightCurrentTurnToken();
         if(token.auraGraphics) token.auraGraphics.destroy();
         if(token.hpGraphics) token.hpGraphics.destroy();
         if(token.elevText) token.elevText.destroy();
         if(token.statusText) token.statusText.destroy();
+        if(token.conditionGroup) token.conditionGroup.destroy(true);
         token.destroy();
     }
 

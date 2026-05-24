@@ -82,6 +82,28 @@
         if (typeof window.renderizarListaTokens === 'function') window.renderizarListaTokens();
     }
 
+    function updateCharacterConditions(characterId, conditions) {
+        if (!characterId || !window.fichasSalvas?.[characterId]) return;
+        const names = (conditions || []).map(condition => condition?.name || condition).filter(Boolean);
+        const existing = Array.isArray(window.fichasSalvas[characterId].conditions) ? window.fichasSalvas[characterId].conditions : [];
+        window.fichasSalvas[characterId].conditions = names.map(name => {
+            const current = existing.find(condition => (condition?.name || condition) === name);
+            return typeof current === 'object' && current ? current : {
+                id: `cond_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+                name,
+                icon: '',
+                color: '#fbbf24',
+                durationType: 'custom',
+                remaining: null,
+                description: ''
+            };
+        });
+        if (window.api?.saveCharacter) {
+            window.api.saveCharacter(characterId, JSON.stringify(window.fichasSalvas[characterId]));
+        }
+        if (typeof window.renderizarListaTokens === 'function') window.renderizarListaTokens();
+    }
+
     function updateTokenHPBar(token, hpAtual, hpMax) {
         if (!token || !window.phaserScene) return;
         window.phaserScene.updateTokenHP(getTokenId(token), hpAtual, hpMax);
@@ -274,13 +296,66 @@
     }
 
     function promptDamageToSelectedToken() {
-        const amount = window.prompt('Dano recebido:', '1');
-        applyDamageToSelectedToken(amount);
+        openHpAdjustModal('damage', applyDamageToSelectedToken);
     }
 
     function promptHealToSelectedToken() {
-        const amount = window.prompt('Cura recebida:', '1');
-        applyHealToSelectedToken(amount);
+        openHpAdjustModal('healing', applyHealToSelectedToken);
+    }
+
+    function openHpAdjustModal(mode, onApply) {
+        document.querySelector('.hp-adjust-modal')?.remove();
+        const isHealing = mode === 'healing';
+        const modal = document.createElement('div');
+        modal.className = 'hp-adjust-modal';
+        modal.innerHTML = `
+            <div class="hp-adjust-modal__dialog" role="dialog" aria-modal="true" aria-label="${isHealing ? 'Aplicar cura' : 'Aplicar dano'}">
+                <header class="hp-adjust-modal__header">
+                    <strong>${isHealing ? 'Aplicar Cura' : 'Aplicar Dano'}</strong>
+                    <button class="ui-icon-btn" type="button" data-hp-adjust-action="close" title="Fechar"><i class="fas fa-times"></i></button>
+                </header>
+                <div class="hp-adjust-modal__quick">
+                    ${[1, 5, 10].map(value => `<button type="button" data-hp-adjust-value="${value}">${isHealing ? '+' : '-'}${value}</button>`).join('')}
+                </div>
+                <label class="hp-adjust-modal__field">
+                    <span>Quantidade</span>
+                    <input class="vtt-input" type="number" min="1" value="1" data-hp-adjust-input>
+                </label>
+                <div class="hp-adjust-modal__actions">
+                    <button class="ui-btn" type="button" data-hp-adjust-action="close">Cancelar</button>
+                    <button class="ui-btn ui-btn--primary" type="button" data-hp-adjust-action="apply">${isHealing ? 'Curar' : 'Aplicar'}</button>
+                </div>
+            </div>
+        `;
+
+        const close = () => modal.remove();
+        const apply = (amount) => {
+            const value = Math.max(0, parseInt(amount, 10) || 0);
+            if (value > 0 && typeof onApply === 'function') onApply(value);
+            close();
+        };
+
+        modal.addEventListener('click', event => {
+            if (event.target === modal) {
+                close();
+                return;
+            }
+
+            const quick = event.target.closest('[data-hp-adjust-value]');
+            if (quick) {
+                apply(quick.dataset.hpAdjustValue);
+                return;
+            }
+
+            const action = event.target.closest('[data-hp-adjust-action]')?.dataset.hpAdjustAction;
+            if (action === 'close') close();
+            if (action === 'apply') apply(modal.querySelector('[data-hp-adjust-input]')?.value);
+        });
+
+        document.body.appendChild(modal);
+        const input = modal.querySelector('[data-hp-adjust-input]');
+        input?.focus();
+        input?.select();
     }
 
     function openSelectedTokenSheet() {
@@ -327,6 +402,7 @@
         window.phaserScene?.renderTokenConditions?.(token);
         const participant = window.combatState.participants.find(p => p.id === tokenId);
         if (participant) participant.conditions = [...token.conditions];
+        updateCharacterConditions(tokenId, token.conditions);
         renderCombatTracker();
     }
 
@@ -337,6 +413,7 @@
         window.phaserScene?.renderTokenConditions?.(token);
         const participant = window.combatState.participants.find(p => p.id === tokenId);
         if (participant) participant.conditions = [...token.conditions];
+        updateCharacterConditions(tokenId, token.conditions);
         renderCombatTracker();
     }
 
@@ -350,6 +427,31 @@
                 tokenRef: findTokenById(participant.id)
             })) : []
         };
+        renderCombatTracker();
+        highlightCurrentTurnToken();
+    }
+
+    function restoreCombatAfterTokensLoaded(state) {
+        restoreCombatState(state);
+        window.combatState.participants.forEach(participant => {
+            const token = findTokenById(participant.id);
+            if (!token) return;
+            const ficha = getCharacterByToken(participant.id);
+            if (ficha) {
+                token.hpAtual = ficha.hpAtual;
+                token.hpMax = ficha.hpMax;
+                token.conditions = Array.isArray(ficha.conditions)
+                    ? ficha.conditions.map(condition => condition?.name || condition).filter(Boolean)
+                    : [];
+            } else {
+                token.hpAtual = participant.hpAtual;
+                token.hpMax = participant.hpMax;
+                token.conditions = Array.isArray(participant.conditions) ? [...participant.conditions] : [];
+            }
+            window.phaserScene?.updateTokenHP?.(participant.id, token.hpAtual, token.hpMax);
+            window.phaserScene?.renderTokenConditions?.(token);
+            syncParticipantFromToken(token);
+        });
         renderCombatTracker();
         highlightCurrentTurnToken();
     }
@@ -424,13 +526,16 @@
     window.addCondition = addCondition;
     window.removeCondition = removeCondition;
     window.restoreCombatState = restoreCombatState;
+    window.restoreCombatAfterTokensLoaded = restoreCombatAfterTokensLoaded;
     window.getCharacterByToken = getCharacterByToken;
     window.updateCharacterHP = updateCharacterHP;
+    window.updateCharacterConditions = updateCharacterConditions;
     window.updateTokenHPBar = updateTokenHPBar;
     window.setCombatTurn = setCombatTurn;
     window.removeParticipantFromCombat = removeParticipantFromCombat;
     window.promptDamageToSelectedToken = promptDamageToSelectedToken;
     window.promptHealToSelectedToken = promptHealToSelectedToken;
+    window.openHpAdjustModal = openHpAdjustModal;
     window.openSelectedTokenSheet = openSelectedTokenSheet;
     window.removeSelectedToken = removeSelectedToken;
     window.toggleSelectedTokenCondition = toggleSelectedTokenCondition;

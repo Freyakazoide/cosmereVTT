@@ -660,6 +660,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         window.phaserScene.setTokenElevation(token, elev || '');
                         if (Number.isFinite(hp) && Number.isFinite(hpMaximum)) {
                             window.phaserScene.updateTokenHP(token.tokenId, hp, hpMaximum);
+                            if (typeof window.updateCharacterHP === 'function') window.updateCharacterHP(token.tokenId, hp, hpMaximum);
                         }
                     }
                     if (typeof addChatMessage === 'function') {
