@@ -884,23 +884,38 @@
             </div>
         </div>
     </div>
-    <!-- MODAL DE ITEM COMPÊNDIO -->
-    <div id="item-compendium-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 4000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
-        <div class="sheet-glass" style="width: 600px; height: 450px; display: flex; flex-direction: row; padding: 0;">
-            <div style="width: 200px; border-right: 1px solid rgba(255,255,255,0.1); padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.3);">
-                <div style="width: 150px; height: 150px; border-radius: 8px; border: 2px solid var(--accent); overflow: hidden; margin-bottom: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.5);">
-                    <img id="item-image-preview" src="../assets/itens/default.png" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100%\' height=\'100%\'><rect width=\'100%\' height=\'100%\' fill=\'%23111827\'/><text x=\'50%\' y=\'50%\' fill=\'%23fbbf24\' font-size=\'40\' text-anchor=\'middle\' dy=\'.3em\' font-family=\'Arial\'>?</text></svg>'">
-                </div>
-                <input type="text" id="item-image-path" placeholder="nome_da_imagem.png" style="width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 8px; border-radius: 4px; font-size: 11px; text-align: center; margin-bottom: 10px;" onchange="document.getElementById('item-image-preview').src = '../assets/itens/' + this.value">
-                <span style="font-size: 9px; color: var(--text-dim); text-align: center;">Nome do arquivo dentro de assets/itens/</span>
+    <!-- MODAL DE ITEM COMPENDIO -->
+    <div id="item-compendium-modal" class="vtt-modal-backdrop hidden">
+        <div class="vtt-modal vtt-modal--item">
+            <div class="vtt-modal-header">
+                <h3 class="vtt-modal-title">Item do Compendio</h3>
+                <button class="ui-icon-btn" type="button" onclick="fecharModalItem()" title="Fechar"><i class="fas fa-times"></i></button>
             </div>
-            <div style="flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 15px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <input type="text" id="item-name-input" placeholder="Nome do Item/Arma" style="background: transparent; border: none; border-bottom: 2px solid var(--accent); color: #fff; font-size: 24px; font-family: 'Georgia', serif; outline: none; width: 80%;">
-                    <button class="btn-close-sheet" onclick="fecharModalItem()" style="position: relative; top: 0; right: 0; width: 30px; height: 30px; font-size: 14px;"><i class="fas fa-times"></i></button>
-                </div>
-                <textarea id="item-obs-input" placeholder="Observações, regras, dados de dano, efeitos especiais..." style="flex: 1; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1; padding: 15px; border-radius: 6px; resize: none; font-family: 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.5; outline: none;"></textarea>
-                <button class="glass-btn success" onclick="salvarItemCompendio()" style="padding: 12px; font-size: 14px; letter-spacing: 1px;"><i class="fas fa-save"></i> SALVAR ITEM</button>
+            <div class="vtt-modal-body item-compendium-editor">
+                <aside class="item-compendium-media">
+                    <div class="item-compendium-preview">
+                        <img id="item-image-preview" src="../assets/itens/default.png" alt="" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100%\' height=\'100%\'><rect width=\'100%\' height=\'100%\' fill=\'%23111827\'/><text x=\'50%\' y=\'50%\' fill=\'%23fbbf24\' font-size=\'40\' text-anchor=\'middle\' dy=\'.3em\' font-family=\'Arial\'>?</text></svg>'">
+                    </div>
+                    <label class="vtt-field">
+                        <span>Arquivo da imagem</span>
+                        <input class="vtt-input item-image-input" type="text" id="item-image-path" placeholder="nome_da_imagem.png" onchange="document.getElementById('item-image-preview').src = '../assets/itens/' + (this.value || 'default.png')">
+                    </label>
+                    <p class="vtt-help-text vtt-help-text--compact">Dentro de assets/itens/</p>
+                </aside>
+                <section class="item-compendium-fields">
+                    <label class="vtt-field">
+                        <span>Nome</span>
+                        <input class="vtt-input item-name-input" type="text" id="item-name-input" placeholder="Nome do Item/Arma">
+                    </label>
+                    <label class="vtt-field item-notes-field">
+                        <span>Observacoes</span>
+                        <textarea class="vtt-textarea item-notes-input" id="item-obs-input" placeholder="Observacoes, regras, dados de dano, efeitos especiais..."></textarea>
+                    </label>
+                </section>
+            </div>
+            <div class="vtt-modal-footer">
+                <button class="ui-btn" type="button" onclick="fecharModalItem()">Cancelar</button>
+                <button class="ui-btn ui-btn--primary" type="button" onclick="salvarItemCompendio()"><i class="fas fa-save"></i> Salvar item</button>
             </div>
         </div>
     </div>

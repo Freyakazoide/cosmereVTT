@@ -779,14 +779,38 @@ function clearContextAuras() {
 
 
         function filtrarSidebar(termo) {
-            termo = termo.toLowerCase();
-            // Pega todos os itens das listas e tokens
-            const itens = document.querySelectorAll('.list-item, .token-item');
+            termo = (termo || '').toLowerCase().trim();
+            const matchesSearch = (element) => {
+                const texto = (element?.innerText || '').toLowerCase();
+                return termo === '' || texto.includes(termo);
+            };
+            document.querySelectorAll('.vtt-library-card').forEach(card => {
+                card.style.display = matchesSearch(card) ? '' : 'none';
+            });
+
+            document.querySelectorAll('.vtt-category-header').forEach(header => {
+                const stack = header.nextElementSibling?.classList.contains('vtt-library-stack')
+                    ? header.nextElementSibling
+                    : null;
+
+                if (!stack) {
+                    header.style.display = '';
+                    return;
+                }
+
+                const hasVisibleCard = Array.from(stack.querySelectorAll('.vtt-library-card'))
+                    .some(card => card.style.display !== 'none');
+
+                header.style.display = hasVisibleCard ? '' : 'none';
+                stack.style.display = hasVisibleCard ? '' : 'none';
+            });
+
+            // Listas legadas: preserva atores/tokens e compendio.
+            const itens = document.querySelectorAll('.list-item:not(.vtt-library-card), .token-item');
             
             itens.forEach(item => {
-                const texto = item.innerText.toLowerCase();
                 // Se o termo estiver vazio ou contido no texto, mostra; senão, esconde.
-                item.style.display = (termo === '' || texto.includes(termo)) ? '' : 'none';
+                item.style.display = matchesSearch(item) ? '' : 'none';
             });
 
             // Esconde os cabeçalhos de categoria (ex: "Personagens", "Monstros") se todos os itens dentro deles estiverem escondidos
@@ -798,7 +822,7 @@ function clearContextAuras() {
                 let temVisivel = false;
                 let next = header.nextElementSibling;
                 while(next && !next.classList.contains('category-header')) {
-                    if(next.style.display !== 'none') temVisivel = true;
+                    if(next.matches?.('.list-item, .token-item') && next.style.display !== 'none') temVisivel = true;
                     next = next.nextElementSibling;
                 }
                 header.style.display = temVisivel ? '' : 'none';

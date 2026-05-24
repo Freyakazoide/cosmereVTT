@@ -231,6 +231,48 @@
   margin-bottom: 10px;
 }
 
+.compendium-toolbar {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.compendium-toolbar .compendium-search {
+  margin-bottom: 0;
+}
+
+.compendium-card-list {
+  margin-bottom: 12px;
+}
+
+.vtt-library-card--compendium {
+  border-left-color: rgba(216, 167, 57, 0.72);
+}
+
+.vtt-library-card--compendium[draggable="true"] {
+  cursor: grab;
+}
+
+.vtt-library-card--compendium[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.compendium-card-preview {
+  width: 70px;
+  height: 62px;
+}
+
+.ui-icon-btn--danger {
+  border-color: rgba(239, 68, 68, 0.34);
+  color: var(--color-danger);
+}
+
+.ui-icon-btn--danger:hover {
+  border-color: var(--color-danger);
+  background: var(--color-danger-soft);
+  color: var(--color-danger-text);
+}
+
 .vtt-control-panel,
 .media-player-panel {
   margin-bottom: 15px;
@@ -456,6 +498,83 @@
 
 .vtt-modal--danger {
   border-color: var(--color-danger);
+}
+
+.vtt-modal--item {
+  width: min(660px, 100%);
+  max-height: min(82vh, 620px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.item-compendium-editor {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 18px;
+  min-height: 340px;
+}
+
+.item-compendium-media {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.item-compendium-preview {
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 1px solid var(--color-accent-border);
+  border-radius: var(--radius-sm);
+  background:
+    radial-gradient(circle at top, var(--color-accent-soft), transparent 60%),
+    var(--color-field-bg);
+  box-shadow: inset 0 1px 0 var(--color-glass-border), var(--shadow-sm);
+}
+
+.item-compendium-preview img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.item-image-input {
+  text-align: center;
+  font-size: 11px;
+}
+
+.item-compendium-fields {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.item-name-input {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+}
+
+.item-notes-field {
+  flex: 1;
+  min-height: 0;
+}
+
+.item-notes-input {
+  min-height: 190px;
+  flex: 1;
+}
+
+@media (max-width: 680px) {
+  .item-compendium-editor {
+    grid-template-columns: 1fr;
+  }
+
+  .item-compendium-preview {
+    max-width: 180px;
+  }
 }
 
 .scene-list-container {
