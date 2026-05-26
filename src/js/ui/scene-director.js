@@ -161,9 +161,18 @@ function prepareDirectedScene() {
     if (draft.mapPath && window.phaserScene) {
         const name = draft.mapPath.split(/[\\/]/).pop();
         window.phaserScene.carregarMapa(draft.mapPath, name);
+        if (typeof window.addSessionEvent === 'function') {
+            window.addSessionEvent('map_loaded', 'Mapa carregado', name, { mapPath: draft.mapPath });
+        }
     }
     applyDirectorWeather(draft.weather);
     renderDirectorPinnedNotes();
+    if (typeof window.addSessionEvent === 'function') {
+        window.addSessionEvent('scene_prepared', 'Cena preparada', draft.sceneName || 'Sem nome', {
+            mapPath: draft.mapPath,
+            weather: draft.weather
+        });
+    }
     addChatMessage('Diretor de Cena', `Cena preparada: <strong>${draft.sceneName || 'Sem nome'}</strong>.`, '#fbbf24');
 }
 
@@ -172,6 +181,9 @@ function startDirectedScene() {
     playDirectorMusic();
     showDirectorIntroToPlayers();
     syncDirectorSceneToPlayers();
+    if (typeof window.addSessionEvent === 'function') {
+        window.addSessionEvent('scene_started', 'Cena iniciada', directedSceneDraft.sceneName || 'Sem nome');
+    }
 }
 
 function playDirectorMusic() {
@@ -180,6 +192,9 @@ function playDirectorMusic() {
     if (!draft.audioPath) return;
     const name = draft.audioPath.split(/[\\/]/).pop();
     if (typeof playMusic === 'function') playMusic(draft.audioPath, name);
+    if (typeof window.addSessionEvent === 'function') {
+        window.addSessionEvent('music_started', 'Musica iniciada', name, { audioPath: draft.audioPath });
+    }
 }
 
 function showDirectorIntroToPlayers() {
@@ -206,6 +221,14 @@ function showDirectorIntroToPlayers() {
         };
         window.api.showHandoutToPlayers(payload);
         if (typeof rememberRevealedHandout === 'function') rememberRevealedHandout(payload);
+    }
+    if (typeof window.addSessionEvent === 'function' && (draft.playerText || draft.handoutPath)) {
+        window.addSessionEvent(
+            'handout_revealed',
+            'Handout/introducao revelado',
+            draft.handoutPath ? draft.handoutPath.split(/[\\/]/).pop() : draft.sceneName || '',
+            { handoutPath: draft.handoutPath, hasPlayerText: !!draft.playerText }
+        );
     }
     addChatMessage('Diretor de Cena', 'Introducao/handout enviados para a visao dos jogadores.', '#38bdf8');
 }
@@ -245,6 +268,9 @@ function endDirectedScene() {
                 tags: ['Cena']
             }
         });
+    }
+    if (typeof window.addSessionEvent === 'function') {
+        window.addSessionEvent('scene_ended', 'Cena encerrada', directedSceneDraft.sceneName || 'Sem nome');
     }
     addChatMessage('Diretor de Cena', `Cena encerrada: <strong>${directedSceneDraft.sceneName || 'Sem nome'}</strong>.`, '#ef4444');
 }

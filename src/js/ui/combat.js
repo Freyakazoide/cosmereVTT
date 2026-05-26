@@ -125,6 +125,13 @@
         window.combatState.currentTurnIndex = window.combatState.currentTurnIndex || 0;
         renderCombatTracker();
         highlightCurrentTurnToken();
+        if (typeof window.addSessionEvent === 'function') {
+            window.addSessionEvent(
+                'combat_started',
+                'Combate iniciado',
+                `${window.combatState.participants.length} participante(s)`
+            );
+        }
         if (typeof addChatMessage === 'function') addChatMessage('Sistema', 'Combate iniciado.', '#fbbf24');
     }
 
@@ -169,12 +176,16 @@
         renderCombatTracker();
         highlightCurrentTurnToken();
         const participant = state.participants[state.currentTurnIndex];
+        if (typeof window.addSessionEvent === 'function') {
+            window.addSessionEvent('turn_changed', 'Turno avancado', participant?.name || 'Participante');
+        }
         if (participant && typeof addChatMessage === 'function') {
             addChatMessage('Sistema', `Turno de <strong>${participant.name}</strong>.`, '#fbbf24');
         }
     }
 
     function endCombat() {
+        const endedRound = window.combatState.round || 1;
         window.combatState.active = false;
         window.combatState.round = 1;
         window.combatState.currentTurnIndex = 0;
@@ -182,6 +193,9 @@
         hideTokenQuickBar();
         window.phaserScene?.clearCurrentTurnHighlight?.();
         renderCombatTracker();
+        if (typeof window.addSessionEvent === 'function') {
+            window.addSessionEvent('combat_ended', 'Combate encerrado', `Rodada ${endedRound}`);
+        }
     }
 
     function renderCombatTracker() {
@@ -284,6 +298,9 @@
         const max = Number(token.hpMax || getCharacterByToken(getTokenId(token))?.hpMax || 10);
         const current = Number(token.hpAtual ?? max);
         updateTokenAndCharacterHP(token, Math.max(0, current - damage), max);
+        if (typeof window.addSessionEvent === 'function') {
+            window.addSessionEvent('damage_applied', 'Dano aplicado', `${getTokenName(token)} sofreu ${damage} de dano`);
+        }
     }
 
     function applyHealToSelectedToken(amount) {
@@ -293,6 +310,9 @@
         const max = Number(token.hpMax || getCharacterByToken(getTokenId(token))?.hpMax || 10);
         const current = Number(token.hpAtual ?? max);
         updateTokenAndCharacterHP(token, Math.min(max, current + heal), max);
+        if (typeof window.addSessionEvent === 'function') {
+            window.addSessionEvent('heal_applied', 'Cura aplicada', `${getTokenName(token)} recuperou ${heal} de HP`);
+        }
     }
 
     function promptDamageToSelectedToken() {
@@ -403,6 +423,9 @@
         const participant = window.combatState.participants.find(p => p.id === tokenId);
         if (participant) participant.conditions = [...token.conditions];
         updateCharacterConditions(tokenId, token.conditions);
+        if (typeof window.addSessionEvent === 'function') {
+            window.addSessionEvent('condition_added', 'Condicao adicionada', `${getTokenName(token)}: ${condition}`);
+        }
         renderCombatTracker();
     }
 
@@ -414,6 +437,9 @@
         const participant = window.combatState.participants.find(p => p.id === tokenId);
         if (participant) participant.conditions = [...token.conditions];
         updateCharacterConditions(tokenId, token.conditions);
+        if (typeof window.addSessionEvent === 'function') {
+            window.addSessionEvent('condition_removed', 'Condicao removida', `${getTokenName(token)}: ${condition}`);
+        }
         renderCombatTracker();
     }
 

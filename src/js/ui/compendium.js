@@ -17,238 +17,869 @@ document.addEventListener('dblclick', (e) => {
     }
 });
 
-function contextTrazerFrente() {
-    if (window.phaserScene && activeTokenForContext) window.phaserScene.bringTokenToFront(activeTokenForContext);
-    document.getElementById('context-menu').classList.add('hidden');
-}
+(function initCompendiumSystem() {
+    const COMPENDIUM_TYPES = {
+        ITEM: 'item',
+        WEAPON: 'weapon',
+        ARMOR: 'armor',
+        POWER: 'power',
+        TALENT: 'talent',
+        CONDITION: 'condition',
+        CREATURE: 'creature',
+        NPC: 'npc',
+        HANDOUT: 'handout',
+        SCENE: 'scene'
+    };
 
-function contextEnviarTras() {
-    if (window.phaserScene && activeTokenForContext) window.phaserScene.sendTokenToBack(activeTokenForContext);
-    document.getElementById('context-menu').classList.add('hidden');
-}
+    const TYPE_LABELS = {
+        item: 'Itens gerais',
+        weapon: 'Armas',
+        armor: 'Armaduras',
+        power: 'Poderes',
+        talent: 'Talentos',
+        condition: 'Condicoes',
+        creature: 'Criaturas',
+        npc: 'NPCs',
+        handout: 'Handouts',
+        scene: 'Cenas modelo'
+    };
 
-function ativarRedimensionamento() {
-    if (window.phaserScene && activeTokenForContext) window.phaserScene.enterResizeMode(activeTokenForContext);
-    document.getElementById('context-menu').classList.add('hidden');
-}
+    const TYPE_ICONS = {
+        item: 'fa-box',
+        weapon: 'fa-gavel',
+        armor: 'fa-shield-halved',
+        power: 'fa-wand-sparkles',
+        talent: 'fa-star',
+        condition: 'fa-tag',
+        creature: 'fa-dragon',
+        npc: 'fa-user',
+        handout: 'fa-image',
+        scene: 'fa-clapperboard'
+    };
 
-let compendioItens = [];
-let indexEditandoItem = -1;
-const COMPENDIUM_FALLBACK_IMAGE = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='128'><rect width='100%' height='100%' fill='%23111827'/><text x='50%' y='50%' fill='%23fbbf24' font-size='44' text-anchor='middle' dy='.3em' font-family='Arial'>?</text></svg>";
+    const MECHANIC_FIELDS = {
+        weapon: [
+            ['damage', 'Dano'],
+            ['attribute', 'Atributo'],
+            ['skill', 'Pericia'],
+            ['range', 'Alcance'],
+            ['weight', 'Peso'],
+            ['properties', 'Propriedades']
+        ],
+        armor: [
+            ['defense', 'Defesa'],
+            ['penalty', 'Penalidade'],
+            ['weight', 'Peso'],
+            ['properties', 'Propriedades']
+        ],
+        power: [
+            ['cost', 'Custo'],
+            ['range', 'Alcance'],
+            ['duration', 'Duracao'],
+            ['test', 'Teste'],
+            ['effect', 'Efeito']
+        ],
+        talent: [
+            ['cost', 'Custo'],
+            ['duration', 'Duracao'],
+            ['effect', 'Efeito']
+        ],
+        condition: [
+            ['effect', 'Efeito mecanico'],
+            ['duration', 'Duracao padrao'],
+            ['removeWith', 'Remove com'],
+            ['icon', 'Icone']
+        ],
+        creature: [
+            ['hpAtual', 'HP atual'],
+            ['hpMax', 'HP maximo'],
+            ['defense', 'Defesas'],
+            ['attributes', 'Atributos'],
+            ['attacks', 'Ataques'],
+            ['tokenPath', 'Token'],
+            ['behavior', 'Comportamento'],
+            ['gmNotes', 'Notas do mestre']
+        ],
+        npc: [
+            ['hpAtual', 'HP atual'],
+            ['hpMax', 'HP maximo'],
+            ['defense', 'Defesas'],
+            ['attributes', 'Atributos'],
+            ['attacks', 'Ataques'],
+            ['tokenPath', 'Token'],
+            ['behavior', 'Comportamento'],
+            ['gmNotes', 'Notas do mestre']
+        ],
+        handout: [
+            ['path', 'Arquivo'],
+            ['effect', 'Uso em cena']
+        ],
+        scene: [
+            ['mapPath', 'Mapa'],
+            ['audioPath', 'Musica'],
+            ['weather', 'Clima'],
+            ['handoutPath', 'Handout']
+        ],
+        item: [
+            ['weight', 'Peso'],
+            ['cost', 'Custo'],
+            ['effect', 'Efeito']
+        ]
+    };
 
-try {
-    const salvos = localStorage.getItem('cosmere_compendio');
-    if (salvos) compendioItens = JSON.parse(salvos);
-} catch (e) { }
+    const TYPE_ORDER = ['weapon', 'armor', 'power', 'talent', 'condition', 'creature', 'npc', 'handout', 'scene', 'item'];
+    const DRAG_MIME = 'application/x-cosmere-compendium';
 
-function getCompendiumImageSrc(item) {
-    return item?.imagem ? '../assets/itens/' + item.imagem : '../assets/itens/default.png';
-}
+    window.COMPENDIUM_TYPES = window.COMPENDIUM_TYPES || COMPENDIUM_TYPES;
+    window.compendiumState = window.compendiumState || {
+        entries: [],
+        filters: {
+            search: '',
+            type: 'all',
+            tag: 'all',
+            sort: 'az'
+        },
+        editingId: null
+    };
 
-function getCompendiumSummary(item) {
-    const obs = String(item?.obs || '').replace(/\s+/g, ' ').trim();
-    return obs || 'Arraste para a ficha ou clique para editar.';
-}
-
-function abrirModalItem(index = -1) {
-    indexEditandoItem = index;
-    if (index === -1) {
-        document.getElementById('item-name-input').value = '';
-        document.getElementById('item-obs-input').value = '';
-        document.getElementById('item-image-path').value = '';
-        document.getElementById('item-image-preview').src = '../assets/itens/default.png';
-    } else {
-        const item = compendioItens[index];
-        document.getElementById('item-name-input').value = item.nome || '';
-        document.getElementById('item-obs-input').value = item.obs || '';
-        document.getElementById('item-image-path').value = item.imagem || '';
-        document.getElementById('item-image-preview').src = getCompendiumImageSrc(item);
+    function ensureState() {
+        window.compendiumState = {
+            entries: [],
+            filters: { search: '', type: 'all', tag: 'all', sort: 'az' },
+            editingId: null,
+            ...(window.compendiumState || {})
+        };
+        window.compendiumState.filters = {
+            search: '',
+            type: 'all',
+            tag: 'all',
+            sort: 'az',
+            ...(window.compendiumState.filters || {})
+        };
+        return window.compendiumState;
     }
-    document.getElementById('item-compendium-modal').classList.remove('hidden');
-}
 
-function fecharModalItem() {
-    document.getElementById('item-compendium-modal').classList.add('hidden');
-}
-
-function salvarItemCompendio() {
-    const nome = document.getElementById('item-name-input').value.trim() || 'Novo Item';
-    const obs = document.getElementById('item-obs-input').value;
-    const imagem = document.getElementById('item-image-path').value.trim();
-    const novoItem = { nome, obs, imagem };
-
-    if (indexEditandoItem === -1) {
-        compendioItens.push(novoItem);
-    } else {
-        compendioItens[indexEditandoItem] = novoItem;
-    }
-
-    localStorage.setItem('cosmere_compendio', JSON.stringify(compendioItens));
-    renderizarCompendio();
-    fecharModalItem();
-}
-
-function renderizarCompendio() {
-    const container = document.getElementById('items-content');
-    if (!container) return;
-
-    container.innerHTML = '';
-
-    const controls = document.createElement('div');
-    controls.className = 'compendium-toolbar';
-
-    const search = document.createElement('input');
-    search.className = 'vtt-input compendium-search';
-    search.type = 'text';
-    search.id = 'search-compendium';
-    search.placeholder = 'Buscar no compendio...';
-    search.addEventListener('input', () => filtrarCompendio(search.value));
-
-    const createButton = document.createElement('button');
-    createButton.className = 'ui-btn ui-btn--primary btn-create-new';
-    createButton.type = 'button';
-    createButton.innerHTML = '<i class="fas fa-plus"></i> Criar Novo Item / Arma';
-    createButton.addEventListener('click', () => abrirModalItem());
-
-    controls.appendChild(search);
-    controls.appendChild(createButton);
-
-    const header = document.createElement('div');
-    header.className = 'vtt-category-header';
-    header.innerHTML = `<strong>Meu Compendio</strong><span>${compendioItens.length}</span>`;
-
-    const list = document.createElement('div');
-    list.className = 'vtt-library-stack compendium-card-list';
-
-    if (compendioItens.length === 0) {
-        const empty = document.createElement('div');
-        empty.className = 'vtt-empty-state vtt-empty-state--library';
-        empty.innerHTML = '<i class="fas fa-book-open"></i><span>Nenhum item no compendio ainda.</span>';
-        list.appendChild(empty);
-    } else {
-        compendioItens.forEach((item, index) => {
-            const card = document.createElement('article');
-            card.className = 'vtt-library-card vtt-library-card--compendium compendium-item-card';
-            card.draggable = true;
-            card.dataset.compendiumIndex = String(index);
-            card.addEventListener('dragstart', event => dragCompendiumItem(event, index));
-
-            const main = document.createElement('button');
-            main.className = 'vtt-library-card__main-action';
-            main.type = 'button';
-            main.addEventListener('click', () => abrirModalItem(index));
-
-            const preview = document.createElement('div');
-            preview.className = 'vtt-library-preview compendium-card-preview';
-
-            const image = document.createElement('img');
-            image.src = getCompendiumImageSrc(item);
-            image.alt = '';
-            image.onerror = () => { image.src = COMPENDIUM_FALLBACK_IMAGE; };
-            preview.appendChild(image);
-
-            const content = document.createElement('div');
-            content.className = 'vtt-library-card__content';
-
-            const title = document.createElement('strong');
-            title.textContent = item.nome || 'Item sem nome';
-
-            const type = document.createElement('small');
-            type.textContent = 'Item / Arma';
-
-            const summary = document.createElement('em');
-            summary.textContent = getCompendiumSummary(item);
-
-            content.appendChild(title);
-            content.appendChild(type);
-            content.appendChild(summary);
-            main.appendChild(preview);
-            main.appendChild(content);
-
-            const actions = document.createElement('div');
-            actions.className = 'vtt-library-card__actions';
-
-            const editButton = document.createElement('button');
-            editButton.className = 'ui-icon-btn';
-            editButton.type = 'button';
-            editButton.title = 'Editar item';
-            editButton.innerHTML = '<i class="fas fa-pen"></i>';
-            editButton.addEventListener('click', () => abrirModalItem(index));
-
-            const deleteButton = document.createElement('button');
-            deleteButton.className = 'ui-icon-btn ui-icon-btn--danger';
-            deleteButton.type = 'button';
-            deleteButton.title = 'Excluir item';
-            deleteButton.innerHTML = '<i class="fas fa-trash"></i>';
-            deleteButton.addEventListener('click', () => deleteCompendiumItem(index));
-
-            actions.appendChild(editButton);
-            actions.appendChild(deleteButton);
-            card.appendChild(main);
-            card.appendChild(actions);
-            list.appendChild(card);
+    function normalizeLegacyEntry(item) {
+        const now = new Date().toISOString();
+        return normalizeCompendiumEntry({
+            id: item.id,
+            name: item.name || item.nome || 'Item sem nome',
+            type: item.type || 'item',
+            category: item.category || 'Itens gerais',
+            image: item.image || item.imagem || '',
+            summary: item.summary || item.obs || '',
+            description: item.description || item.obs || '',
+            tags: item.tags || [],
+            rarity: item.rarity || 'comum',
+            source: item.source || '',
+            mechanics: item.mechanics || {},
+            actorTemplate: item.actorTemplate || null,
+            createdAt: item.createdAt || now,
+            updatedAt: item.updatedAt || now
         });
     }
 
-    container.appendChild(controls);
-    container.appendChild(header);
-    container.appendChild(list);
-}
+    function normalizeCompendiumEntry(entry) {
+        const now = new Date().toISOString();
+        return {
+            id: entry.id || `cmp_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+            name: entry.name || 'Novo registro',
+            type: entry.type || 'item',
+            category: entry.category || TYPE_LABELS[entry.type || 'item'] || 'Itens gerais',
+            image: entry.image || '',
+            summary: entry.summary || '',
+            description: entry.description || '',
+            tags: Array.isArray(entry.tags) ? entry.tags : parseTags(entry.tags),
+            rarity: entry.rarity || 'comum',
+            source: entry.source || '',
+            mechanics: entry.mechanics || {},
+            actorTemplate: entry.actorTemplate || null,
+            createdAt: entry.createdAt || now,
+            updatedAt: now
+        };
+    }
 
-renderizarCompendio();
-
-function deleteCompendiumItem(index) {
-    compendioItens.splice(index, 1);
-    localStorage.setItem('cosmere_compendio', JSON.stringify(compendioItens));
-    renderizarCompendio();
-}
-
-function filtrarCompendio(termo) {
-    termo = (termo || '').toLowerCase();
-    const items = document.querySelectorAll('#items-content .compendium-item-card');
-    items.forEach(item => {
-        item.style.display = item.innerText.toLowerCase().includes(termo) ? '' : 'none';
-    });
-}
-
-function dragCompendiumItem(e, index) {
-    e.dataTransfer.setData('text/plain', JSON.stringify(compendioItens[index]));
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    const equipCont = document.getElementById('equipment-container');
-    if (equipCont) {
-        equipCont.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            equipCont.style.borderColor = 'var(--accent)';
-        });
-        equipCont.addEventListener('dragleave', () => {
-            equipCont.style.borderColor = '';
-        });
-        equipCont.addEventListener('drop', (e) => {
-            e.preventDefault();
-            equipCont.style.borderColor = '';
+    async function loadCompendiumEntries() {
+        const state = ensureState();
+        if (window.api?.getCompendiumEntries) {
+            const entries = await window.api.getCompendiumEntries();
+            state.entries = Array.isArray(entries) ? entries.map(normalizeCompendiumEntry) : [];
+        } else {
             try {
-                const itemData = JSON.parse(e.dataTransfer.getData('text/plain'));
-                if (itemData && itemData.nome) {
-                    addEquipamentoFromCompendium(itemData);
-                }
-            } catch (err) { }
+                state.entries = JSON.parse(localStorage.getItem('cosmere_compendio') || '[]').map(normalizeLegacyEntry);
+            } catch (error) {
+                state.entries = [];
+            }
+        }
+
+        await migrateLegacyLocalCompendium();
+        renderCompendium();
+    }
+
+    async function migrateLegacyLocalCompendium() {
+        if (!window.api?.saveCompendiumEntry) return;
+        if (window.compendiumState.entries.length > 0) return;
+
+        let legacy = [];
+        try {
+            legacy = JSON.parse(localStorage.getItem('cosmere_compendio') || '[]');
+        } catch (error) {
+            legacy = [];
+        }
+
+        if (!legacy.length) return;
+        for (const item of legacy) {
+            await saveCompendiumEntry(normalizeLegacyEntry(item), { silent: true });
+        }
+    }
+
+    async function saveCompendiumEntry(entry, options = {}) {
+        const state = ensureState();
+        const normalized = normalizeCompendiumEntry(entry);
+
+        if (window.api?.saveCompendiumEntry) {
+            await window.api.saveCompendiumEntry(JSON.stringify(normalized));
+        }
+
+        const index = state.entries.findIndex(item => item.id === normalized.id);
+        if (index >= 0) state.entries[index] = normalized;
+        else state.entries.push(normalized);
+
+        if (!window.api?.saveCompendiumEntry) {
+            localStorage.setItem('cosmere_compendio', JSON.stringify(state.entries));
+        }
+
+        if (!options.silent) renderCompendium();
+        return normalized;
+    }
+
+    async function deleteCompendiumEntry(id) {
+        const state = ensureState();
+        if (window.api?.deleteCompendiumEntry) await window.api.deleteCompendiumEntry(id);
+        state.entries = state.entries.filter(entry => entry.id !== id);
+        if (!window.api?.deleteCompendiumEntry) {
+            localStorage.setItem('cosmere_compendio', JSON.stringify(state.entries));
+        }
+        renderCompendium();
+    }
+
+    function getFilteredCompendiumEntries() {
+        const state = ensureState();
+        const { search, type, tag, sort } = state.filters;
+        let entries = [...state.entries];
+
+        if (search) {
+            const term = search.toLowerCase();
+            entries = entries.filter(entry => [
+                entry.name,
+                entry.summary,
+                entry.description,
+                entry.category,
+                ...(entry.tags || [])
+            ].join(' ').toLowerCase().includes(term));
+        }
+
+        if (type && type !== 'all') entries = entries.filter(entry => entry.type === type);
+        if (tag && tag !== 'all') entries = entries.filter(entry => (entry.tags || []).includes(tag));
+
+        if (sort === 'az') entries.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+        if (sort === 'type') entries.sort((a, b) => typeSortValue(a.type) - typeSortValue(b.type) || String(a.name).localeCompare(String(b.name)));
+        if (sort === 'recent') entries.sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
+
+        return entries;
+    }
+
+    function typeSortValue(type) {
+        const index = TYPE_ORDER.indexOf(type);
+        return index < 0 ? 999 : index;
+    }
+
+    function groupCompendiumByType(entries) {
+        return entries.reduce((groups, entry) => {
+            const type = entry.type || 'item';
+            if (!groups[type]) groups[type] = [];
+            groups[type].push(entry);
+            return groups;
+        }, {});
+    }
+
+    function renderCompendium() {
+        const container = document.getElementById('items-content');
+        if (!container) return;
+
+        const entries = getFilteredCompendiumEntries();
+        const groups = groupCompendiumByType(entries);
+        const orderedGroups = Object.entries(groups).sort(([a], [b]) => typeSortValue(a) - typeSortValue(b));
+
+        container.innerHTML = `
+            <div class="compendium-panel">
+                ${renderCompendiumToolbar()}
+                ${orderedGroups.length ? orderedGroups.map(([type, items]) => renderCompendiumGroup(type, items)).join('') : renderCompendiumEmpty()}
+            </div>
+        `;
+
+        bindCompendiumPanel(container);
+    }
+
+    function renderCompendiumToolbar() {
+        const state = ensureState();
+        const tags = getAllTags();
+        return `
+            <div class="compendium-toolbar">
+                <div class="compendium-filter-row">
+                    <input class="vtt-input" type="text" data-compendium-filter="search" value="${escapeHtml(state.filters.search)}" placeholder="Buscar no compendio...">
+                    <select class="vtt-select" data-compendium-filter="type">
+                        <option value="all">Todos os tipos</option>
+                        ${TYPE_ORDER.map(type => `<option value="${type}" ${state.filters.type === type ? 'selected' : ''}>${TYPE_LABELS[type]}</option>`).join('')}
+                    </select>
+                    <select class="vtt-select" data-compendium-filter="tag">
+                        <option value="all">Todas as tags</option>
+                        ${tags.map(tag => `<option value="${escapeHtml(tag)}" ${state.filters.tag === tag ? 'selected' : ''}>${escapeHtml(tag)}</option>`).join('')}
+                    </select>
+                    <select class="vtt-select" data-compendium-filter="sort">
+                        <option value="az" ${state.filters.sort === 'az' ? 'selected' : ''}>A-Z</option>
+                        <option value="type" ${state.filters.sort === 'type' ? 'selected' : ''}>Tipo</option>
+                        <option value="recent" ${state.filters.sort === 'recent' ? 'selected' : ''}>Mais recentes</option>
+                    </select>
+                </div>
+                <div class="compendium-filter-row compendium-filter-row--actions">
+                    <button class="ui-btn ui-btn--primary" type="button" data-compendium-action="new"><i class="fas fa-plus"></i> Novo registro</button>
+                    <button class="ui-btn" type="button" data-compendium-action="seed"><i class="fas fa-seedling"></i> Popular exemplos</button>
+                    <button class="ui-btn" type="button" data-compendium-action="import-equipment"><i class="fas fa-file-import"></i> Importar fichas</button>
+                    <button class="ui-btn" type="button" data-compendium-action="import"><i class="fas fa-upload"></i> Importar</button>
+                    <button class="ui-btn" type="button" data-compendium-action="export"><i class="fas fa-download"></i> Exportar</button>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderCompendiumGroup(type, items) {
+        return `
+            <section class="compendium-group">
+                <header class="compendium-group-header">
+                    <strong><i class="fas ${TYPE_ICONS[type] || TYPE_ICONS.item}"></i> ${TYPE_LABELS[type] || type}</strong>
+                    <span>${items.length}</span>
+                </header>
+                <div class="compendium-card-grid">
+                    ${items.map(renderCompendiumEntryCard).join('')}
+                </div>
+            </section>
+        `;
+    }
+
+    function renderCompendiumEntryCard(entry) {
+        const mechanicText = getMechanicSummary(entry);
+        return `
+            <article class="compendium-entry-card compendium-entry-card--${escapeAttr(entry.type)}" draggable="true" data-compendium-entry-id="${escapeAttr(entry.id)}">
+                <div class="compendium-entry-card__drag" title="Arrastar"><i class="fas fa-grip-vertical"></i></div>
+                <button class="compendium-entry-card__main" type="button" data-compendium-action="edit" data-compendium-entry-id="${escapeAttr(entry.id)}">
+                    <div class="compendium-entry-card__icon"><i class="fas ${TYPE_ICONS[entry.type] || TYPE_ICONS.item}"></i></div>
+                    <div class="compendium-entry-card__body">
+                        <strong>${escapeHtml(entry.name)}</strong>
+                        <span>${escapeHtml(entry.summary || entry.description || 'Sem resumo.')}</span>
+                        ${mechanicText ? `<small>${escapeHtml(mechanicText)}</small>` : ''}
+                        <div class="compendium-entry-badges">
+                            <em>${escapeHtml(TYPE_LABELS[entry.type] || entry.type)}</em>
+                            ${(entry.tags || []).slice(0, 3).map(tag => `<em>${escapeHtml(tag)}</em>`).join('')}
+                        </div>
+                    </div>
+                </button>
+                <div class="compendium-entry-card__actions">
+                    <button class="ui-icon-btn" type="button" data-compendium-action="edit" data-compendium-entry-id="${escapeAttr(entry.id)}" title="Editar"><i class="fas fa-pen"></i></button>
+                    <button class="ui-icon-btn" type="button" data-compendium-action="duplicate" data-compendium-entry-id="${escapeAttr(entry.id)}" title="Duplicar"><i class="fas fa-copy"></i></button>
+                    <button class="ui-icon-btn ui-icon-btn--danger" type="button" data-compendium-action="delete" data-compendium-entry-id="${escapeAttr(entry.id)}" title="Excluir"><i class="fas fa-trash"></i></button>
+                </div>
+            </article>
+        `;
+    }
+
+    function renderCompendiumEmpty() {
+        return `
+            <div class="vtt-empty-state vtt-empty-state--library">
+                <i class="fas fa-book-open"></i>
+                <span>Nenhum registro encontrado no compendio.</span>
+            </div>
+        `;
+    }
+
+    function bindCompendiumPanel(container) {
+        container.querySelectorAll('[data-compendium-filter]').forEach(control => {
+            control.addEventListener('input', updateCompendiumFilter);
+            control.addEventListener('change', updateCompendiumFilter);
+        });
+
+        container.querySelectorAll('[data-compendium-action]').forEach(button => {
+            button.addEventListener('click', handleCompendiumAction);
+        });
+
+        container.querySelectorAll('[draggable="true"][data-compendium-entry-id]').forEach(card => {
+            card.addEventListener('dragstart', event => dragCompendiumEntry(event, card.dataset.compendiumEntryId));
         });
     }
-});
 
-function addEquipamentoFromCompendium(item) {
-    const container = document.getElementById('equipment-container');
-    const div = document.createElement('div');
-    div.className = 'char-card card-fisico slot-weapon';
-    div.innerHTML = `
-        <button class="btn-delete-item" onclick="prepararDelecao(this)"><i class="fas fa-trash"></i></button>
-        <label><i class="fas fa-box"></i> ${item.nome}</label>
-        <input type="text" value="${item.nome}" class="item-name">
-        <div class="slot-desc"><input type="text" value="${item.obs || ''}" style="font-size:12px; color:var(--accent); font-family: 'Segoe UI', sans-serif;"></div>
-    `;
-    container.appendChild(div);
-    calcularPeso();
-    addChatMessage('Sistema', `Item <strong>${item.nome}</strong> adicionado ao equipamento.`, '#22c55e');
-}
+    function updateCompendiumFilter(event) {
+        const key = event.currentTarget.dataset.compendiumFilter;
+        ensureState().filters[key] = event.currentTarget.value;
+        renderCompendium();
+    }
+
+    function filtrarCompendio(term) {
+        ensureState().filters.search = term || '';
+        renderCompendium();
+    }
+
+    async function handleCompendiumAction(event) {
+        const action = event.currentTarget.dataset.compendiumAction;
+        const entryId = event.currentTarget.dataset.compendiumEntryId;
+        if (action === 'new') return abrirModalItem();
+        if (action === 'edit') return abrirModalItem(entryId);
+        if (action === 'duplicate') return duplicateCompendiumEntry(entryId);
+        if (action === 'delete') return deleteCompendiumEntry(entryId);
+        if (action === 'import') return importCompendium();
+        if (action === 'import-equipment') return importCharacterEquipmentCompendium();
+        if (action === 'export') return exportCompendium();
+        if (action === 'seed') return seedStarterCompendium();
+    }
+
+    function abrirModalItem(entryId = null) {
+        const state = ensureState();
+        state.editingId = typeof entryId === 'string' ? entryId : null;
+        const entry = state.entries.find(item => item.id === state.editingId) || normalizeCompendiumEntry({ type: 'item' });
+        renderCompendiumEditor(entry);
+        document.getElementById('item-compendium-modal')?.classList.remove('hidden');
+    }
+
+    function fecharModalItem() {
+        document.getElementById('item-compendium-modal')?.classList.add('hidden');
+    }
+
+    function renderCompendiumEditor(entry) {
+        const modal = document.getElementById('item-compendium-modal');
+        if (!modal) return;
+        const fields = MECHANIC_FIELDS[entry.type] || MECHANIC_FIELDS.item;
+
+        modal.innerHTML = `
+            <div class="vtt-modal vtt-modal--item compendium-editor">
+                <div class="vtt-modal-header">
+                    <h3 class="vtt-modal-title">${entry.id ? 'Registro do compendio' : 'Novo registro'}</h3>
+                    <button class="ui-icon-btn" type="button" data-compendium-editor-action="close" title="Fechar"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="vtt-modal-body compendium-editor__body">
+                    <label class="vtt-field">
+                        <span>Nome</span>
+                        <input class="vtt-input" id="compendium-entry-name" type="text" value="${escapeHtml(entry.name)}">
+                    </label>
+                    <label class="vtt-field">
+                        <span>Tipo</span>
+                        <select class="vtt-select" id="compendium-entry-type">
+                            ${TYPE_ORDER.map(type => `<option value="${type}" ${entry.type === type ? 'selected' : ''}>${TYPE_LABELS[type]}</option>`).join('')}
+                        </select>
+                    </label>
+                    <label class="vtt-field">
+                        <span>Categoria</span>
+                        <input class="vtt-input" id="compendium-entry-category" type="text" value="${escapeHtml(entry.category)}">
+                    </label>
+                    <label class="vtt-field">
+                        <span>Imagem / arquivo</span>
+                        <input class="vtt-input" id="compendium-entry-image" type="text" value="${escapeHtml(entry.image)}" placeholder="lanca.png ou caminho completo">
+                    </label>
+                    <label class="vtt-field">
+                        <span>Resumo</span>
+                        <input class="vtt-input" id="compendium-entry-summary" type="text" value="${escapeHtml(entry.summary)}">
+                    </label>
+                    <label class="vtt-field compendium-editor__wide">
+                        <span>Descricao</span>
+                        <textarea class="vtt-textarea" id="compendium-entry-description">${escapeHtml(entry.description)}</textarea>
+                    </label>
+                    <label class="vtt-field">
+                        <span>Tags</span>
+                        <input class="vtt-input" id="compendium-entry-tags" type="text" value="${escapeHtml((entry.tags || []).join(', '))}">
+                    </label>
+                    <label class="vtt-field">
+                        <span>Raridade</span>
+                        <input class="vtt-input" id="compendium-entry-rarity" type="text" value="${escapeHtml(entry.rarity)}">
+                    </label>
+                    <label class="vtt-field">
+                        <span>Fonte</span>
+                        <input class="vtt-input" id="compendium-entry-source" type="text" value="${escapeHtml(entry.source)}">
+                    </label>
+                    <section class="compendium-editor__wide">
+                        <div class="compendium-group-header"><strong>Dados mecanicos</strong><span>${TYPE_LABELS[entry.type] || entry.type}</span></div>
+                        <div class="compendium-mechanics-grid">
+                            ${fields.map(([key, label]) => `
+                                <label class="vtt-field">
+                                    <span>${escapeHtml(label)}</span>
+                                    <input class="vtt-input" data-mechanic-key="${escapeAttr(key)}" type="text" value="${escapeHtml(entry.mechanics?.[key] ?? entry.actorTemplate?.[key] ?? '')}">
+                                </label>
+                            `).join('')}
+                        </div>
+                    </section>
+                </div>
+                <div class="vtt-modal-footer">
+                    <button class="ui-btn" type="button" data-compendium-editor-action="close">Cancelar</button>
+                    <button class="ui-btn ui-btn--primary" type="button" data-compendium-editor-action="save"><i class="fas fa-save"></i> Salvar</button>
+                </div>
+            </div>
+        `;
+
+        modal.querySelector('#compendium-entry-type')?.addEventListener('change', () => {
+            const draft = readEditorEntry();
+            draft.type = modal.querySelector('#compendium-entry-type').value;
+            draft.category = draft.category || TYPE_LABELS[draft.type] || '';
+            renderCompendiumEditor(draft);
+        });
+
+        modal.querySelectorAll('[data-compendium-editor-action]').forEach(button => {
+            button.addEventListener('click', async () => {
+                const action = button.dataset.compendiumEditorAction;
+                if (action === 'close') fecharModalItem();
+                if (action === 'save') await salvarItemCompendio();
+            });
+        });
+    }
+
+    function readEditorEntry() {
+        const state = ensureState();
+        const existing = state.entries.find(item => item.id === state.editingId) || {};
+        const type = document.getElementById('compendium-entry-type')?.value || existing.type || 'item';
+        const mechanics = {};
+        document.querySelectorAll('#item-compendium-modal [data-mechanic-key]').forEach(input => {
+            mechanics[input.dataset.mechanicKey] = input.value.trim();
+        });
+
+        const actorTemplate = ['creature', 'npc'].includes(type) ? {
+            hpAtual: parseInt(mechanics.hpAtual, 10) || 10,
+            hpMax: parseInt(mechanics.hpMax, 10) || 10,
+            type: type === 'npc' ? 'NPC' : 'Monster',
+            tokenPath: mechanics.tokenPath || '',
+            ataques: mechanics.attacks || '',
+            attributes: mechanics.attributes || '',
+            conditions: []
+        } : null;
+
+        return normalizeCompendiumEntry({
+            ...existing,
+            name: document.getElementById('compendium-entry-name')?.value.trim() || 'Novo registro',
+            type,
+            category: document.getElementById('compendium-entry-category')?.value.trim() || TYPE_LABELS[type] || '',
+            image: document.getElementById('compendium-entry-image')?.value.trim() || '',
+            summary: document.getElementById('compendium-entry-summary')?.value.trim() || '',
+            description: document.getElementById('compendium-entry-description')?.value || '',
+            tags: parseTags(document.getElementById('compendium-entry-tags')?.value || ''),
+            rarity: document.getElementById('compendium-entry-rarity')?.value.trim() || 'comum',
+            source: document.getElementById('compendium-entry-source')?.value.trim() || '',
+            mechanics,
+            actorTemplate
+        });
+    }
+
+    async function salvarItemCompendio() {
+        await saveCompendiumEntry(readEditorEntry());
+        fecharModalItem();
+    }
+
+    async function duplicateCompendiumEntry(entryId) {
+        const entry = ensureState().entries.find(item => item.id === entryId);
+        if (!entry) return;
+        await saveCompendiumEntry({
+            ...entry,
+            id: null,
+            name: `${entry.name} (copia)`,
+            createdAt: null
+        });
+    }
+
+    function dragCompendiumEntry(event, entryId) {
+        const entry = ensureState().entries.find(item => item.id === entryId);
+        if (!entry) return;
+        const payload = JSON.stringify({ source: 'compendium', entryId: entry.id, type: entry.type });
+        event.dataTransfer.setData(DRAG_MIME, payload);
+        event.dataTransfer.setData('text/plain', payload);
+        event.dataTransfer.effectAllowed = 'copy';
+    }
+
+    function getDraggedCompendiumEntry(event) {
+        try {
+            const raw = event.dataTransfer.getData(DRAG_MIME) || event.dataTransfer.getData('text/plain');
+            const payload = JSON.parse(raw);
+            if (!payload?.entryId) return null;
+            return ensureState().entries.find(entry => entry.id === payload.entryId) || null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function setupCompendiumDrops() {
+        document.addEventListener('dragover', event => {
+            const entry = getDraggedCompendiumEntry(event);
+            if (!entry) return;
+            if (getDropZoneForEvent(event, entry)) event.preventDefault();
+        });
+
+        document.addEventListener('drop', event => {
+            const entry = getDraggedCompendiumEntry(event);
+            if (!entry) return;
+            const zone = getDropZoneForEvent(event, entry);
+            if (!zone) return;
+            event.preventDefault();
+            handleCompendiumDrop(entry, zone, event);
+        });
+    }
+
+    function getDropZoneForEvent(event, entry) {
+        if (event.target.closest('#equipment-container') && ['item', 'weapon', 'armor'].includes(entry.type)) return 'equipment';
+        if (event.target.closest('#talents-container, #tab-magic') && ['power', 'talent'].includes(entry.type)) return 'powers';
+        if (event.target.closest('#director-content') && ['handout', 'scene'].includes(entry.type)) return 'scene';
+        if (event.target.closest('#game-container, canvas') && ['creature', 'npc', 'condition'].includes(entry.type)) return 'map';
+        return null;
+    }
+
+    function handleCompendiumDrop(entry, zone, event) {
+        const characterId = window.getCurrentCharacterId?.();
+        if (zone === 'equipment') return window.addCompendiumEntryToEquipment?.(characterId, entry);
+        if (zone === 'powers') return window.addCompendiumEntryToPowers?.(characterId, entry);
+        if (zone === 'scene') return applyCompendiumEntryToScene(entry);
+        if (zone === 'map') {
+            const point = getWorldPointFromDrop(event);
+            const token = findTokenAtWorldPoint(point.x, point.y) || window.selectedToken;
+            if (entry.type === 'condition') return applyCompendiumConditionToToken(entry, token);
+            return spawnCreatureFromCompendium(entry, point.x, point.y);
+        }
+    }
+
+    function getWorldPointFromDrop(event) {
+        const scene = window.phaserScene;
+        if (!scene?.cameras?.main) return { x: event.clientX, y: event.clientY };
+        const rect = scene.game.canvas.getBoundingClientRect();
+        const camera = scene.cameras.main;
+        return {
+            x: camera.scrollX + ((event.clientX - rect.left) / camera.zoom),
+            y: camera.scrollY + ((event.clientY - rect.top) / camera.zoom)
+        };
+    }
+
+    function findTokenAtWorldPoint(x, y) {
+        return window.phaserScene?.camadaTokens?.list?.find(token => {
+            const width = token.displayWidth || 0;
+            const height = token.displayHeight || 0;
+            return x >= token.x - width / 2 && x <= token.x + width / 2 && y >= token.y - height / 2 && y <= token.y + height / 2;
+        }) || null;
+    }
+
+    function spawnCreatureFromCompendium(entry, x, y) {
+        if (!window.phaserScene || !window.fichasSalvas) return;
+        const characterId = `actor_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        const tokenPath = entry.actorTemplate?.tokenPath || entry.mechanics?.tokenPath || entry.image || '../assets/persons/default.png';
+        const ficha = {
+            id: characterId,
+            nome: entry.name,
+            type: entry.type === 'npc' ? 'NPC' : 'Monster',
+            hpAtual: parseInt(entry.actorTemplate?.hpAtual ?? entry.mechanics?.hpAtual, 10) || 10,
+            hpMax: parseInt(entry.actorTemplate?.hpMax ?? entry.mechanics?.hpMax, 10) || 10,
+            portraitPath: entry.actorTemplate?.portraitPath || tokenPath,
+            tokenPath,
+            equipamentos: entry.actorTemplate?.equipamentos || [],
+            poderes: entry.actorTemplate?.poderes || [],
+            conditions: [],
+            compendiumId: entry.id
+        };
+
+        window.fichasSalvas[characterId] = ficha;
+        if (window.api?.saveCharacter) window.api.saveCharacter(characterId, JSON.stringify(ficha));
+
+        const safeName = entry.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+        window.phaserScene.spawnTokenAt(`tk_${safeName}_${Date.now()}`, tokenPath, x, y, '', characterId, false, entry.name, {
+            hp: ficha.hpAtual,
+            hpMax: ficha.hpMax,
+            conditions: []
+        });
+        if (typeof window.renderizarListaTokens === 'function') window.renderizarListaTokens();
+    }
+
+    function applyCompendiumConditionToToken(entry, token) {
+        if (!entry || entry.type !== 'condition' || !token) return;
+        if (typeof window.addCondition === 'function') window.addCondition(token.tokenId, entry.name);
+        if (typeof window.addSessionEvent === 'function') {
+            window.addSessionEvent('condition_added', 'Condicao aplicada', `${entry.name} em ${token.charName || token.tokenId}`, {
+                conditionId: entry.id,
+                tokenId: token.tokenId
+            });
+        }
+    }
+
+    function applyCompendiumEntryToScene(entry) {
+        if (entry.type === 'handout') {
+            const path = entry.mechanics?.path || entry.image;
+            const handout = document.getElementById('director-handout');
+            if (handout && path) {
+                if (![...handout.options].some(option => option.value === path)) {
+                    handout.insertAdjacentHTML('beforeend', `<option value="${escapeAttr(path)}">${escapeHtml(entry.name)}</option>`);
+                }
+                handout.value = path;
+            }
+        }
+
+        if (entry.type === 'scene' && typeof window.restoreDirectedSceneFromState === 'function') {
+            window.restoreDirectedSceneFromState({
+                sceneName: entry.name,
+                playerText: entry.description,
+                mapPath: entry.mechanics?.mapPath || '',
+                audioPath: entry.mechanics?.audioPath || '',
+                weather: entry.mechanics?.weather || 'none',
+                handoutPath: entry.mechanics?.handoutPath || ''
+            });
+        }
+
+        if (typeof window.addSessionEvent === 'function') {
+            window.addSessionEvent('scene_prepared', 'Registro aplicado a cena', entry.name, { compendiumId: entry.id, type: entry.type });
+        }
+    }
+
+    function exportCompendium() {
+        const data = {
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            entries: ensureState().entries
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `cosmere_compendium_${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function importCompendium() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = async event => {
+            const file = event.target.files[0];
+            if (!file) return;
+            const data = JSON.parse(await file.text());
+            const entries = Array.isArray(data.entries) ? data.entries : [];
+            for (const entry of entries) {
+                await saveCompendiumEntry({ ...entry, id: entry.id || null }, { silent: true });
+            }
+            renderCompendium();
+        };
+        input.click();
+    }
+
+    async function importCharacterEquipmentCompendium() {
+        if (!window.api?.importCharacterEquipmentCompendium) return;
+        let result;
+        try {
+            result = await window.api.importCharacterEquipmentCompendium();
+            const entries = await window.api.getCompendiumEntries();
+            ensureState().entries = Array.isArray(entries) ? entries.map(normalizeCompendiumEntry) : [];
+            renderCompendium();
+        } catch (error) {
+            console.error('Erro ao importar equipamentos das fichas para o compendio:', error);
+            if (typeof window.mostrarToast === 'function') {
+                window.mostrarToast('Nao foi possivel importar equipamentos das fichas.', 'danger', 'fa-triangle-exclamation');
+            }
+            return;
+        }
+
+        if (typeof window.mostrarToast === 'function') {
+            const count = result?.importedCount || 0;
+            const message = count
+                ? `${count} equipamento(s) importado(s) das fichas.`
+                : 'Nenhum equipamento novo para importar.';
+            window.mostrarToast(message, count ? 'success' : 'info', 'fa-book');
+        }
+    }
+
+    async function seedStarterCompendium() {
+        const starterEntries = [
+            {
+                type: 'weapon',
+                name: 'Lanca',
+                category: 'Armas',
+                summary: 'Arma longa de combate corpo a corpo.',
+                tags: ['corpo a corpo', 'haste'],
+                mechanics: { damage: '1d8', attribute: 'FORCA', skill: 'Armamento Pesado', range: '1,5m' }
+            },
+            {
+                type: 'condition',
+                name: 'Caido',
+                category: 'Condicoes',
+                summary: 'O alvo esta no chao.',
+                mechanics: { effect: 'Pode sofrer desvantagem em certas acoes fisicas.' }
+            },
+            {
+                type: 'power',
+                name: 'Gravitacao Basica',
+                category: 'Surges',
+                summary: 'Manipula direcao e forca da gravidade.',
+                tags: ['surge', 'gravitacao'],
+                mechanics: { cost: '1 investidura', range: 'curto', duration: '1 rodada', effect: 'Altera a direcao da queda de um alvo ou objeto.' }
+            }
+        ];
+
+        for (const entry of starterEntries) {
+            if (!ensureState().entries.some(item => item.name === entry.name && item.type === entry.type)) {
+                await saveCompendiumEntry(entry, { silent: true });
+            }
+        }
+        renderCompendium();
+    }
+
+    function getAllTags() {
+        return [...new Set(ensureState().entries.flatMap(entry => entry.tags || []))].sort((a, b) => a.localeCompare(b));
+    }
+
+    function getMechanicSummary(entry) {
+        const m = entry.mechanics || {};
+        if (entry.type === 'weapon') return [m.damage, m.range, m.attribute].filter(Boolean).join(' | ');
+        if (entry.type === 'armor') return [`Def ${m.defense || 0}`, m.penalty ? `Pen ${m.penalty}` : ''].filter(Boolean).join(' | ');
+        if (entry.type === 'power') return [m.cost, m.range, m.duration].filter(Boolean).join(' | ');
+        if (entry.type === 'condition') return m.effect || '';
+        if (['creature', 'npc'].includes(entry.type)) return `HP ${m.hpAtual || entry.actorTemplate?.hpAtual || 10}/${m.hpMax || entry.actorTemplate?.hpMax || 10}`;
+        return m.effect || m.cost || '';
+    }
+
+    function parseTags(value) {
+        if (Array.isArray(value)) return value.map(String).map(tag => tag.trim()).filter(Boolean);
+        return String(value || '').split(',').map(tag => tag.trim()).filter(Boolean);
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, char => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[char]));
+    }
+
+    function escapeAttr(value) {
+        return escapeHtml(value).replace(/`/g, '&#96;');
+    }
+
+    window.loadCompendiumEntries = loadCompendiumEntries;
+    window.saveCompendiumEntry = saveCompendiumEntry;
+    window.deleteCompendiumEntry = deleteCompendiumEntry;
+    window.renderCompendium = renderCompendium;
+    window.renderizarCompendio = renderCompendium;
+    window.filtrarCompendio = filtrarCompendio;
+    window.abrirModalItem = abrirModalItem;
+    window.fecharModalItem = fecharModalItem;
+    window.salvarItemCompendio = salvarItemCompendio;
+    window.dragCompendiumEntry = dragCompendiumEntry;
+    window.getDraggedCompendiumEntry = getDraggedCompendiumEntry;
+    window.exportCompendium = exportCompendium;
+    window.importCompendium = importCompendium;
+    window.importCharacterEquipmentCompendium = importCharacterEquipmentCompendium;
+    window.seedStarterCompendium = seedStarterCompendium;
+    window.spawnCreatureFromCompendium = spawnCreatureFromCompendium;
+    window.applyCompendiumConditionToToken = applyCompendiumConditionToToken;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        setupCompendiumDrops();
+        loadCompendiumEntries();
+    });
+})();

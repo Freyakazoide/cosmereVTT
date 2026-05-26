@@ -4,8 +4,14 @@
         function addChatMessage(user, msg, color = "#fff") {
             const msgProcessada = msg.replace(/@([a-zA-ZÀ-ÿ0-9_]+)/g, `<span style="color: var(--accent); cursor: pointer; text-decoration: underline; font-weight: bold; padding: 0 2px;" onclick="if(window.abrirFicha) abrirFicha('$1')">@$1</span>`);
 
+            const lowerMsg = String(msg || '').toLowerCase();
+            const resultClass = lowerMsg.includes('falha cr') || lowerMsg.includes('fumble')
+                ? ' is-fumble'
+                : (lowerMsg.includes('critico') || lowerMsg.includes('crÃ­tico') || color === 'gold' ? ' is-critical' : '');
+
             const log = document.getElementById('chat-log');
             const entry = document.createElement('div');
+            entry.className = `dice-result-card chat-message${resultClass}`;
             entry.style.background = "rgba(255,255,255,0.03)";
             entry.style.padding = "6px 10px";
             entry.style.borderRadius = "4px";
@@ -140,6 +146,11 @@ function loadChatHistory() {
             log.innerHTML = '';
             chatLog.forEach(entry => {
                 const div = document.createElement('div');
+                const lowerMsg = String(entry.msg || '').toLowerCase();
+                const resultClass = lowerMsg.includes('falha cr') || lowerMsg.includes('fumble')
+                    ? ' is-fumble'
+                    : (lowerMsg.includes('critico') || lowerMsg.includes('crÃ­tico') || entry.color === 'gold' ? ' is-critical' : '');
+                div.className = `dice-result-card chat-message${resultClass}`;
                 div.style.background = "rgba(255,255,255,0.03)";
                 div.style.padding = "6px 10px";
                 div.style.borderRadius = "4px";

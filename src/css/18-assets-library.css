@@ -1,0 +1,217 @@
+.assets-library-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.assets-library-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.assets-library-header h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 22px;
+}
+
+.assets-library-actions,
+.assets-library-filters {
+  display: grid;
+  gap: 8px;
+}
+
+.assets-library-actions {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.assets-library-filters {
+  grid-template-columns: minmax(160px, 1.3fr) repeat(4, minmax(95px, 1fr)) repeat(2, minmax(92px, auto));
+}
+
+.assets-library-actions .ui-btn,
+.assets-library-filters .ui-btn {
+  min-width: 0;
+}
+
+.assets-library-filters .ui-btn.is-active {
+  border-color: rgba(216, 167, 57, 0.48);
+  background: rgba(216, 167, 57, 0.16);
+  color: var(--mistborn-amber);
+}
+
+.assets-library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+.asset-card {
+  --asset-type-color: var(--mistborn-gold);
+  display: grid;
+  grid-template-rows: 112px auto auto;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid rgba(154, 163, 173, 0.14);
+  border-top: 3px solid var(--asset-type-color);
+  border-radius: var(--radius-sm);
+  background: rgba(10, 13, 18, 0.76);
+  box-shadow: var(--shadow-sm);
+}
+
+.asset-card[draggable="true"] {
+  cursor: grab;
+}
+
+.asset-card[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.asset-card--map {
+  --asset-type-color: #38bdf8;
+}
+
+.asset-card--token,
+.asset-card--portrait {
+  --asset-type-color: #22c55e;
+}
+
+.asset-card--video,
+.asset-card--audio {
+  --asset-type-color: #e879f9;
+}
+
+.asset-card--handout,
+.asset-card--image {
+  --asset-type-color: var(--mistborn-amber);
+}
+
+.asset-card.is-missing {
+  --asset-type-color: #ef4444;
+  border-style: dashed;
+}
+
+.asset-card__preview {
+  width: 100%;
+  height: 112px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+}
+
+.asset-card__preview img,
+.asset-card__preview video,
+.asset-editor-preview img,
+.asset-editor-preview video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.asset-card__body {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.asset-card__body strong,
+.asset-card__body span,
+.asset-card__body small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.asset-card__body strong {
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+.asset-card__body span,
+.asset-card__body small {
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.asset-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.asset-tag,
+.asset-type-pill {
+  display: inline-grid;
+  place-items: center;
+  min-height: 18px;
+  padding: 0 6px;
+  border: 1px solid rgba(216, 167, 57, 0.18);
+  border-radius: 999px;
+  background: rgba(216, 167, 57, 0.08);
+  color: var(--mistborn-amber);
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.asset-card__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.asset-card__actions .ui-icon-btn.is-active {
+  color: var(--mistborn-amber);
+}
+
+.asset-preview,
+.asset-preview--audio,
+.asset-preview--missing {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--asset-type-color, var(--mistborn-gold));
+  font-size: 28px;
+}
+
+.asset-preview--missing {
+  color: #ef4444;
+}
+
+.vtt-modal--asset {
+  width: min(680px, calc(100vw - 36px));
+}
+
+.asset-editor-body {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.asset-editor-preview {
+  grid-row: span 5;
+  min-height: 220px;
+  overflow: hidden;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+@media (max-width: 900px) {
+  .assets-library-actions,
+  .assets-library-filters,
+  .asset-editor-body {
+    grid-template-columns: 1fr;
+  }
+
+  .asset-editor-preview {
+    grid-row: auto;
+  }
+}

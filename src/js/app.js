@@ -193,6 +193,7 @@ function getVttTooltipDescription(label) {
         'Mapas': 'Carregue cenários, mapas de batalha e ambientes da campanha.',
         'Atores e Tokens': 'Gerencie personagens, NPCs, criaturas e tokens da mesa.',
         'Combate': 'Controle iniciativa, rodadas, turnos, HP e condicoes dos tokens.',
+        'Sessao': 'Acompanhe a linha do tempo da sessao e gere recaps.',
         'Chat': 'Registro da mesa, rolagens, mensagens e eventos importantes.',
         'Notas': 'Diário, pistas, lore, segredos e anotações da campanha.',
         'Compendio': 'Itens, armas, regras rápidas e conteúdos reutilizáveis.',
@@ -936,8 +937,8 @@ function clearContextAuras() {
 
 // Sobrescrever addChatMessage para detectar críticos
 const _addChatMessageOriginal = addChatMessage;
-addChatMessage = function(sender, message, color) {
-    _addChatMessageOriginal(sender, message, color);
+addChatMessage = function(sender, message, color, ...rest) {
+    _addChatMessageOriginal(sender, message, color, ...rest);
 
     const texto = (message || '').toLowerCase();
     if (texto.includes('crítico') || texto.includes('critico')) {

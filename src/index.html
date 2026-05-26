@@ -20,7 +20,11 @@
     <link rel="stylesheet" href="css/13-scene-director.css">
     <link rel="stylesheet" href="css/14-dock-flyout.css">
     <link rel="stylesheet" href="css/15-combat.css">
+    <link rel="stylesheet" href="css/16-session-timeline.css">
+    <link rel="stylesheet" href="css/17-compendium.css">
+    <link rel="stylesheet" href="css/18-assets-library.css">
     <link rel="stylesheet" href="css/99-legacy.css">
+    <link rel="stylesheet" href="css/16-polish.css">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://unpkg.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com data:; img-src 'self' file: data: blob: https://unpkg.com; worker-src blob: 'self';">
 </head>
 <body>
@@ -65,9 +69,11 @@
 
         <div class="dock-section" aria-label="Paineis">
             <button class="tool-btn tab-btn" data-target-id="director-content" data-title="Diretor de Cena" title="Diretor de Cena"><i class="fas fa-clapperboard"></i></button>
+            <button class="tool-btn tab-btn" data-target-id="assets-library-content" data-title="Biblioteca" title="Biblioteca de Assets"><i class="fas fa-box-archive"></i></button>
             <button class="tool-btn tab-btn" data-target-id="maps-content" data-title="Mapas" title="Mapas e Cenarios"><i class="fas fa-map-marked-alt"></i></button>
             <button class="tool-btn tab-btn" data-target-id="tokens-content" data-title="Atores e Tokens" title="Atores / NPCs"><i class="fas fa-users"></i></button>
             <button class="tool-btn tab-btn" data-target-id="combat-content" data-title="Combate" title="Combate"><i class="fas fa-khanda"></i></button>
+            <button class="tool-btn tab-btn" data-target-id="session-content" data-title="Sessao" title="Sessao"><i class="fas fa-scroll"></i></button>
             <button class="tool-btn tab-btn" data-target-id="chat-content" data-title="Chat" title="Chat Log"><i class="fas fa-comments"></i></button>
             <button class="tool-btn tab-btn" data-target-id="notes-content" data-title="Notas" title="Diarios / Anotacoes"><i class="fas fa-book-journal-whills"></i></button>
             <button class="tool-btn tab-btn" data-target-id="items-content" data-title="Compendio" title="Compendio e Monstros"><i class="fas fa-book-open"></i></button>
@@ -96,6 +102,52 @@
         <div id="vtt-flyout-body" class="vtt-flyout-body">
     <div id="maps-content" class="content-area">
         <div id="map-list"></div>
+    </div>
+
+    <div id="assets-library-content" class="content-area hidden">
+        <div class="assets-library-panel">
+            <div class="assets-library-header">
+                <div>
+                    <div class="director-kicker">Arquivos</div>
+                    <h2>Biblioteca de Assets</h2>
+                </div>
+                <span id="assets-library-count" class="combat-round-pill">0 assets</span>
+            </div>
+            <div class="assets-library-actions">
+                <button class="ui-btn ui-btn--primary" onclick="importAssetFromDialog()"><i class="fas fa-upload"></i> Importar</button>
+                <button class="ui-btn" onclick="scanAssetsFolders()"><i class="fas fa-rotate"></i> Escanear pastas</button>
+                <button class="ui-btn" onclick="validateAssetsLibrary()"><i class="fas fa-shield-halved"></i> Validar</button>
+                <button class="ui-btn" onclick="exportAssetsManifest()"><i class="fas fa-file-export"></i> Manifesto</button>
+            </div>
+            <div class="assets-library-filters">
+                <input id="assets-search" class="vtt-input" placeholder="Buscar asset..." oninput="setAssetsSearch(this.value)">
+                <select id="assets-type-filter" class="vtt-select" onchange="setAssetsTypeFilter(this.value)">
+                    <option value="all">Todos os tipos</option>
+                    <option value="map">Mapas</option>
+                    <option value="token">Tokens</option>
+                    <option value="portrait">Retratos</option>
+                    <option value="image">Imagens</option>
+                    <option value="video">Videos</option>
+                    <option value="audio">Audios</option>
+                    <option value="handout">Handouts</option>
+                </select>
+                <select id="assets-category-filter" class="vtt-select" onchange="setAssetsCategoryFilter(this.value)">
+                    <option value="all">Todas as categorias</option>
+                </select>
+                <select id="assets-tag-filter" class="vtt-select" onchange="setAssetsTagFilter(this.value)">
+                    <option value="all">Todas as tags</option>
+                </select>
+                <select id="assets-sort-filter" class="vtt-select" onchange="setAssetsSort(this.value)">
+                    <option value="az">A-Z</option>
+                    <option value="type">Tipo</option>
+                    <option value="recent">Mais recentes</option>
+                    <option value="size">Tamanho</option>
+                </select>
+                <button id="assets-favorites-filter" class="ui-btn" onclick="toggleAssetsFavoritesOnly()"><i class="fas fa-star"></i> Favoritos</button>
+                <button id="assets-missing-filter" class="ui-btn" onclick="toggleAssetsMissingOnly()"><i class="fas fa-triangle-exclamation"></i> Quebrados</button>
+            </div>
+            <div id="assets-library-grid" class="assets-library-grid"></div>
+        </div>
     </div>
     
     <div id="tokens-content" class="content-area hidden">
@@ -151,6 +203,25 @@
                 <button class="ui-btn ui-btn--danger" onclick="endCombat()"><i class="fas fa-stop"></i> Encerrar</button>
             </div>
             <div id="combat-tracker-list" class="combat-tracker-list"></div>
+        </div>
+    </div>
+
+    <div id="session-content" class="content-area hidden">
+        <div class="session-panel">
+            <div class="session-panel__header">
+                <div>
+                    <div class="director-kicker">Historico</div>
+                    <h2>Sessao</h2>
+                </div>
+                <span id="session-status-pill" class="combat-round-pill">Inativa</span>
+            </div>
+            <div class="session-actions">
+                <button class="ui-btn ui-btn--primary" onclick="startSession()"><i class="fas fa-play"></i> Iniciar sessao</button>
+                <button class="ui-btn" onclick="generateSessionRecap()"><i class="fas fa-file-lines"></i> Gerar recap</button>
+                <button class="ui-btn ui-btn--danger" onclick="endSession()"><i class="fas fa-stop"></i> Encerrar</button>
+            </div>
+            <div id="session-recap-output" class="session-recap-output hidden"></div>
+            <div id="session-timeline-list" class="session-timeline-list"></div>
         </div>
     </div>
 
@@ -921,6 +992,50 @@
         </div>
     </div>
 
+    <div id="asset-editor-modal" class="vtt-modal-backdrop hidden">
+        <div class="vtt-modal vtt-modal--asset">
+            <div class="vtt-modal-header">
+                <h3 class="vtt-modal-title">Editar asset</h3>
+                <button class="ui-icon-btn" type="button" onclick="closeAssetEditor()" title="Fechar"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="asset-editor-body">
+                <div id="asset-editor-preview" class="asset-editor-preview"></div>
+                <label class="vtt-field">
+                    <span>Nome</span>
+                    <input id="asset-editor-name" class="vtt-input">
+                </label>
+                <label class="vtt-field">
+                    <span>Tipo</span>
+                    <select id="asset-editor-type" class="vtt-select">
+                        <option value="map">Mapa</option>
+                        <option value="token">Token</option>
+                        <option value="portrait">Retrato</option>
+                        <option value="image">Imagem</option>
+                        <option value="video">Video</option>
+                        <option value="audio">Audio</option>
+                        <option value="handout">Handout</option>
+                    </select>
+                </label>
+                <label class="vtt-field">
+                    <span>Categoria</span>
+                    <input id="asset-editor-category" class="vtt-input">
+                </label>
+                <label class="vtt-field">
+                    <span>Tags</span>
+                    <input id="asset-editor-tags" class="vtt-input" placeholder="cidade, noite, ponte">
+                </label>
+                <label class="vtt-checkbox-row">
+                    <span>Favorito</span>
+                    <input id="asset-editor-favorite" type="checkbox" class="vtt-checkbox">
+                </label>
+            </div>
+            <div class="vtt-modal-footer">
+                <button class="ui-btn" type="button" onclick="closeAssetEditor()">Cancelar</button>
+                <button class="ui-btn ui-btn--primary" type="button" onclick="saveAssetMetadataFromEditor()"><i class="fas fa-save"></i> Salvar</button>
+            </div>
+        </div>
+    </div>
+
     <script src="../node_modules/phaser/dist/phaser.js"></script>
     <script src="renderer.js"></script>
     <script src="js/ui/toolbar.js"></script>
@@ -928,10 +1043,12 @@
     <script src="js/ui/dice.js"></script>
     <script src="js/ui/initiative.js"></script>
     <script src="js/ui/combat.js"></script>
+    <script src="js/ui/session-timeline.js"></script>
     <script src="js/ui/notes.js"></script>
     <script src="js/ui/toast.js"></script>
     <script src="js/ui/character-sheet.js"></script>
     <script src="js/ui/compendium.js"></script>
+    <script src="js/ui/assets-library.js"></script>
     <script src="js/ui/player-view.js"></script>
     <script src="js/ui/handouts.js"></script>
     <script src="js/ui/scene-director.js"></script>

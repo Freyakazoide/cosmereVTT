@@ -50,6 +50,9 @@ function renderVttLibraryCard({
     const normalizedPreview = normalizarCaminhoVtt(preview || path);
     const resolvedFileName = fileName || title || nomeArquivoVtt(path);
     const resolvedTitle = title || limparExtensaoVtt(resolvedFileName);
+    const displayVariant = variant === 'audio'
+        ? 'audio'
+        : (['map', 'image', 'video'].includes(variant) ? 'visual' : (variant || 'compact'));
 
     const safeTitle = escaparHtmlVtt(resolvedTitle);
     const safeFileName = escaparHtmlVtt(resolvedFileName);
@@ -57,7 +60,9 @@ function renderVttLibraryCard({
     const safeMeta = escaparHtmlVtt(meta);
     const safePath = escaparHtmlVtt(normalizedPath);
     const safeVariant = escaparHtmlVtt(variant);
+    const safeDisplayVariant = escaparHtmlVtt(displayVariant);
     const safeIcon = escaparHtmlVtt(icon);
+    const titleText = safePath ? `${safeTitle} - ${safePath}` : safeTitle;
 
     let previewHtml = `
         <span class="vtt-library-preview vtt-library-preview--icon">
@@ -82,16 +87,36 @@ function renderVttLibraryCard({
         `;
     }
 
+    if (displayVariant === 'audio') {
+        return `
+            <article class="vtt-library-card vtt-library-card--audio vtt-library-card--row" title="${titleText}" data-vtt-path="${safePath}">
+                <button class="vtt-library-card__main-action" type="button" onclick="${onClick}">
+                    <span class="vtt-library-row-icon"><i class="${safeIcon}"></i></span>
+                    <span class="vtt-library-card__content">
+                        <strong class="vtt-library-card__filename">${safeFileName}</strong>
+                        <span class="vtt-library-card__meta-line">
+                            <small>${safeSubtitle}</small>
+                            ${safeMeta ? `<em>${safeMeta}</em>` : ''}
+                        </span>
+                    </span>
+                </button>
+
+                ${actions ? `<div class="vtt-library-card__actions">${actions}</div>` : ''}
+            </article>
+        `;
+    }
+
     return `
-        <article class="vtt-library-card ${safeVariant ? `vtt-library-card--${safeVariant}` : ''}">
+        <article class="vtt-library-card ${safeVariant ? `vtt-library-card--${safeVariant}` : ''} vtt-library-card--${safeDisplayVariant}" title="${titleText}" data-vtt-path="${safePath}">
             <button class="vtt-library-card__main-action" type="button" onclick="${onClick}">
                 ${previewHtml}
 
                 <span class="vtt-library-card__content">
                     <strong class="vtt-library-card__filename">${safeFileName}</strong>
-                    <small>${safeSubtitle}</small>
+                    <span class="vtt-library-card__meta-line">
+                        <small>${safeSubtitle}</small>
+                    </span>
                     ${safeMeta ? `<em>${safeMeta}</em>` : ''}
-                    ${safePath ? `<code>${safePath}</code>` : ''}
                 </span>
             </button>
 
@@ -792,6 +817,15 @@ class MainScene extends Phaser.Scene {
                 ...(window.combatState || { active: false, round: 1, currentTurnIndex: 0, participants: [] }),
                 participants: (window.combatState?.participants || []).map(({ tokenRef, ...participant }) => participant)
             },
+            sessionState: typeof window.getSessionStateSnapshot === 'function'
+                ? window.getSessionStateSnapshot()
+                : (window.sessionState || {
+                    active: false,
+                    sessionName: '',
+                    startedAt: null,
+                    endedAt: null,
+                    events: []
+                }),
             weather: this.currentWeather || null,
             fog: {
                 alpha: this.fogRT ? this.fogRT.alpha : 0.9,
@@ -911,6 +945,19 @@ class MainScene extends Phaser.Scene {
             restoreDirectedSceneFromState(state.sceneDirector);
         } else if (state.sceneDirector) {
             window.directedSceneDraft = state.sceneDirector;
+        }
+        if (state.sessionState) {
+            if (typeof window.restoreSessionState === 'function') {
+                window.restoreSessionState(state.sessionState);
+            } else {
+                window.sessionState = state.sessionState;
+                if (typeof window.renderSessionTimeline === 'function') {
+                    window.renderSessionTimeline();
+                }
+                if (typeof window.persistSessionState === 'function') {
+                    window.persistSessionState();
+                }
+            }
         }
         if (!window.location.search.includes('player=true') && typeof restoreSceneNotesFromBoardState === 'function') {
             restoreSceneNotesFromBoardState(state);
@@ -1311,6 +1358,39 @@ class MainScene extends Phaser.Scene {
         } else {
             this.spawnTokenAt(key, path, this.cameras.main.worldView.centerX, this.cameras.main.worldView.centerY, '', characterId, isVideo, nome);
         }
+    }
+
+    handleAssetDropOnCanvas(payload, x, y) {
+        const asset = window.assetsLibraryState?.assets?.find(item => item.id === payload?.assetId);
+        if (!asset || asset.missing) return;
+
+        if (asset.type === 'map') {
+            this.carregarMapa(asset.path, asset.fileName || asset.name);
+            return;
+        }
+
+        if (['token', 'image', 'handout', 'portrait'].includes(asset.type)) {
+            this.spawnTokenAsset(asset, x, y);
+        }
+    }
+
+    spawnTokenAsset(asset, x, y) {
+        if (!asset?.path) return;
+        const ext = asset.path.split('.').pop().toLowerCase();
+        const isVideo = ['webm', 'mp4'].includes(ext);
+        const safePath = btoa(encodeURIComponent(asset.path)).replace(/[^a-zA-Z0-9]/g, '').substring(0, 15);
+        const safeName = String(asset.name || 'Asset').replace(/[^a-zA-Z0-9_-]/g, '_');
+        const key = `asset_${safeName}_${safePath}`;
+
+        if (!this.textures.exists(key) && !this.cache.video.has(key)) {
+            if (isVideo) this.load.video(key, `file://${asset.path}`);
+            else this.load.image(key, `file://${asset.path}`);
+            this.load.once('complete', () => this.spawnTokenAt(key, asset.path, x, y, '', null, isVideo, asset.name));
+            this.load.start();
+            return;
+        }
+
+        this.spawnTokenAt(key, asset.path, x, y, '', null, isVideo, asset.name);
     }
 
     spawnTokenAt(key, path, x, y, elev, savedTokenId, isVideo = false, charName = null, savedState = null) {

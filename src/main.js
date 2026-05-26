@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const sqlite3 = require('sqlite3').verbose();
@@ -54,6 +54,9 @@ ipcMain.on('save-note', (event, content) => {
 });
 
 app.whenReady().then(() => {
+  runCharacterEquipmentCompendiumMigration().catch(error => {
+    console.error('Erro ao importar equipamentos das fichas para o compendio:', error);
+  });
   createWindow();
 
   app.on('activate', () => {
@@ -119,7 +122,344 @@ ipcMain.handle('get-tokens', async () => {
 db.serialize(() => {
   db.run("CREATE TABLE IF NOT EXISTS scenes (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, state TEXT)");
   db.run("CREATE TABLE IF NOT EXISTS characters (id TEXT PRIMARY KEY, data TEXT)");
+  db.run(`
+    CREATE TABLE IF NOT EXISTS app_migrations (
+      id TEXT PRIMARY KEY,
+      applied_at TEXT NOT NULL
+    )
+  `);
+  db.run(`
+    CREATE TABLE IF NOT EXISTS assets_library (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL,
+      name TEXT NOT NULL,
+      file_name TEXT NOT NULL,
+      category TEXT,
+      tags TEXT,
+      favorite INTEGER DEFAULT 0,
+      path TEXT NOT NULL,
+      relative_path TEXT,
+      mime_type TEXT,
+      size_bytes INTEGER DEFAULT 0,
+      missing INTEGER DEFAULT 0,
+      data TEXT NOT NULL,
+      created_at TEXT,
+      updated_at TEXT
+    )
+  `);
+  db.run(`
+    CREATE TABLE IF NOT EXISTS compendium_entries (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL,
+      name TEXT NOT NULL,
+      category TEXT,
+      tags TEXT,
+      data TEXT NOT NULL,
+      created_at TEXT,
+      updated_at TEXT
+    )
+  `);
 });
+
+function runDb(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function(err) {
+      if (err) reject(err);
+      else resolve(this);
+    });
+  });
+}
+
+function allDb(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows || []);
+    });
+  });
+}
+
+function getDb(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) reject(err);
+      else resolve(row || null);
+    });
+  });
+}
+
+function safeFileName(name) {
+  return String(name || 'asset')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .replace(/_+/g, '_');
+}
+
+function detectAssetType(filePath, preferredType = null) {
+  if (preferredType) return preferredType;
+  const ext = path.extname(filePath).toLowerCase();
+  if (['.mp3', '.wav', '.ogg', '.m4a'].includes(ext)) return 'audio';
+  if (['.mp4', '.webm'].includes(ext)) return 'video';
+  if (['.png', '.jpg', '.jpeg', '.webp', '.gif'].includes(ext)) return 'image';
+  return 'image';
+}
+
+function getAssetTargetDir(type) {
+  const root = path.join(__dirname, '../assets');
+  const map = {
+    map: path.join(root, 'cenarios'),
+    token: path.join(root, 'persons'),
+    portrait: path.join(root, 'portraits'),
+    image: path.join(root, 'imagens'),
+    video: path.join(root, 'videos'),
+    audio: path.join(root, 'audio'),
+    handout: path.join(root, 'imagens')
+  };
+  return map[type] || map.image;
+}
+
+function getAssetMimeType(filePath) {
+  const ext = path.extname(filePath).toLowerCase();
+  const mime = {
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.webp': 'image/webp',
+    '.gif': 'image/gif',
+    '.mp4': 'video/mp4',
+    '.webm': 'video/webm',
+    '.ogg': 'application/ogg',
+    '.mp3': 'audio/mpeg',
+    '.wav': 'audio/wav',
+    '.m4a': 'audio/mp4'
+  };
+  return mime[ext] || 'application/octet-stream';
+}
+
+function getRelativeAssetPath(filePath) {
+  return path.relative(path.join(__dirname, '..'), filePath).replace(/\\/g, '/');
+}
+
+function normalizeAsset(asset) {
+  const now = new Date().toISOString();
+  const stats = fs.existsSync(asset.path) ? fs.statSync(asset.path) : null;
+  const fileName = asset.fileName || asset.file_name || path.basename(asset.path || '');
+  return {
+    id: asset.id || `asset_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+    name: asset.name || fileName.replace(/\.[^/.]+$/, ''),
+    fileName,
+    type: asset.type || detectAssetType(asset.path),
+    category: asset.category || '',
+    tags: Array.isArray(asset.tags) ? asset.tags : parseJsonArray(asset.tags),
+    favorite: !!asset.favorite,
+    path: asset.path,
+    relativePath: asset.relativePath || asset.relative_path || getRelativeAssetPath(asset.path),
+    mimeType: asset.mimeType || asset.mime_type || getAssetMimeType(asset.path),
+    sizeBytes: Number(asset.sizeBytes ?? asset.size_bytes ?? stats?.size ?? 0),
+    createdAt: asset.createdAt || asset.created_at || now,
+    updatedAt: asset.updatedAt || asset.updated_at || now,
+    missing: asset.missing !== undefined ? !!asset.missing : !stats
+  };
+}
+
+function parseJsonArray(value) {
+  if (Array.isArray(value)) return value;
+  try {
+    const parsed = JSON.parse(value || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function normalizeLookupKey(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
+function makeCompendiumIdFromCharacterEquipment(name, type) {
+  const slug = normalizeLookupKey(name)
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'item';
+  return `cmp_import_equipment_${type}_${slug}`;
+}
+
+function extractDiceNotation(value) {
+  const match = String(value || '').match(/\b(\d+)\s*d\s*(\d+)\b/i);
+  return match ? `${match[1]}d${match[2]}` : '';
+}
+
+function inferCompendiumTypeFromEquipment(equipment) {
+  const type = normalizeLookupKey(equipment.type || equipment.tipo || equipment.kind || '');
+  const label = normalizeLookupKey(`${equipment.label || ''} ${equipment.category || ''} ${equipment.nome || equipment.name || ''}`);
+  const description = String(equipment.desc || equipment.description || equipment.summary || '');
+
+  if (['weapon', 'arma'].includes(type) || extractDiceNotation(description)) return 'weapon';
+  if (['armor', 'armadura'].includes(type) || /\b(armadura|escudo|placa|cota)\b/.test(label)) return 'armor';
+  return 'item';
+}
+
+function normalizeCharacterEquipmentForCompendium(equipment, characterName) {
+  const name = String(equipment.nome || equipment.name || equipment.label || '').trim();
+  if (!name) return null;
+
+  const type = inferCompendiumTypeFromEquipment(equipment);
+  const rawDescription = String(equipment.desc || equipment.description || equipment.summary || '').trim();
+  const damage = extractDiceNotation(equipment.damage || equipment.dano || equipment.dice || equipment.dado || rawDescription);
+  const mechanics = { ...(equipment.mechanics || {}) };
+  if (damage && !mechanics.damage) mechanics.damage = damage;
+  if (equipment.weight !== undefined && mechanics.weight === undefined) mechanics.weight = String(equipment.weight);
+  if (equipment.peso !== undefined && mechanics.weight === undefined) mechanics.weight = String(equipment.peso);
+
+  const category = type === 'weapon' ? 'Armas' : type === 'armor' ? 'Armaduras' : 'Itens gerais';
+  const description = rawDescription || mechanics.effect || '';
+  const now = new Date().toISOString();
+
+  return {
+    id: makeCompendiumIdFromCharacterEquipment(name, type),
+    name,
+    type,
+    category,
+    image: equipment.image || equipment.imagem || '',
+    summary: damage || description,
+    description,
+    tags: ['importado de ficha'],
+    rarity: equipment.rarity || 'comum',
+    source: characterName ? `Ficha: ${characterName}` : 'Ficha importada',
+    mechanics,
+    actorTemplate: null,
+    createdAt: now,
+    updatedAt: now
+  };
+}
+
+async function importCharacterEquipmentIntoCompendium() {
+  const characters = await allDb("SELECT id, data FROM characters");
+  const existingRows = await allDb("SELECT type, name FROM compendium_entries");
+  const knownEntries = new Set(existingRows.map(row => `${row.type}|${normalizeLookupKey(row.name)}`));
+  const imported = [];
+  let scanned = 0;
+  let skipped = 0;
+
+  for (const row of characters) {
+    let character;
+    try {
+      character = JSON.parse(row.data || '{}');
+    } catch (error) {
+      skipped++;
+      continue;
+    }
+
+    const equipments = Array.isArray(character.equipamentos) ? character.equipamentos : [];
+    for (const equipment of equipments) {
+      scanned++;
+      const entry = normalizeCharacterEquipmentForCompendium(equipment, character.nome || row.id);
+      if (!entry) {
+        skipped++;
+        continue;
+      }
+
+      const key = `${entry.type}|${normalizeLookupKey(entry.name)}`;
+      if (knownEntries.has(key)) {
+        skipped++;
+        continue;
+      }
+
+      await runDb(`
+        INSERT INTO compendium_entries
+        (id, type, name, category, tags, data, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        entry.id,
+        entry.type,
+        entry.name,
+        entry.category || '',
+        JSON.stringify(entry.tags || []),
+        JSON.stringify(entry),
+        entry.createdAt,
+        entry.updatedAt
+      ]);
+
+      knownEntries.add(key);
+      imported.push(entry);
+    }
+  }
+
+  return { imported, importedCount: imported.length, scannedCount: scanned, skippedCount: skipped };
+}
+
+async function runCharacterEquipmentCompendiumMigration() {
+  const migrationId = 'character_equipment_compendium_seed_v1';
+  const existing = await getDb("SELECT id FROM app_migrations WHERE id = ?", [migrationId]);
+  if (existing) return { imported: [], importedCount: 0, scannedCount: 0, skippedCount: 0, alreadyApplied: true };
+
+  const result = await importCharacterEquipmentIntoCompendium();
+  await runDb("INSERT INTO app_migrations (id, applied_at) VALUES (?, ?)", [migrationId, new Date().toISOString()]);
+  return { ...result, alreadyApplied: false };
+}
+
+async function saveAsset(asset) {
+  const normalized = normalizeAsset(asset);
+  await runDb(`
+    INSERT OR REPLACE INTO assets_library
+    (id, type, name, file_name, category, tags, favorite, path, relative_path, mime_type, size_bytes, missing, data, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [
+    normalized.id,
+    normalized.type,
+    normalized.name,
+    normalized.fileName,
+    normalized.category || '',
+    JSON.stringify(normalized.tags || []),
+    normalized.favorite ? 1 : 0,
+    normalized.path,
+    normalized.relativePath || '',
+    normalized.mimeType || '',
+    normalized.sizeBytes || 0,
+    normalized.missing ? 1 : 0,
+    JSON.stringify(normalized),
+    normalized.createdAt,
+    normalized.updatedAt
+  ]);
+  return normalized;
+}
+
+async function getAllAssets() {
+  const rows = await allDb("SELECT * FROM assets_library ORDER BY type ASC, name ASC");
+  return rows.map(row => {
+    try {
+      return normalizeAsset(JSON.parse(row.data));
+    } catch (error) {
+      return normalizeAsset(row);
+    }
+  });
+}
+
+async function getAssetById(assetId) {
+  const row = await getDb("SELECT data FROM assets_library WHERE id = ?", [assetId]);
+  if (!row) return null;
+  return normalizeAsset(JSON.parse(row.data));
+}
+
+function discoverAssetFiles(dir, type, list = []) {
+  if (!fs.existsSync(dir)) return list;
+  fs.readdirSync(dir).forEach(file => {
+    const fullPath = path.join(dir, file);
+    const stat = fs.statSync(fullPath);
+    if (stat.isDirectory()) {
+      discoverAssetFiles(fullPath, type, list);
+      return;
+    }
+    if (!/\.(png|jpg|jpeg|webp|gif|mp4|webm|ogg|mp3|wav|m4a)$/i.test(file)) return;
+    list.push({ path: fullPath, type, stat });
+  });
+  return list;
+}
 
 // Salvar Cena Nomeada
 ipcMain.handle('save-scene', async (event, name, stateJSON) => {
@@ -198,6 +538,217 @@ ipcMain.handle('get-characters', async () => {
       }
     });
   });
+});
+
+ipcMain.handle('get-compendium-entries', async () => {
+  return new Promise((resolve, reject) => {
+    db.all("SELECT * FROM compendium_entries ORDER BY type ASC, name ASC", (err, rows) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+
+      resolve(rows.map(row => {
+        try {
+          return JSON.parse(row.data);
+        } catch (error) {
+          return null;
+        }
+      }).filter(Boolean));
+    });
+  });
+});
+
+ipcMain.handle('save-compendium-entry', async (event, entryJSON) => {
+  const entry = JSON.parse(entryJSON);
+  const now = new Date().toISOString();
+
+  return new Promise((resolve, reject) => {
+    db.run(`
+      INSERT OR REPLACE INTO compendium_entries
+      (id, type, name, category, tags, data, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      entry.id,
+      entry.type,
+      entry.name,
+      entry.category || '',
+      JSON.stringify(entry.tags || []),
+      JSON.stringify(entry),
+      entry.createdAt || now,
+      entry.updatedAt || now
+    ], err => {
+      if (err) reject(err);
+      else resolve(true);
+    });
+  });
+});
+
+ipcMain.handle('delete-compendium-entry', async (event, id) => {
+  return new Promise((resolve, reject) => {
+    db.run("DELETE FROM compendium_entries WHERE id = ?", [id], err => {
+      if (err) reject(err);
+      else resolve(true);
+    });
+  });
+});
+
+ipcMain.handle('import-character-equipment-compendium', async () => {
+  return importCharacterEquipmentIntoCompendium();
+});
+
+ipcMain.handle('get-assets-library', async () => {
+  return getAllAssets();
+});
+
+ipcMain.handle('import-asset', async (event, payloadJSON) => {
+  const payload = JSON.parse(payloadJSON || '{}');
+  const result = await dialog.showOpenDialog({
+    title: 'Importar asset',
+    properties: ['openFile', 'multiSelections'],
+    filters: [
+      { name: 'Imagens', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'] },
+      { name: 'Videos', extensions: ['mp4', 'webm', 'ogg'] },
+      { name: 'Audios', extensions: ['mp3', 'wav', 'ogg', 'm4a'] },
+      { name: 'Todos', extensions: ['*'] }
+    ]
+  });
+
+  if (result.canceled) return [];
+
+  const imported = [];
+  for (const sourcePath of result.filePaths) {
+    const type = detectAssetType(sourcePath, payload.type || null);
+    const targetDir = getAssetTargetDir(type);
+    fs.mkdirSync(targetDir, { recursive: true });
+
+    const originalName = path.basename(sourcePath);
+    let fileName = safeFileName(originalName);
+    let targetPath = path.join(targetDir, fileName);
+    const ext = path.extname(fileName);
+    const base = fileName.slice(0, fileName.length - ext.length);
+    let suffix = 1;
+    while (fs.existsSync(targetPath)) {
+      fileName = `${base}_${suffix}${ext}`;
+      targetPath = path.join(targetDir, fileName);
+      suffix++;
+    }
+
+    fs.copyFileSync(sourcePath, targetPath);
+    const asset = await saveAsset({
+      type,
+      name: payload.name || path.basename(fileName, path.extname(fileName)),
+      fileName,
+      category: payload.category || '',
+      tags: payload.tags || [],
+      favorite: false,
+      path: targetPath,
+      relativePath: getRelativeAssetPath(targetPath),
+      mimeType: getAssetMimeType(targetPath)
+    });
+    imported.push(asset);
+  }
+
+  return imported;
+});
+
+ipcMain.handle('save-asset-metadata', async (event, assetJSON) => {
+  const asset = JSON.parse(assetJSON);
+  const existing = asset.id ? await getAssetById(asset.id) : null;
+  return saveAsset({
+    ...(existing || {}),
+    ...asset,
+    updatedAt: new Date().toISOString()
+  });
+});
+
+ipcMain.handle('delete-asset', async (event, assetId) => {
+  const asset = await getAssetById(assetId);
+  if (asset?.path && fs.existsSync(asset.path) && isInsideAllowedAssetFolder(asset.path)) {
+    fs.unlinkSync(asset.path);
+  }
+  await runDb("DELETE FROM assets_library WHERE id = ?", [assetId]);
+  return true;
+});
+
+ipcMain.handle('rename-asset', async (event, payloadJSON) => {
+  const payload = JSON.parse(payloadJSON || '{}');
+  const asset = await getAssetById(payload.assetId);
+  if (!asset) return null;
+
+  const oldPath = asset.path;
+  const ext = path.extname(oldPath);
+  const newFileName = safeFileName(payload.newName) + ext;
+  const newPath = path.join(path.dirname(oldPath), newFileName);
+
+  if (fs.existsSync(oldPath) && oldPath !== newPath) {
+    fs.renameSync(oldPath, newPath);
+  }
+
+  return saveAsset({
+    ...asset,
+    name: payload.newName,
+    fileName: newFileName,
+    path: newPath,
+    relativePath: getRelativeAssetPath(newPath),
+    updatedAt: new Date().toISOString()
+  });
+});
+
+ipcMain.handle('scan-assets-folders', async () => {
+  const root = path.join(__dirname, '../assets');
+  const folders = [
+    { type: 'map', dir: path.join(root, 'cenarios') },
+    { type: 'token', dir: path.join(root, 'persons') },
+    { type: 'portrait', dir: path.join(root, 'portraits') },
+    { type: 'image', dir: path.join(root, 'imagens') },
+    { type: 'video', dir: path.join(root, 'videos') },
+    { type: 'audio', dir: path.join(root, 'audio') }
+  ];
+
+  const existing = await getAllAssets();
+  const knownPaths = new Set(existing.map(asset => path.resolve(asset.path)));
+  const knownRelatives = new Set(existing.map(asset => asset.relativePath));
+  const scanned = [];
+
+  for (const folder of folders) {
+    const files = discoverAssetFiles(folder.dir, folder.type);
+    for (const file of files) {
+      const relativePath = getRelativeAssetPath(file.path);
+      if (knownPaths.has(path.resolve(file.path)) || knownRelatives.has(relativePath)) continue;
+      const category = path.relative(folder.dir, path.dirname(file.path)) || '';
+      const asset = await saveAsset({
+        type: folder.type,
+        name: path.basename(file.path, path.extname(file.path)),
+        fileName: path.basename(file.path),
+        category: category === '.' ? '' : category,
+        tags: [],
+        favorite: false,
+        path: file.path,
+        relativePath,
+        mimeType: getAssetMimeType(file.path),
+        sizeBytes: file.stat.size
+      });
+      scanned.push(asset);
+      knownPaths.add(path.resolve(file.path));
+      knownRelatives.add(relativePath);
+    }
+  }
+
+  return getAllAssets();
+});
+
+ipcMain.handle('validate-assets-library', async () => {
+  const assets = await getAllAssets();
+  const updated = [];
+  for (const asset of assets) {
+    updated.push(await saveAsset({
+      ...asset,
+      missing: !fs.existsSync(asset.path),
+      updatedAt: new Date().toISOString()
+    }));
+  }
+  return updated;
 });
 
 // Handler para ler imagens (Handouts)

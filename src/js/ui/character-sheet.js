@@ -916,6 +916,9 @@ container.innerHTML += `
             fichasSalvas[characterId].hpAtual = Math.max(0, (parseInt(fichasSalvas[characterId].hpAtual) || 0) - value);
             persistCombatCharacter(characterId);
             renderCombatSheet(fichasSalvas[characterId]);
+            if (typeof window.addSessionEvent === 'function') {
+                window.addSessionEvent('damage_applied', 'Dano aplicado', `${fichasSalvas[characterId].nome || 'Personagem'} sofreu ${value} de dano`);
+            }
             addChatMessage('Sistema', `${fichasSalvas[characterId].nome || 'Personagem'} recebeu ${value} de dano.`, '#ef4444');
         }
 
@@ -926,6 +929,9 @@ container.innerHTML += `
             fichasSalvas[characterId].hpAtual = Math.min(hpMax, (parseInt(fichasSalvas[characterId].hpAtual) || 0) + value);
             persistCombatCharacter(characterId);
             renderCombatSheet(fichasSalvas[characterId]);
+            if (typeof window.addSessionEvent === 'function') {
+                window.addSessionEvent('heal_applied', 'Cura aplicada', `${fichasSalvas[characterId].nome || 'Personagem'} recuperou ${value} de HP`);
+            }
             addChatMessage('Sistema', `${fichasSalvas[characterId].nome || 'Personagem'} recuperou ${value} de HP.`, '#22c55e');
         }
 
@@ -933,7 +939,8 @@ container.innerHTML += `
             if (!fichasSalvas[characterId]) return;
             const conditions = normalizeSheetConditions(fichasSalvas[characterId]);
             const existing = conditions.findIndex(c => c.name === condition);
-            if (existing >= 0) conditions.splice(existing, 1);
+            const wasRemoved = existing >= 0;
+            if (wasRemoved) conditions.splice(existing, 1);
             else conditions.push({ id: `cond_${Date.now()}`, name: condition, icon: '', color: '#fbbf24', durationType: 'custom', remaining: null, description: '' });
             const token = window.phaserScene?.camadaTokens?.list?.find(t => t.tokenId === characterId);
             if (token) {
@@ -944,6 +951,13 @@ container.innerHTML += `
             if (participant) participant.conditions = conditions.map(c => c.name || c).filter(Boolean);
             persistCombatCharacter(characterId);
             renderCombatSheet(fichasSalvas[characterId]);
+            if (typeof window.addSessionEvent === 'function') {
+                window.addSessionEvent(
+                    wasRemoved ? 'condition_removed' : 'condition_added',
+                    wasRemoved ? 'Condicao removida' : 'Condicao adicionada',
+                    `${fichasSalvas[characterId].nome || 'Personagem'}: ${condition}`
+                );
+            }
         }
 
         function rollCharacterAction(characterId, actionId) {
@@ -1612,4 +1626,43 @@ function getModPericia(skillRowEl) {
 if (typeof window !== 'undefined') {
   window.fichasSalvas = fichasSalvas;
   window.pastasAtores = pastasAtores;
+  window.getCurrentCharacterId = () => fichaAtualId;
+  window.addCompendiumEntryToEquipment = (characterId, entry) => {
+    const ficha = fichasSalvas[characterId || fichaAtualId];
+    if (!ficha || !entry) return;
+    ficha.equipamentos = ficha.equipamentos || [];
+    ficha.equipamentos.push({
+      id: `eq_${Date.now()}`,
+      compendiumId: entry.id,
+      label: entry.category || entry.type || 'Item',
+      nome: entry.name,
+      tipo: entry.type,
+      desc: entry.summary || entry.description || entry.mechanics?.effect || '',
+      mechanics: entry.mechanics || {}
+    });
+    if (window.api?.saveCharacter) window.api.saveCharacter(characterId || fichaAtualId, JSON.stringify(ficha));
+    if (typeof abrirFicha === 'function' && (characterId || fichaAtualId)) abrirFicha(ficha.nome || entry.name, characterId || fichaAtualId);
+  };
+  window.addCompendiumEntryToPowers = (characterId, entry) => {
+    const ficha = fichasSalvas[characterId || fichaAtualId];
+    if (!ficha || !entry) return;
+    ficha.poderes = ficha.poderes || [];
+    ficha.talentos = ficha.talentos || [];
+    const power = {
+      id: `pow_${Date.now()}`,
+      compendiumId: entry.id,
+      nome: entry.name,
+      custo: entry.mechanics?.cost || '',
+      alcance: entry.mechanics?.range || '',
+      duracao: entry.mechanics?.duration || '',
+      efeito: entry.mechanics?.effect || entry.description || entry.summary || ''
+    };
+    ficha.poderes.push(power);
+    ficha.talentos.push({
+      nome: entry.name,
+      descricao: power.efeito
+    });
+    if (window.api?.saveCharacter) window.api.saveCharacter(characterId || fichaAtualId, JSON.stringify(ficha));
+    if (typeof abrirFicha === 'function' && (characterId || fichaAtualId)) abrirFicha(ficha.nome || entry.name, characterId || fichaAtualId);
+  };
 }

@@ -64,7 +64,8 @@ function getCurrentSceneId() {
 }
 
 function noteBelongsToScene(note, sceneId = getCurrentSceneId()) {
-    return !note.sceneId || note.sceneId === sceneId || sceneId === UNASSIGNED_SCENE_ID;
+    const noteSceneId = note?.sceneId || UNASSIGNED_SCENE_ID;
+    return noteSceneId === UNASSIGNED_SCENE_ID || noteSceneId === sceneId || sceneId === UNASSIGNED_SCENE_ID;
 }
 
 function getScenePinnedNotes(sceneId = getCurrentSceneId()) {
@@ -175,9 +176,11 @@ function renderNotesList() {
     if (btnIcon) btnIcon.className = notesViewMode === 'grid' ? 'fas fa-th-large' : 'fas fa-list';
     list.className = notesViewMode === 'grid' ? 'notes-grid' : 'notes-list-mode';
 
-    const visibleNotes = campaignNotes
+    const sceneNotes = campaignNotes
         .map((note, index) => ({ note, index }))
         .filter(({ note }) => !note.isArchived)
+        .filter(({ note }) => noteBelongsToScene(note));
+    const visibleNotes = sceneNotes
         .filter(({ note }) => {
             const haystack = [
                 note.title,
@@ -191,6 +194,11 @@ function renderNotesList() {
 
     if (campaignNotes.length === 0) {
         list.innerHTML = '<div class="notes-empty">O diario esta vazio. Comece a escrever.</div>';
+        return;
+    }
+
+    if (sceneNotes.length === 0) {
+        list.innerHTML = '<div class="notes-empty">Nenhuma anotacao vinculada a esta cena.</div>';
         return;
     }
 
@@ -271,6 +279,12 @@ function shareNote(index, e) {
         addChatMessage('Sistema', `Anotacao "<strong>${note.title}</strong>" enviada aos jogadores.`, '#38bdf8');
     } else {
         addChatMessage('Sistema', `<strong>${note.title}</strong>: ${stripHtml(note.content)}`, '#38bdf8');
+    }
+    if (typeof window.addSessionEvent === 'function') {
+        window.addSessionEvent('note_revealed', 'Nota revelada', note.title || 'Nota', {
+            noteId: note.id,
+            sceneName: note.sceneName || getCurrentSceneName()
+        });
     }
     renderNotesList();
 }
@@ -491,11 +505,13 @@ function restoreSceneNotesFromBoardState(state) {
 
     function rememberNote(rawNote, overrides = {}) {
         if (!rawNote || typeof rawNote !== 'object') return;
+        const hasSceneId = Object.prototype.hasOwnProperty.call(rawNote, 'sceneId');
+        const restoredSceneId = hasSceneId ? rawNote.sceneId : sceneId;
         const note = normalizeNote({
             ...rawNote,
             ...overrides,
-            sceneId: rawNote.sceneId || sceneId,
-            sceneName: rawNote.sceneName || sceneName
+            sceneId: restoredSceneId || null,
+            sceneName: restoredSceneId ? rawNote.sceneName || sceneName : rawNote.sceneName || null
         });
         const existing = notesById.get(note.id);
         notesById.set(note.id, existing ? normalizeNote({
