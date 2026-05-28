@@ -200,9 +200,6 @@
                         case 'clone':
                             duplicateCharacter(id);
                             break;
-                        case 'visibility':
-                            togglePlayerVisibility(id);
-                            break;
                         case 'delete':
                             deletarPersonagemBanco(id);
                             break;
@@ -454,11 +451,6 @@
 
                         const hpPct = ficha.hpMax > 0 ? (ficha.hpAtual / ficha.hpMax) * 100 : 0;
                         const hpStateClass = getHpStateClass(hpPct);
-                        const eyeIcon = ficha.isVisibleToPlayers ? 'fa-eye' : 'fa-eye-slash';
-                        const eyeColor = ficha.isVisibleToPlayers ? '#22c55e' : '#94a3b8';
-                        const visibilityClass = ficha.isVisibleToPlayers ? 'is-visible' : 'is-hidden';
-                        const visibilityLabel = ficha.isVisibleToPlayers ? 'Visivel' : 'Oculto';
-                        const visibilityTitle = ficha.isVisibleToPlayers ? 'Visivel para jogadores' : 'Oculto dos jogadores';
                         const safeId = escapeSheetHtml(id);
                         const safeName = escapeSheetHtml(ficha.nome);
                         const safeTrilha = escapeSheetHtml(ficha.trilha || 'Nenhuma Trilha');
@@ -467,11 +459,6 @@
                         card.innerHTML = `
                             <img class="roster-img" src="file://${escapeSheetHtml(ficha.portraitPath || '')}" onerror="this.src='../assets/persons/default.png'">
 
-                            <button class="roster-visibility-toggle ${visibilityClass}" data-roster-action="visibility" data-character-id="${safeId}" title="${visibilityTitle}" aria-label="${visibilityTitle}" aria-pressed="${ficha.isVisibleToPlayers ? 'true' : 'false'}" style="--roster-visibility-color: ${eyeColor}">
-                                <i class="fas ${eyeIcon}"></i>
-                                <span>${visibilityLabel}</span>
-                            </button>
-                            
                             <div class="roster-info">
                                 <div class="roster-name">${safeName}</div>
                                 <div class="roster-class">${safeTrilha}</div>
@@ -534,23 +521,8 @@
             
             if (window.api) window.api.saveCharacter(id, JSON.stringify(fichasSalvas[id]));
             if (window.phaserScene) window.phaserScene.updateTokenHP(id, novoHP, fichasSalvas[id].hpMax);
-            if (typeof window.syncPlayerViewDebounced === 'function') window.syncPlayerViewDebounced();
             
             renderizarListaTokens();
-        }
-
-        function togglePlayerVisibility(id) {
-            if (fichasSalvas[id]) {
-                fichasSalvas[id].isVisibleToPlayers = !fichasSalvas[id].isVisibleToPlayers;
-                const token = window.phaserScene?.camadaTokens?.list?.find(item => item.tokenId === id || item.characterId === id);
-                if (token) token.visibleToPlayers = fichasSalvas[id].isVisibleToPlayers !== false;
-                if (window.api) {
-                    window.api.saveCharacter(id, JSON.stringify(fichasSalvas[id]));
-                    if (window.api.syncBoard) window.api.syncBoard({ type: 'update-permissions', charId: id, visible: fichasSalvas[id].isVisibleToPlayers });
-                }
-                renderizarListaTokens();
-                if (typeof window.syncPlayerViewDebounced === 'function') window.syncPlayerViewDebounced();
-            }
         }
 
         // Ao abrir o app
@@ -565,7 +537,6 @@
                         
                         // Fallbacks de migração para fichas antigas
                         if (!fichasSalvas[id].folderId) fichasSalvas[id].folderId = 'default';
-                        if (fichasSalvas[id].isVisibleToPlayers === undefined) fichasSalvas[id].isVisibleToPlayers = true;
                         if (!fichasSalvas[id].type) fichasSalvas[id].type = 'PC';
                         
                     } catch(e) {
@@ -1465,8 +1436,8 @@ function getCharacterPortraitPreviewModal() {
                 <img id="character-portrait-preview-img" src="" alt="">
             </div>
             <footer class="character-portrait-preview__actions">
-                <button class="glass-btn primary" type="button" onclick="sendCharacterPortraitToPlayers()">
-                    <i class="fas fa-users"></i> Enviar para os players
+                <button class="glass-btn primary" type="button" onclick="openCharacterPortraitLocally()">
+                    <i class="fas fa-image"></i> Abrir na mesa
                 </button>
             </footer>
         </div>
@@ -1498,23 +1469,16 @@ function closeCharacterPortraitPreview() {
     if (modal) modal.classList.add('hidden');
 }
 
-function sendCharacterPortraitToPlayers() {
+function openCharacterPortraitLocally() {
     const payload = getCurrentCharacterPortraitPayload();
     if (!payload) {
         if (typeof mostrarToast === 'function') mostrarToast('Nenhum retrato encontrado para enviar.', 'warning');
         return;
     }
 
-    if (typeof showHandoutPathToPlayers === 'function') {
-        showHandoutPathToPlayers(payload.path, 'image', payload.title);
+    if (typeof showHandoutPathLocally === 'function') {
+        showHandoutPathLocally(payload.path, 'image', payload.title);
         return;
-    }
-
-    if (window.api?.showHandoutToPlayers) {
-        const handoutPayload = { type: 'image', path: payload.path, title: payload.title };
-        window.api.showHandoutToPlayers(handoutPayload);
-        if (typeof window.updatePlayerViewStatusCard === 'function') window.updatePlayerViewStatusCard({ handout: handoutPayload });
-        if (typeof addChatMessage === 'function') addChatMessage('Sistema', 'Retrato enviado para os players.', '#38bdf8');
     }
 }
 

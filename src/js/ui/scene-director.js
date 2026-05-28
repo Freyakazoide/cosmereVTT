@@ -21,7 +21,7 @@ function getDirectedSceneDraftFromUI() {
     return {
         sceneName: getDirectorEl('director-scene-name')?.value || '',
         gmText: getDirectorEl('director-gm-text')?.value || '',
-        playerText: getDirectorEl('director-player-text')?.value || '',
+        introText: getDirectorEl('director-intro-text')?.value || '',
         mapPath: getDirectorEl('director-map')?.value || '',
         audioPath: getDirectorEl('director-audio')?.value || '',
         weather: getDirectorEl('director-weather')?.value || 'none',
@@ -38,7 +38,7 @@ function applyDirectedSceneDraftToUI(draft) {
     const fields = {
         'director-scene-name': draft.sceneName,
         'director-gm-text': draft.gmText,
-        'director-player-text': draft.playerText,
+        'director-intro-text': draft.introText,
         'director-weather': draft.weather,
         'director-objective': draft.objective,
         'director-victory': draft.victory,
@@ -173,7 +173,7 @@ function renderDirectorPinnedNotes() {
             <strong>${escapeDirectorText(note.title || 'Pista')}</strong>
             <span>${escapeDirectorText(note.type || 'Pista')}${note.tags?.length ? ' / ' + escapeDirectorText(note.tags.join(', ')) : ''}</span>
             <div class="director-note-actions">
-                <button class="ui-icon-btn" onclick="revealNoteById('${escapeDirectorText(note.id)}')" title="Revelar aos aventureiros"><i class="fas fa-scroll"></i></button>
+                <button class="ui-icon-btn" onclick="revealNoteById('${escapeDirectorText(note.id)}')" title="Revelar na mesa"><i class="fas fa-scroll"></i></button>
                 <button class="ui-icon-btn" onclick="unpinNoteById('${escapeDirectorText(note.id)}')" title="Remover do mural"><i class="fas fa-times"></i></button>
             </div>
         </div>
@@ -225,8 +225,7 @@ function prepareDirectedScene() {
 function startDirectedScene() {
     prepareDirectedScene();
     playDirectorMusic();
-    showDirectorIntroToPlayers();
-    syncDirectorSceneToPlayers();
+    showDirectorIntroLocally();
     if (typeof window.addSessionEvent === 'function') {
         window.addSessionEvent('scene_started', 'Cena iniciada', directedSceneDraft.sceneName || 'Sem nome');
     }
@@ -243,81 +242,36 @@ function playDirectorMusic() {
     }
 }
 
-function showDirectorIntroToPlayers() {
+function showDirectorIntroLocally() {
     saveDirectedSceneDraft();
     const draft = directedSceneDraft;
-    if (draft.playerText && window.api?.syncBoard) {
-        window.api.syncBoard({
-            type: 'show-note',
-            note: {
-                id: `director_intro_${Date.now()}`,
-                title: draft.sceneName || 'Introducao da Cena',
-                type: 'Cena',
-                content: draft.playerText,
-                tags: ['Cena']
-            }
-        });
+    const introText = draft.introText;
+    if (introText) {
+        addChatMessage('Orquestrador', `<strong>${draft.sceneName || 'Prologo'}</strong>: ${introText}`, '#38bdf8');
     }
 
-    if (draft.handoutPath && window.api?.showHandoutToPlayers) {
-        const payload = {
-            type: /\.(mp4|webm|ogg)$/i.test(draft.handoutPath) ? 'video' : 'image',
-            path: draft.handoutPath,
-            title: draft.handoutPath.split(/[\\/]/).pop()
-        };
-        window.api.showHandoutToPlayers(payload);
-        if (typeof window.updatePlayerViewStatusCard === 'function') window.updatePlayerViewStatusCard({ handout: payload });
-        if (typeof rememberRevealedHandout === 'function') rememberRevealedHandout(payload);
+    if (draft.handoutPath && typeof showHandoutPathLocally === 'function') {
+        const type = /\.(mp4|webm|ogg)$/i.test(draft.handoutPath) ? 'video' : 'image';
+        showHandoutPathLocally(draft.handoutPath, type, draft.handoutPath.split(/[\\/]/).pop());
     }
-    if (typeof window.addSessionEvent === 'function' && (draft.playerText || draft.handoutPath)) {
+    if (typeof window.addSessionEvent === 'function' && (introText || draft.handoutPath)) {
         window.addSessionEvent(
             'handout_revealed',
-            'Pergaminho/prologo revelado',
+            'Pergaminho/prologo aberto',
             draft.handoutPath ? draft.handoutPath.split(/[\\/]/).pop() : draft.sceneName || '',
-            { handoutPath: draft.handoutPath, hasPlayerText: !!draft.playerText }
+            { handoutPath: draft.handoutPath, hasIntroText: !!introText }
         );
     }
-    addChatMessage('Orquestrador', 'Prologo/pergaminho enviados para a visao dos aventureiros.', '#38bdf8');
+    addChatMessage('Orquestrador', 'Prologo/pergaminho abertos na mesa.', '#38bdf8');
 }
 
-function closeDirectorHandoutForPlayers() {
-    if (typeof hideHandoutFromPlayers === 'function') {
-        hideHandoutFromPlayers();
-    } else if (window.api?.hideHandoutFromPlayers) {
-        window.api.hideHandoutFromPlayers();
-    }
-}
-
-function syncDirectorSceneToPlayers() {
-    saveDirectedSceneDraft();
-    if (window.api?.syncBoard && window.phaserScene) {
-        const state = typeof window.getPlayerSafeBoardState === 'function'
-            ? window.getPlayerSafeBoardState()
-            : window.phaserScene.getBoardState();
-        state.sceneDirector = {
-            ...directedSceneDraft,
-            pinnedNotes: window.pinnedNotes || []
-        };
-        window.api.syncBoard(state);
-        addChatMessage('Orquestrador', 'Cena sincronizada com os aventureiros.', '#e879f9');
-    }
+function closeDirectorHandoutLocally() {
+    if (typeof closeRevealedHandoutsLocally === 'function') closeRevealedHandoutsLocally();
 }
 
 function endDirectedScene() {
     saveDirectedSceneDraft();
     if (typeof stopMusic === 'function') stopMusic();
-    if (window.api?.syncBoard) {
-        window.api.syncBoard({
-            type: 'show-note',
-            note: {
-                id: `director_end_${Date.now()}`,
-                title: directedSceneDraft.sceneName || 'Cena encerrada',
-                type: 'Cena',
-                content: 'A cena foi encerrada.',
-                tags: ['Cena']
-            }
-        });
-    }
     if (typeof window.addSessionEvent === 'function') {
         window.addSessionEvent('scene_ended', 'Cena encerrada', directedSceneDraft.sceneName || 'Sem nome');
     }

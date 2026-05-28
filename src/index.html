@@ -15,7 +15,6 @@
     <link rel="stylesheet" href="css/08-roster.css">
     <link rel="stylesheet" href="css/09-notes.css">
     <link rel="stylesheet" href="css/10-dice.css">
-    <link rel="stylesheet" href="css/11-player-view.css">
     <link rel="stylesheet" href="css/12-effects.css">
     <link rel="stylesheet" href="css/13-scene-director.css">
     <link rel="stylesheet" href="css/14-dock-flyout.css">
@@ -42,8 +41,6 @@
     <button class="tool-btn" onclick="loadBoard()" title="Abrir arquivo de cenas"><i class="fas fa-book-atlas"></i></button>
     <button class="tool-btn tool-btn--success" onclick="exportBoard()" title="Exportar campanha"><i class="fas fa-scroll"></i></button>
     <button class="tool-btn tool-btn--info" onclick="importBoard()" title="Importar campanha"><i class="fas fa-file-import"></i></button>
-    <button class="tool-btn tool-btn--purple" onclick="openPlayerScreen()" title="Abrir tela dos aventureiros"><i class="fas fa-users-viewfinder"></i></button>
-    <button class="tool-btn tool-btn--pink" onclick="forceSyncToPlayer()" title="Sincronizar visao do grupo"><i class="fas fa-eye"></i></button>
     <button class="tool-btn tool-btn--accent" onclick="abrirPuzzle1()" title="Enigma: O Primeiro Ideal"><i class="fas fa-dungeon"></i></button>
 </aside>
 
@@ -69,7 +66,7 @@
 
         <div class="dock-section" aria-label="Paineis">
             <button class="tool-btn tab-btn" data-target-id="director-content" data-title="Orquestrador" title="Orquestrador de cenas"><i class="fas fa-hat-wizard"></i></button>
-            <button class="tool-btn tab-btn" data-target-id="assets-library-content" data-title="Arsenal" title="Arsenal da campanha"><i class="fas fa-box-open"></i></button>
+            <button class="tool-btn tab-btn" data-target-id="assets-library-content" data-title="Assets" title="Biblioteca de assets"><i class="fas fa-box-open"></i></button>
             <button class="tool-btn tab-btn" data-target-id="maps-content" data-title="Regioes" title="Mapas e regioes"><i class="fas fa-map-location-dot"></i></button>
             <button class="tool-btn tab-btn" data-target-id="tokens-content" data-title="Elenco" title="Herois, aliados e ameacas"><i class="fas fa-users"></i></button>
             <button class="tool-btn tab-btn" data-target-id="combat-content" data-title="Encontro" title="Encontro de combate"><i class="fas fa-shield-halved"></i></button>
@@ -109,14 +106,14 @@
             <div class="assets-library-header">
                 <div>
                     <div class="director-kicker">Inventario</div>
-                    <h2>Arsenal da Campanha</h2>
+                    <h2>Biblioteca de Assets</h2>
                 </div>
                 <span id="assets-library-count" class="combat-round-pill">0 reliquias</span>
             </div>
             <div class="assets-library-actions">
                 <button class="ui-btn ui-btn--primary" onclick="importAssetFromDialog()"><i class="fas fa-file-import"></i> Trazer reliquia</button>
                 <button class="ui-btn" onclick="scanAssetsFolders()"><i class="fas fa-compass"></i> Vasculhar pastas</button>
-                <button class="ui-btn" onclick="validateAssetsLibrary()"><i class="fas fa-shield-halved"></i> Conferir arsenal</button>
+                <button class="ui-btn" onclick="validateAssetsLibrary()"><i class="fas fa-shield-halved"></i> Validar biblioteca</button>
                 <button class="ui-btn" onclick="exportAssetsManifest()"><i class="fas fa-scroll"></i> Manifesto</button>
             </div>
             <div class="assets-library-filters">
@@ -248,7 +245,7 @@
                 <li>Defina titulo, mapa, trilha, clima e pergaminho da cena.</li>
                 <li>Fixe pistas no Diario para elas surgirem aqui.</li>
                 <li>Clique em Preparar para montar terreno e pressagios do mestre.</li>
-                <li>Clique em Iniciar para tocar a trilha, revelar introducao e sincronizar aventureiros.</li>
+                <li>Clique em Iniciar para tocar a trilha e abrir a introducao na mesa.</li>
                 <li>Use Registrar cena no tomo para guardar tambem este roteiro.</li>
                 <li>Ao carregar ou importar a cena, este orquestrador volta ao estado salvo.</li>
             </ol>
@@ -265,8 +262,8 @@
         </label>
 
         <label class="director-field">
-            <span>Narracao aos aventureiros</span>
-            <textarea id="director-player-text" placeholder="Texto revelado quando a cena comecar..."></textarea>
+            <span>Narracao da cena</span>
+            <textarea id="director-intro-text" placeholder="Texto revelado quando a cena comecar..."></textarea>
         </label>
 
         <div class="director-grid">
@@ -317,10 +314,9 @@
         <div class="director-actions">
             <button class="ui-btn ui-btn--primary" onclick="prepareDirectedScene()"><i class="fas fa-wand-sparkles"></i> Preparar cena</button>
             <button class="ui-btn" onclick="startDirectedScene()"><i class="fas fa-play"></i> Abrir cena</button>
-            <button class="ui-btn" onclick="showDirectorIntroToPlayers()"><i class="fas fa-scroll"></i> Revelar prologo</button>
+            <button class="ui-btn" onclick="showDirectorIntroLocally()"><i class="fas fa-scroll"></i> Abrir prologo</button>
             <button class="ui-btn" onclick="playDirectorMusic()"><i class="fas fa-drum"></i> Tocar trilha</button>
-            <button class="ui-btn" onclick="closeDirectorHandoutForPlayers()"><i class="fas fa-eye-slash"></i> Ocultar pergaminho</button>
-            <button class="ui-btn" onclick="syncDirectorSceneToPlayers()"><i class="fas fa-users-viewfinder"></i> Unir visoes</button>
+            <button class="ui-btn" onclick="closeDirectorHandoutLocally()"><i class="fas fa-eye-slash"></i> Ocultar pergaminho</button>
             <button class="ui-btn ui-btn--danger" onclick="endDirectedScene()"><i class="fas fa-flag-checkered"></i> Fechar cena</button>
         </div>
     </div>
@@ -402,7 +398,7 @@
             <i class="fas fa-dice-d20"></i>Cor dos Dados de Destino
         </label>
         <div class="vtt-range-row">
-            <input class="vtt-color-input" type="color" id="player-dice-color" value="#fbbf24" onchange="localStorage.setItem('dice-color', this.value)">
+            <input class="vtt-color-input" type="color" id="dice-color-input" value="#fbbf24" onchange="localStorage.setItem('dice-color', this.value)">
             <span class="vtt-help-text">Cor do dado ao rolar</span>
         </div>
     </div>
@@ -461,7 +457,7 @@
             <span id="fog-opacity-display" class="vtt-meter-value">90%</span>
         </div>
         <div class="vtt-help-text vtt-help-text--compact">
-            Ajusta a opacidade da neblina na tela do Mestre. Jogadores sempre veem 100% preto.
+            Ajusta a opacidade da neblina na mesa.
         </div>
     </div>
 
@@ -504,7 +500,7 @@
 
             <div class="note-status-row">
                 <label><input type="checkbox" id="note-pinned"> Fixada no mural da cena</label>
-                <label><input type="checkbox" id="note-revealed"> Revelada aos aventureiros</label>
+                <label><input type="checkbox" id="note-revealed"> Revelada na mesa</label>
             </div>
 
             <div class="note-editor-actions">
@@ -811,12 +807,6 @@
     <div id="image-viewer-modal" class="hidden" onclick="fecharViewer()">
         <img id="viewer-img-src" src="" class="hidden">
         <video id="viewer-video-src" src="" controls class="hidden"></video>
-        <button class="glass-btn primary gm-only viewer-share-btn" onclick="event.stopPropagation(); showCurrentHandoutToPlayers()">
-            <i class="fas fa-users"></i> Revelar aos aventureiros
-        </button>
-        <button class="glass-btn danger gm-only viewer-hide-btn" onclick="event.stopPropagation(); hideHandoutFromPlayers()">
-            <i class="fas fa-eye-slash"></i> Ocultar dos aventureiros
-        </button>
         <div class="viewer-close-hint">Clique fora para fechar</div>
     </div>
 
@@ -1049,7 +1039,6 @@
     <script src="js/ui/character-sheet.js"></script>
     <script src="js/ui/compendium.js"></script>
     <script src="js/ui/assets-library.js"></script>
-    <script src="js/ui/player-view.js"></script>
     <script src="js/ui/handouts.js"></script>
     <script src="js/ui/scene-director.js"></script>
     <script src="js/ui/session-tools.js"></script>

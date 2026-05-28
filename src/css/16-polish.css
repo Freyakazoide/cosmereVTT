@@ -507,9 +507,9 @@ body::after {
   color: var(--rarity-color, var(--mistborn-amber));
 }
 
-@media (max-width: 1100px) {
+@media (min-width: 901px) and (max-width: 1100px) {
   #sidebar.vtt-flyout {
-    width: min(560px, calc(100vw - 92px));
+    width: clamp(520px, 58vw, 860px);
   }
 
   .vtt-library-card__main-action {
@@ -523,13 +523,17 @@ body::after {
 }
 
 @media (max-width: 760px) {
+  #vtt-dock-shell.vtt-dock-shell,
   .vtt-dock-shell {
-    inset: 10px;
+    left: 50%;
+    right: auto;
+    bottom: 12px;
+    transform: translateX(-50%);
   }
 
   #sidebar.vtt-flyout {
-    width: calc(100vw - 84px);
-    height: calc(100vh - 20px);
+    width: auto;
+    height: min(72vh, 720px);
   }
 
   .vtt-library-card {

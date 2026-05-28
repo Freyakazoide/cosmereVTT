@@ -61,25 +61,26 @@
             addChatMessage("Mestre", `Iniciou uma cena de vídeo.`, "#a78bfa");
         }
 
-        function showCurrentHandoutToPlayers() {
-            if (!currentHandoutPayload || !window.api || !window.api.showHandoutToPlayers) return;
-            window.api.showHandoutToPlayers(currentHandoutPayload);
-            if (typeof window.updatePlayerViewStatusCard === 'function') window.updatePlayerViewStatusCard({ handout: currentHandoutPayload });
+        function showCurrentHandoutLocally() {
+            if (!currentHandoutPayload) return;
             rememberRevealedHandout(currentHandoutPayload);
-            addChatMessage("Sistema", "Pergaminho revelado aos aventureiros.", "#38bdf8");
+            addChatMessage("Sistema", "Pergaminho marcado como revelado.", "#38bdf8");
         }
 
-        function showHandoutPathToPlayers(path, type = 'image', title = '') {
-            if (!path || !window.api || !window.api.showHandoutToPlayers) return;
+        function showHandoutPathLocally(path, type = 'image', title = '') {
+            if (!path) return;
             const payload = {
                 type,
                 path,
                 title: title || path.split(/[\\/]/).pop()
             };
-            window.api.showHandoutToPlayers(payload);
-            if (typeof window.updatePlayerViewStatusCard === 'function') window.updatePlayerViewStatusCard({ handout: payload });
+            if (type === 'video') {
+                mostrarVideo(path);
+            } else {
+                mostrarImagem(path);
+            }
             rememberRevealedHandout(payload);
-            addChatMessage("Sistema", "Pergaminho enviado diretamente aos aventureiros.", "#38bdf8");
+            addChatMessage("Sistema", "Pergaminho aberto na mesa.", "#38bdf8");
         }
 
         function rememberRevealedHandout(payload) {
@@ -91,13 +92,10 @@
             });
         }
 
-        function hideHandoutFromPlayers() {
+        function closeRevealedHandoutsLocally() {
             window.revealedHandouts = [];
-            if (window.api && window.api.hideHandoutFromPlayers) {
-                window.api.hideHandoutFromPlayers();
-            }
-            if (typeof window.updatePlayerViewStatusCard === 'function') window.updatePlayerViewStatusCard({ handout: null });
-            addChatMessage("Sistema", "Pergaminho ocultado da visao dos aventureiros.", "#94a3b8");
+            fecharViewer();
+            addChatMessage("Sistema", "Pergaminho ocultado da mesa.", "#94a3b8");
         }
 
         function fecharViewer() {

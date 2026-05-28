@@ -26,20 +26,5 @@ contextBridge.exposeInMainWorld('api', {
   getAudio: () => ipcRenderer.invoke('get-audio'),
   getImages: () => ipcRenderer.invoke('get-images'),
   getVideos: () => ipcRenderer.invoke('get-videos'),
-  getPortraits: (tipo) => ipcRenderer.invoke('get-portraits', tipo),
-  
-  // Funções Novas da Visão de Jogador
-  openPlayerView: () => ipcRenderer.invoke('open-player-view'),
-  getPlayerViewStatus: () => ipcRenderer.invoke('get-player-view-status'),
-  syncBoard: (state) => ipcRenderer.send('sync-board', state),
-  onUpdateBoard: (callback) => ipcRenderer.on('update-board', (event, state) => callback(state)),
-  syncPing: (payloadOrX, y) => {
-    const payload = typeof payloadOrX === 'object' ? payloadOrX : { x: payloadOrX, y };
-    ipcRenderer.send('sync-ping', payload);
-  },
-  onPing: (callback) => ipcRenderer.on('player-ping', (event, payload) => callback(payload)),
-  showHandoutToPlayers: (payload) => ipcRenderer.send('show-handout-to-players', payload),
-  onShowHandout: (callback) => ipcRenderer.on('player-handout', (event, payload) => callback(payload)),
-  hideHandoutFromPlayers: () => ipcRenderer.send('hide-handout-from-players'),
-  onHideHandout: (callback) => ipcRenderer.on('player-hide-handout', () => callback())
+  getPortraits: (tipo) => ipcRenderer.invoke('get-portraits', tipo)
 });

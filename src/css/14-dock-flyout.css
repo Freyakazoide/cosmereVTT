@@ -1,12 +1,19 @@
 /* Mistborn sidebar and dock overhaul. Keep JS-facing IDs/classes intact. */
 
+#vtt-dock-shell.vtt-dock-shell,
 .vtt-dock-shell {
-  position: absolute;
-  inset: 16px auto 16px 16px;
-  z-index: 40;
+  position: fixed;
+  left: 50%;
+  right: auto;
+  bottom: 14px;
+  top: auto;
+  transform: translateX(-50%);
+  width: auto;
+  max-width: calc(100vw - 24px);
+  z-index: 80;
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  align-items: flex-end;
+  justify-content: center;
   pointer-events: none;
 }
 
@@ -20,64 +27,61 @@
 .vtt-dock.tools-bar,
 .glass-dock {
   position: relative;
-  width: 64px;
-  max-height: calc(100vh - 32px);
+  width: auto;
+  max-width: min(92vw, 980px);
+  height: auto;
+  max-height: none;
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
   overflow: visible;
-  padding: 10px 9px;
-  border: 1px solid var(--sidebar-border);
-  border-radius: var(--radius-md);
-  background:
-    linear-gradient(180deg, rgba(28, 32, 38, 0.94), rgba(4, 6, 10, 0.94)),
-    var(--sidebar-bg);
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.20);
+  border-radius: 22px;
+  background: rgba(15, 23, 42, 0.60);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    inset -1px 0 0 rgba(216, 167, 57, 0.08),
-    var(--shadow-soft);
-  backdrop-filter: blur(14px);
+    0 18px 48px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  backdrop-filter: blur(18px);
 }
 
 .vtt-dock::before {
-  content: "";
-  position: absolute;
-  inset: 8px auto 8px 0;
-  width: 2px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, transparent, var(--mistborn-gold), transparent);
-  opacity: 0.62;
+  display: none;
 }
 
 .tool-group-wrapper {
   position: relative;
-  width: 44px;
-  min-height: 44px;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 auto;
 }
 
 .dock-section {
-  display: grid;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
   gap: 6px;
 }
 
 .tool-separator {
-  width: 34px;
-  height: 1px;
-  margin: 2px auto;
-  background: linear-gradient(90deg, transparent, rgba(216, 167, 57, 0.34), transparent);
+  width: 1px;
+  height: 32px;
+  margin: 0 4px;
+  background: linear-gradient(180deg, transparent, rgba(216, 167, 57, 0.34), transparent);
 }
 
 .vtt-dock .tool-btn,
 #global-actions .tool-btn {
   position: relative;
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   min-width: 0;
   padding: 0;
   display: grid;
   place-items: center;
   border: 1px solid rgba(154, 163, 173, 0.16);
-  border-radius: var(--radius-sm);
+  border-radius: 16px;
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.055), rgba(0, 0, 0, 0.18)),
     rgba(10, 13, 18, 0.84);
@@ -114,7 +118,7 @@
 #global-actions .tool-btn:hover,
 .vtt-dock .tool-btn:focus-visible,
 #global-actions .tool-btn:focus-visible {
-  transform: translateX(2px);
+  transform: translateY(-2px);
   border-color: rgba(216, 167, 57, 0.42);
   background:
     radial-gradient(circle at 35% 18%, rgba(216, 167, 57, 0.16), transparent 56%),
@@ -155,10 +159,10 @@
 }
 
 .tool-group-wrapper .master-tool-btn::after {
-  content: "\f105";
+  content: "\f106";
   position: absolute;
-  right: -7px;
-  top: 50%;
+  right: -3px;
+  top: -5px;
   width: 18px;
   height: 18px;
   display: grid;
@@ -171,57 +175,48 @@
   font-size: 9px;
   font-weight: 900;
   line-height: 1;
-  transform: translateY(-50%);
+  transform: none;
   transition: transform var(--motion-med), background var(--transition-fast), border-color var(--transition-fast);
 }
 
 .tool-group-wrapper.is-hover-open .master-tool-btn::after,
 .tool-group-wrapper.is-click-open .master-tool-btn::after,
 .tool-group-wrapper:has(.tool-submenu.is-open) .master-tool-btn::after {
-  transform: translateY(-50%) rotate(90deg);
+  transform: translateY(-2px);
   background: rgba(63, 52, 29, 0.96);
   border-color: rgba(240, 199, 102, 0.68);
 }
 
 .tool-submenu {
   position: absolute;
-  top: 50%;
-  left: 58px;
+  left: 50%;
+  bottom: 58px;
+  top: auto;
   z-index: 45;
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 44px;
+  display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: start;
-  gap: 7px;
+  gap: 8px;
   padding: 10px;
-  border: 1px solid rgba(216, 167, 57, 0.24);
-  border-radius: var(--radius-md);
-  background:
-    linear-gradient(90deg, rgba(36, 34, 29, 0.96), rgba(8, 11, 16, 0.96)),
-    var(--sidebar-surface);
+  border: 1px solid rgba(148, 163, 184, 0.20);
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.78);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
     0 18px 42px rgba(0, 0, 0, 0.42);
-  backdrop-filter: blur(14px);
+  backdrop-filter: blur(18px);
   opacity: 0;
   pointer-events: none;
-  transform: translate(-12px, -50%) scale(0.98);
-  transform-origin: left center;
+  transform: translate(-50%, 12px) scale(0.98);
+  transform-origin: center bottom;
   transition:
     opacity var(--motion-med),
     transform var(--motion-med);
 }
 
 .tool-submenu::before {
-  content: "";
-  position: absolute;
-  left: -8px;
-  top: 50%;
-  width: 8px;
-  height: 1px;
-  transform: translateY(-50%);
-  background: rgba(216, 167, 57, 0.38);
+  display: none;
 }
 
 .tool-group-wrapper.is-hover-open .tool-submenu,
@@ -229,38 +224,36 @@
 .tool-submenu.is-open {
   opacity: 1;
   pointer-events: auto;
-  transform: translate(0, -50%) scale(1);
+  transform: translate(-50%, 0) scale(1);
 }
 
 .tool-submenu .tool-btn {
-  width: 44px;
-  height: 44px;
-  flex: 0 0 44px;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
 }
 
 #sidebar.vtt-flyout {
-  position: relative;
+  position: fixed;
   top: auto;
   right: auto;
-  bottom: auto;
-  left: auto;
-  width: clamp(460px, 38vw, 680px);
-  height: calc(100vh - 32px);
+  bottom: 88px;
+  left: 50%;
+  width: clamp(520px, 58vw, 860px);
+  height: min(72vh, 720px);
   display: grid;
   grid-template-rows: auto auto 1fr;
   overflow: hidden;
   border: 1px solid var(--sidebar-border);
-  border-radius: var(--radius-md);
-  background:
-    radial-gradient(circle at 18% 0%, rgba(216, 167, 57, 0.10), transparent 30%),
-    linear-gradient(180deg, rgba(20, 25, 33, 0.96), rgba(4, 6, 10, 0.97));
+  border-radius: 24px;
+  background: rgba(15, 23, 42, 0.82);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
     inset 1px 0 0 rgba(216, 167, 57, 0.08),
     var(--shadow-soft);
-  backdrop-filter: blur(16px);
+  backdrop-filter: blur(20px);
   opacity: 1;
-  transform: translateX(0);
+  transform: translateX(-50%) translateY(0) scale(1);
   transition:
     opacity var(--motion-med),
     transform var(--motion-slow);
@@ -269,7 +262,7 @@
 #sidebar.vtt-flyout.is-closed {
   opacity: 0;
   pointer-events: none;
-  transform: translateX(-18px);
+  transform: translateX(-50%) translateY(18px) scale(0.98);
 }
 
 .vtt-flyout-header {
@@ -1083,31 +1076,16 @@
 
 .tool-options-panel {
   position: absolute;
-  top: 0;
-  left: 76px;
-  max-width: min(720px, calc(100vw - 104px));
+  left: 50%;
+  bottom: 74px;
+  top: auto;
+  transform: translateX(-50%);
+  max-width: min(720px, calc(100vw - 24px));
 }
 
 #btn-toggle-menu,
 #btn-collapse-sidebar,
 .tabs {
-  display: none;
-}
-
-body.player-view #global-actions,
-body.player-view #sidebar,
-body.player-view .dock-section,
-body.player-view .tool-separator,
-body.player-view .player-hidden-panel {
-  display: none;
-}
-
-body.player-view .vtt-dock-shell {
-  display: none;
-}
-
-body.player-view .vtt-dock.tools-bar,
-body.player-view .glass-dock {
   display: none;
 }
 
@@ -1177,15 +1155,25 @@ body.player-view .glass-dock {
 }
 
 @media (max-width: 900px) {
+  #vtt-dock-shell.vtt-dock-shell,
   .vtt-dock-shell {
-    inset: 10px auto 10px 10px;
-    gap: 9px;
+    left: 50%;
+    right: auto;
+    bottom: 12px;
+    transform: translateX(-50%);
+    width: auto;
+    max-width: calc(100vw - 24px);
+    justify-content: center;
   }
 
   .vtt-dock.tools-bar,
   .glass-dock {
-    width: 58px;
-    padding: 8px 7px;
+    width: auto;
+    max-width: calc(100vw - 24px);
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding: 8px;
+    background: rgba(15, 23, 42, 0.60);
   }
 
   .vtt-dock .tool-btn {
@@ -1194,24 +1182,30 @@ body.player-view .glass-dock {
   }
 
   #sidebar.vtt-flyout {
-    width: clamp(420px, 48vw, 600px);
-    height: calc(100vh - 20px);
+    left: 12px;
+    right: 12px;
+    bottom: 86px;
+    width: auto;
+    height: min(72vh, 720px);
+    transform: translateY(0) scale(1);
   }
 
   .tool-submenu {
-    top: 0;
-    left: 54px;
-    grid-auto-flow: row;
-    grid-template-columns: repeat(2, 42px);
-    max-height: calc(100vh - 24px);
-    overflow-y: auto;
-    transform: translateX(-10px) scale(0.98);
+    left: 0;
+    bottom: 54px;
+    max-width: calc(100vw - 24px);
+    overflow-x: auto;
+    transform: translateY(12px) scale(0.98);
   }
 
   .tool-group-wrapper.is-hover-open .tool-submenu,
   .tool-group-wrapper.is-click-open .tool-submenu,
   .tool-submenu.is-open {
-    transform: translateX(0) scale(1);
+    transform: translateY(0) scale(1);
+  }
+
+  #sidebar.vtt-flyout.is-closed {
+    transform: translateY(18px) scale(0.98);
   }
 
   #global-actions {
@@ -1222,8 +1216,17 @@ body.player-view .glass-dock {
 }
 
 @media (max-width: 760px) {
+  #vtt-dock-shell.vtt-dock-shell,
+  .vtt-dock-shell {
+    left: 50%;
+    right: auto;
+    bottom: 12px;
+    transform: translateX(-50%);
+    max-width: calc(100vw - 16px);
+  }
+
   #sidebar.vtt-flyout {
-    width: calc(100vw - 92px);
+    width: auto;
   }
 
   .vtt-library-card--visual,

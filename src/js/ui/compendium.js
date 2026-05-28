@@ -722,7 +722,7 @@ document.addEventListener('dblclick', (e) => {
         if (entry.type === 'scene' && typeof window.restoreDirectedSceneFromState === 'function') {
             window.restoreDirectedSceneFromState({
                 sceneName: entry.name,
-                playerText: entry.description,
+                introText: entry.description,
                 mapPath: entry.mechanics?.mapPath || '',
                 audioPath: entry.mechanics?.audioPath || '',
                 weather: entry.mechanics?.weather || 'none',

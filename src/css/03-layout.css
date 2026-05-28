@@ -42,8 +42,3 @@
   z-index: var(--z-dice-layer);
   pointer-events: none;
 }
-
-body.player-view .vtt-dock-shell,
-body.player-view #global-actions {
-  display: none;
-}

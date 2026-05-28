@@ -248,7 +248,7 @@ function renderNotesList() {
                     <div class="note-tags">${tagHtml}</div>
                     <div class="note-actions">
                         <button class="ui-icon-btn" data-note-action="pin" data-note-index="${index}" title="Fixar no mural da cena"><i class="fas fa-thumbtack"></i></button>
-                        <button class="ui-icon-btn" data-note-action="share" data-note-index="${index}" title="Revelar aos aventureiros"><i class="fas fa-scroll"></i></button>
+                        <button class="ui-icon-btn" data-note-action="share" data-note-index="${index}" title="Revelar na mesa"><i class="fas fa-scroll"></i></button>
                         <button class="ui-icon-btn" data-note-action="duplicate" data-note-index="${index}" title="Duplicar"><i class="fas fa-copy"></i></button>
                         <button class="ui-icon-btn note-danger" data-note-action="delete" data-note-index="${index}" title="Apagar"><i class="fas fa-trash"></i></button>
                     </div>
@@ -274,12 +274,7 @@ function shareNote(index, e) {
 
     const payload = buildNotePayload(note);
 
-    if (window.api && window.api.syncBoard) {
-        window.api.syncBoard({ type: 'show-note', note: payload });
-        addChatMessage('Sistema', `Pista "<strong>${note.title}</strong>" revelada aos aventureiros.`, '#38bdf8');
-    } else {
-        addChatMessage('Sistema', `<strong>${note.title}</strong>: ${stripHtml(note.content)}`, '#38bdf8');
-    }
+    addChatMessage('Sistema', `<strong>${note.title}</strong>: ${stripHtml(note.content)}`, '#38bdf8');
     if (typeof window.addSessionEvent === 'function') {
         window.addSessionEvent('note_revealed', 'Nota revelada', note.title || 'Nota', {
             noteId: note.id,

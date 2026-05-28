@@ -117,7 +117,6 @@
         updateCharacterHP(getTokenId(token), hpAtual, hpMax);
         syncParticipantFromToken(token);
         renderCombatTracker();
-        if (typeof window.syncPlayerViewDebounced === 'function') window.syncPlayerViewDebounced();
     }
 
     function startCombat() {
@@ -428,7 +427,6 @@
             window.addSessionEvent('condition_added', 'Condicao adicionada', `${getTokenName(token)}: ${condition}`);
         }
         renderCombatTracker();
-        if (typeof window.syncPlayerViewDebounced === 'function') window.syncPlayerViewDebounced();
     }
 
     function removeCondition(tokenId, condition) {
@@ -443,7 +441,6 @@
             window.addSessionEvent('condition_removed', 'Condicao removida', `${getTokenName(token)}: ${condition}`);
         }
         renderCombatTracker();
-        if (typeof window.syncPlayerViewDebounced === 'function') window.syncPlayerViewDebounced();
     }
 
     function restoreCombatState(state) {

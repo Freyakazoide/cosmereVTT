@@ -197,7 +197,7 @@ function getVttTooltipDescription(label) {
         'Chat': 'Registro da mesa, rolagens, mensagens e eventos importantes.',
         'Notas': 'Diário, pistas, lore, segredos e anotações da campanha.',
         'Compendio': 'Itens, armas, regras rápidas e conteúdos reutilizáveis.',
-        'Handouts': 'Imagens, pistas visuais e materiais para mostrar aos jogadores.',
+        'Handouts': 'Imagens, pistas visuais e materiais para abrir na mesa.',
         'Videos': 'Cenas, animações e recursos visuais da campanha.',
         'Audio': 'Músicas, efeitos e ambientações sonoras.',
         'Configuracoes': 'Tema, áudio, dados, neblina e preferências da mesa.',
@@ -662,7 +662,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (Number.isFinite(hp) && Number.isFinite(hpMaximum)) {
                             window.phaserScene.updateTokenHP(token.tokenId, hp, hpMaximum);
                             if (typeof window.updateCharacterHP === 'function') window.updateCharacterHP(token.tokenId, hp, hpMaximum);
-                            if (typeof window.syncPlayerViewDebounced === 'function') window.syncPlayerViewDebounced();
                         }
                     }
                     if (typeof addChatMessage === 'function') {
@@ -707,7 +706,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('context-menu').classList.add('hidden');
-    if (typeof window.syncPlayerViewDebounced === 'function') window.syncPlayerViewDebounced();
 }
 
 function clearContextAuras() {
@@ -725,7 +723,6 @@ function clearContextAuras() {
     }
 
     document.getElementById('context-menu').classList.add('hidden');
-    if (typeof window.syncPlayerViewDebounced === 'function') window.syncPlayerViewDebounced();
 }
 
 
@@ -837,7 +834,7 @@ function clearContextAuras() {
 (function() {
     const diceColor = localStorage.getItem('dice-color');
     if (diceColor) {
-        const colorInput = document.getElementById('player-dice-color');
+        const colorInput = document.getElementById('dice-color-input');
         if (colorInput) colorInput.value = diceColor;
     }
 })();
