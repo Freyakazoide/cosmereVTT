@@ -534,6 +534,7 @@
             
             if (window.api) window.api.saveCharacter(id, JSON.stringify(fichasSalvas[id]));
             if (window.phaserScene) window.phaserScene.updateTokenHP(id, novoHP, fichasSalvas[id].hpMax);
+            if (typeof window.syncPlayerViewDebounced === 'function') window.syncPlayerViewDebounced();
             
             renderizarListaTokens();
         }
@@ -541,11 +542,14 @@
         function togglePlayerVisibility(id) {
             if (fichasSalvas[id]) {
                 fichasSalvas[id].isVisibleToPlayers = !fichasSalvas[id].isVisibleToPlayers;
+                const token = window.phaserScene?.camadaTokens?.list?.find(item => item.tokenId === id || item.characterId === id);
+                if (token) token.visibleToPlayers = fichasSalvas[id].isVisibleToPlayers !== false;
                 if (window.api) {
                     window.api.saveCharacter(id, JSON.stringify(fichasSalvas[id]));
                     if (window.api.syncBoard) window.api.syncBoard({ type: 'update-permissions', charId: id, visible: fichasSalvas[id].isVisibleToPlayers });
                 }
                 renderizarListaTokens();
+                if (typeof window.syncPlayerViewDebounced === 'function') window.syncPlayerViewDebounced();
             }
         }
 
@@ -1507,7 +1511,9 @@ function sendCharacterPortraitToPlayers() {
     }
 
     if (window.api?.showHandoutToPlayers) {
-        window.api.showHandoutToPlayers({ type: 'image', path: payload.path, title: payload.title });
+        const handoutPayload = { type: 'image', path: payload.path, title: payload.title };
+        window.api.showHandoutToPlayers(handoutPayload);
+        if (typeof window.updatePlayerViewStatusCard === 'function') window.updatePlayerViewStatusCard({ handout: handoutPayload });
         if (typeof addChatMessage === 'function') addChatMessage('Sistema', 'Retrato enviado para os players.', '#38bdf8');
     }
 }

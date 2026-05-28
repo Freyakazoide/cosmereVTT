@@ -322,6 +322,51 @@ function normalizeBoardState(state, options = {}) {
 
 window.normalizeBoardState = normalizeBoardState;
 
+function isPlayerViewModeVtt() {
+    return window.isPlayerView || window.location.search.includes('player=true');
+}
+
+function filterPlayerSafeBoardState(state) {
+    const normalized = typeof normalizeBoardState === 'function'
+        ? normalizeBoardState(state)
+        : (state || {});
+    const visibleTokens = (normalized.tokens || []).filter(token => token.visibleToPlayers !== false);
+    const visibleTokenIds = new Set(visibleTokens.map(token => token.tokenId || token.characterId || token.id).filter(Boolean));
+
+    return {
+        ...normalized,
+        tokens: visibleTokens,
+        drawings: (normalized.drawings || []).filter(drawing => drawing.visibleToPlayers !== false),
+        combatState: {
+            ...(normalized.combatState || getDefaultCombatStateVtt()),
+            participants: (normalized.combatState?.participants || []).filter(participant => {
+                if (!participant?.id) return true;
+                return visibleTokenIds.has(participant.id);
+            })
+        }
+    };
+}
+
+window.filterPlayerSafeBoardState = filterPlayerSafeBoardState;
+
+window.getPlayerSafeBoardState = function getPlayerSafeBoardState() {
+    if (!window.phaserScene?.getBoardState) return null;
+    return filterPlayerSafeBoardState(window.phaserScene.getBoardState());
+};
+
+function getTokenVisibilityIdVtt(token) {
+    return token?.tokenId || token?.characterId || token?.id || '';
+}
+
+function isTokenVisibleToPlayersVtt(token) {
+    if (!token) return false;
+    const tokenId = getTokenVisibilityIdVtt(token);
+    const linkedFicha = tokenId && window.fichasSalvas ? window.fichasSalvas[tokenId] : null;
+    return token.visibleToPlayers !== false && linkedFicha?.isVisibleToPlayers !== false;
+}
+
+window.isTokenVisibleToPlayersVtt = isTokenVisibleToPlayersVtt;
+
 
 
 class MainScene extends Phaser.Scene {
@@ -809,6 +854,7 @@ class MainScene extends Phaser.Scene {
 
     mudarFerramenta(nome) {
         this.ferramentaAtual = nome;
+        const isPlayerViewMode = isPlayerViewModeVtt();
         
         if (nome !== 'ruler') {
             this.graficosRegua.clear();
@@ -817,13 +863,13 @@ class MainScene extends Phaser.Scene {
         
         // Trava ou Destrava Tokens
         this.camadaTokens.list.forEach(token => {
-            this.input.setDraggable(token, nome === 'select');
+            this.input.setDraggable(token, !isPlayerViewMode && nome === 'select');
         });
 
         // Trava ou Destrava Mapas para montagem
         if (this.mapasAtivos) {
             this.mapasAtivos.forEach(mapa => {
-                this.input.setDraggable(mapa, nome === 'map-edit');
+                this.input.setDraggable(mapa, !isPlayerViewMode && nome === 'map-edit');
             });
         }
     }
@@ -917,6 +963,14 @@ class MainScene extends Phaser.Scene {
 
 // --- CONTROLES DE CLIMA DINÂMICO ---
     setAdvancedWeather(config) {
+        this.currentWeather = {
+            ash: Number(config?.ash) || 0,
+            rain: Number(config?.rain) || 0,
+            sun: Number(config?.sun) || 0,
+            wind: Number(config?.wind) || 0
+        };
+        config = this.currentWeather;
+
         if (config.ash > 0) {
             this.ashEmitter.setConfig({ 
                 x: { min: -5000, max: 10000 }, y: -1000, lifespan: 12000, 
@@ -938,6 +992,7 @@ class MainScene extends Phaser.Scene {
         } else { this.rainEmitter.stop(); }
 
         this.sunOverlay.setAlpha(config.sun / 200);
+        if (!isPlayerViewModeVtt() && typeof window.syncPlayerViewDebounced === 'function') window.syncPlayerViewDebounced();
     }
 
     // --- SISTEMA DE TABULEIRO (SAVE/LOAD) ---
@@ -1038,7 +1093,7 @@ class MainScene extends Phaser.Scene {
                     charName: t.charName,
                     hp: ficha ? ficha.hpAtual : t.hpAtual,
                     hpMax: ficha ? ficha.hpMax : t.hpMax,
-                    visibleToPlayers: t.visibleToPlayers !== false,
+                    visibleToPlayers: t.visibleToPlayers !== false && ficha?.isVisibleToPlayers !== false,
                     locked: !!t.locked,
                     notes: t.notes || '',
                     conditions: Array.isArray(t.conditions) ? [...t.conditions] : []
@@ -1060,9 +1115,20 @@ class MainScene extends Phaser.Scene {
             : state;
         state.mapas = state.mapas || state.maps || [];
         state.tokens = state.tokens || [];
+        if (isPlayerViewModeVtt()) {
+            state.tokens = state.tokens.filter(token => token.visibleToPlayers !== false);
+            state.drawings = (state.drawings || []).filter(drawing => drawing.visibleToPlayers !== false);
+            const visibleTokenIds = new Set(state.tokens.map(token => token.tokenId || token.characterId || token.id).filter(Boolean));
+            if (state.combatState?.participants) {
+                state.combatState = {
+                    ...state.combatState,
+                    participants: state.combatState.participants.filter(participant => !participant?.id || visibleTokenIds.has(participant.id))
+                };
+            }
+        }
         this.loadSceneGridSettings(state.sceneSettings || state.grid || {});
         this.camadaMapa.removeAll(true);
-        this.camadaTokens.removeAll(true);
+        this.clearTokenLayerVtt();
         this.camadaTatico.removeAll(true);
         this.drawingHistory = [];
         this.redoHistory = [];
@@ -1143,12 +1209,14 @@ class MainScene extends Phaser.Scene {
                 }
                 
                 novoMapa.caminhoAbsoluto = m.path;
-                this.input.setDraggable(novoMapa, this.ferramentaAtual === 'map-edit');
-                novoMapa.on('drag', (p, dx, dy) => { if(this.ferramentaAtual==='map-edit'){ novoMapa.x=dx; novoMapa.y=dy;} });
+                this.input.setDraggable(novoMapa, !isPlayerViewModeVtt() && this.ferramentaAtual === 'map-edit');
+                novoMapa.on('drag', (p, dx, dy) => { if(!isPlayerViewModeVtt() && this.ferramentaAtual==='map-edit'){ novoMapa.x=dx; novoMapa.y=dy;} });
                 novoMapa.on('dragend', () => {
+                    if (isPlayerViewModeVtt()) return;
                     const gridSize = this.getSceneGridSize();
                     novoMapa.x = Math.round(novoMapa.x / gridSize) * gridSize;
                     novoMapa.y = Math.round(novoMapa.y / gridSize) * gridSize;
+                    if (typeof window.syncPlayerViewDebounced === 'function') window.syncPlayerViewDebounced();
                 });
                 if (m.scaleX) novoMapa.setScale(m.scaleX, m.scaleY || m.scaleX);
                 this.mapasAtivos.push(novoMapa);
@@ -1475,12 +1543,14 @@ class MainScene extends Phaser.Scene {
             }
             
             novoMapa.caminhoAbsoluto = caminhoAbsoluto;
-            this.input.setDraggable(novoMapa, this.ferramentaAtual === 'map-edit');
-            novoMapa.on('drag', (pointer, dragX, dragY) => { if (this.ferramentaAtual !== 'map-edit') return; novoMapa.x = dragX; novoMapa.y = dragY; });
+            this.input.setDraggable(novoMapa, !isPlayerViewModeVtt() && this.ferramentaAtual === 'map-edit');
+            novoMapa.on('drag', (pointer, dragX, dragY) => { if (isPlayerViewModeVtt() || this.ferramentaAtual !== 'map-edit') return; novoMapa.x = dragX; novoMapa.y = dragY; });
             novoMapa.on('dragend', () => {
+                if (isPlayerViewModeVtt()) return;
                 const gridSize = this.getSceneGridSize();
                 novoMapa.x = Math.round(novoMapa.x / gridSize) * gridSize;
                 novoMapa.y = Math.round(novoMapa.y / gridSize) * gridSize;
+                if (typeof window.syncPlayerViewDebounced === 'function') window.syncPlayerViewDebounced();
             });
             
             if (!this.mapasAtivos) this.mapasAtivos = [];
@@ -1550,6 +1620,11 @@ class MainScene extends Phaser.Scene {
             isVideo = ['webm', 'mp4'].includes(ext);
         }
 
+        const targetTokenId = savedTokenId || savedState?.tokenId || savedState?.characterId || savedState?.id;
+        if (isPlayerViewModeVtt() && savedState && !isTokenVisibleToPlayersVtt({ ...savedState, tokenId: targetTokenId })) {
+            return null;
+        }
+
         let token;
         if (isVideo) {
             token = this.add.video(x, y, key).setInteractive();
@@ -1561,18 +1636,18 @@ class MainScene extends Phaser.Scene {
         token.caminhoAbsoluto = path;
         // Salva o nome real do personagem no próprio Token para não dependermos da chave do cache:
         token.charName = charName || key.replace('tk_', '').split('_')[0];
-        token.tokenId = savedTokenId || ('tk_' + Date.now() + '_' + Math.floor(Math.random() * 1000));
+        token.tokenId = targetTokenId || ('tk_' + Date.now() + '_' + Math.floor(Math.random() * 1000));
         token.characterId = token.tokenId;
         const linkedFicha = window.fichasSalvas?.[token.tokenId] || null;
 
-        this.input.setDraggable(token, this.ferramentaAtual === 'select');
+        this.input.setDraggable(token, !isPlayerViewModeVtt() && this.ferramentaAtual === 'select');
         token.gridSize = savedState?.gridSize || 1;
         token.displayWidth = this.getSceneGridSize() * token.gridSize; 
         token.scaleY = token.scaleX;
         if (savedState?.scaleX) {
             token.setScale(savedState.scaleX, savedState.scaleY || savedState.scaleX);
         }
-        token.visibleToPlayers = savedState?.visibleToPlayers !== false;
+        token.visibleToPlayers = savedState?.visibleToPlayers !== false && linkedFicha?.isVisibleToPlayers !== false;
         token.locked = !!savedState?.locked;
         token.notes = savedState?.notes || '';
         token.conditions = Array.isArray(linkedFicha?.conditions)
@@ -1630,6 +1705,7 @@ class MainScene extends Phaser.Scene {
         this.renderTokenConditions(token);
 
         token.on('pointerdown', (pointer) => {
+            if (isPlayerViewModeVtt()) return;
             window.selectedToken = token;
             if (pointer.button === 2 && window.showTokenContextMenu) {
                 window.showTokenContextMenu(token, pointer.event.clientX, pointer.event.clientY);
@@ -1640,7 +1716,7 @@ class MainScene extends Phaser.Scene {
         });
 
         token.on('drag', (pointer, dragX, dragY) => {
-            if(this.ferramentaAtual !== 'select') return; 
+            if(isPlayerViewModeVtt() || this.ferramentaAtual !== 'select') return; 
             token.x = dragX;
             token.y = dragY;
             syncExtras();
@@ -1649,6 +1725,7 @@ class MainScene extends Phaser.Scene {
         });
 
         token.on('dragend', () => {
+            if (isPlayerViewModeVtt()) return;
             const gridSize = this.getSceneGridSize();
             let offset = (token.gridSize % 2 === 0) ? 0 : (gridSize / 2);
             let targetX = Math.round(token.x / gridSize) * gridSize + offset;
@@ -1666,17 +1743,49 @@ class MainScene extends Phaser.Scene {
                 duration: 200, // Tempo do deslize (200ms). Se quiser mais lento, coloque 400.
                 ease: 'Power2',
                 onUpdate: () => syncExtras(), // Atualiza a barra de HP/Aura acompanhando o movimento
-                onComplete: () => syncExtras()
+                onComplete: () => {
+                    syncExtras();
+                    if (typeof window.syncPlayerViewDebounced === 'function') window.syncPlayerViewDebounced();
+                }
             });
         });
         
         token.on('destroy', () => {
-            if(token.auraGraphics) token.auraGraphics.destroy();
-            if(token.elevText) token.elevText.destroy();
-            if(token.hpGraphics) token.hpGraphics.destroy();
-            if(token.statusText) token.statusText.destroy();
-            if(token.conditionGroup) token.conditionGroup.destroy(true);
+            this.destroyTokenExtrasVtt(token);
         });
+
+        return token;
+    }
+
+    destroyTokenExtrasVtt(token) {
+        if (!token) return;
+        if (token.auraGraphics && token.auraGraphics.scene) token.auraGraphics.destroy();
+        if (token.elevText && token.elevText.scene) token.elevText.destroy();
+        if (token.hpGraphics && token.hpGraphics.scene) token.hpGraphics.destroy();
+        if (token.statusText && token.statusText.scene) token.statusText.destroy();
+        if (token.conditionGroup && token.conditionGroup.scene) token.conditionGroup.destroy(true);
+        token.auraGraphics = null;
+        token.elevText = null;
+        token.hpGraphics = null;
+        token.statusText = null;
+        token.conditionGroup = null;
+    }
+
+    clearTokenLayerVtt() {
+        if (!this.camadaTokens?.list) return;
+        [...this.camadaTokens.list].forEach(token => {
+            this.destroyTokenExtrasVtt(token);
+            if (token?.destroy) token.destroy();
+        });
+        this.camadaTokens.removeAll(false);
+    }
+
+    removePlayerTokenById(tokenId) {
+        if (!tokenId || !this.camadaTokens?.list) return false;
+        const token = this.camadaTokens.list.find(item => item.tokenId === tokenId || item.characterId === tokenId || item.id === tokenId);
+        if (!token) return false;
+        this.removeToken(token);
+        return true;
     }
 
     // --- FUNÇÕES CHAMADAS PELO HTML (MENU DE CONTEXTO) ---
@@ -1709,6 +1818,7 @@ class MainScene extends Phaser.Scene {
         } else {
             token.auraColor = null;
         }
+        if (!isPlayerViewModeVtt() && typeof window.syncPlayerViewDebounced === 'function') window.syncPlayerViewDebounced();
     }
 
     renderTokenConditions(token) {
@@ -1763,6 +1873,7 @@ class MainScene extends Phaser.Scene {
         token.hpGraphics.fillStyle(color, 1);
         token.hpGraphics.fillRect(offsetX, offsetY, w * pct, h);
         if (typeof window.renderCombatTracker === 'function') window.renderCombatTracker();
+        if (!isPlayerViewModeVtt() && typeof window.syncPlayerViewDebounced === 'function') window.syncPlayerViewDebounced();
     }
 
     clearCurrentTurnHighlight() {

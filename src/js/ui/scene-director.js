@@ -5,6 +5,13 @@ let directorAssets = {
     audios: [],
     handouts: []
 };
+const DIRECTOR_ASSET_BUCKETS = {
+    map: 'maps',
+    audio: 'audios',
+    image: 'handouts',
+    video: 'handouts',
+    handout: 'handouts'
+};
 
 function getDirectorEl(id) {
     return document.getElementById(id);
@@ -85,14 +92,61 @@ function loadDirectedSceneDraft() {
     window.directedSceneDraft = directedSceneDraft;
 }
 
-function directorOption(item) {
-    return `<option value="${item.path.replace(/\\/g, '/')}">${item.name.replace(/\.[^/.]+$/, '')}</option>`;
-}
-
 function escapeDirectorText(value) {
     const div = document.createElement('div');
     div.textContent = value || '';
     return div.innerHTML;
+}
+
+function escapeDirectorAttr(value) {
+    return escapeDirectorText(value).replace(/`/g, '&#96;');
+}
+
+function normalizeDirectorPath(value) {
+    return String(value || '').replace(/\\/g, '/');
+}
+
+function getDirectorAssetName(asset) {
+    const name = asset.name || asset.fileName || normalizeDirectorPath(asset.path).split('/').pop() || '';
+    return String(name).replace(/\.[^/.]+$/, '');
+}
+
+function getDirectorAssetLabel(asset) {
+    const name = getDirectorAssetName(asset);
+    return asset.category ? `${asset.category} / ${name}` : name;
+}
+
+function directorOption(asset) {
+    return `<option value="${escapeDirectorAttr(asset.path)}">${escapeDirectorText(getDirectorAssetLabel(asset))}</option>`;
+}
+
+function getUniqueDirectorAssets(assets) {
+    const byPath = new Map();
+    (assets || []).forEach(asset => {
+        if (!asset?.path || asset.missing) return;
+        const key = normalizeDirectorPath(asset.path).toLowerCase();
+        if (!byPath.has(key)) byPath.set(key, asset);
+    });
+    return [...byPath.values()].sort((a, b) => getDirectorAssetLabel(a).localeCompare(getDirectorAssetLabel(b)));
+}
+
+function getDirectorAssetsFromLibrary(assets) {
+    const nextAssets = {
+        maps: [],
+        audios: [],
+        handouts: []
+    };
+
+    (assets || []).forEach(asset => {
+        const bucket = DIRECTOR_ASSET_BUCKETS[asset?.type];
+        if (bucket) nextAssets[bucket].push(asset);
+    });
+
+    return {
+        maps: getUniqueDirectorAssets(nextAssets.maps),
+        audios: getUniqueDirectorAssets(nextAssets.audios),
+        handouts: getUniqueDirectorAssets(nextAssets.handouts)
+    };
 }
 
 function populateDirectorSelects() {
@@ -127,18 +181,10 @@ function renderDirectorPinnedNotes() {
 }
 
 async function refreshSceneDirector() {
-    if (!window.api) return;
-    const [maps, audios, images, videos] = await Promise.all([
-        window.api.getMaps ? window.api.getMaps() : [],
-        window.api.getAudio ? window.api.getAudio() : [],
-        window.api.getImages ? window.api.getImages() : [],
-        window.api.getVideos ? window.api.getVideos() : []
-    ]);
-    directorAssets = {
-        maps: maps || [],
-        audios: audios || [],
-        handouts: [...(images || []), ...(videos || [])]
-    };
+    if (!window.api?.getAssetsLibrary) return;
+    const assets = await window.api.getAssetsLibrary();
+    if (window.assetsLibraryState) window.assetsLibraryState.assets = assets || [];
+    directorAssets = getDirectorAssetsFromLibrary(assets);
     populateDirectorSelects();
     renderDirectorPinnedNotes();
 }
@@ -220,6 +266,7 @@ function showDirectorIntroToPlayers() {
             title: draft.handoutPath.split(/[\\/]/).pop()
         };
         window.api.showHandoutToPlayers(payload);
+        if (typeof window.updatePlayerViewStatusCard === 'function') window.updatePlayerViewStatusCard({ handout: payload });
         if (typeof rememberRevealedHandout === 'function') rememberRevealedHandout(payload);
     }
     if (typeof window.addSessionEvent === 'function' && (draft.playerText || draft.handoutPath)) {
@@ -244,7 +291,9 @@ function closeDirectorHandoutForPlayers() {
 function syncDirectorSceneToPlayers() {
     saveDirectedSceneDraft();
     if (window.api?.syncBoard && window.phaserScene) {
-        const state = window.phaserScene.getBoardState();
+        const state = typeof window.getPlayerSafeBoardState === 'function'
+            ? window.getPlayerSafeBoardState()
+            : window.phaserScene.getBoardState();
         state.sceneDirector = {
             ...directedSceneDraft,
             pinnedNotes: window.pinnedNotes || []

@@ -1103,12 +1103,12 @@ body.player-view .player-hidden-panel {
 }
 
 body.player-view .vtt-dock-shell {
-  display: flex;
+  display: none;
 }
 
 body.player-view .vtt-dock.tools-bar,
 body.player-view .glass-dock {
-  display: flex;
+  display: none;
 }
 
 #vtt-custom-tooltip {

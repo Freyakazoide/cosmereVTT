@@ -29,7 +29,8 @@ contextBridge.exposeInMainWorld('api', {
   getPortraits: (tipo) => ipcRenderer.invoke('get-portraits', tipo),
   
   // Funções Novas da Visão de Jogador
-  openPlayerView: () => ipcRenderer.send('open-player-view'),
+  openPlayerView: () => ipcRenderer.invoke('open-player-view'),
+  getPlayerViewStatus: () => ipcRenderer.invoke('get-player-view-status'),
   syncBoard: (state) => ipcRenderer.send('sync-board', state),
   onUpdateBoard: (callback) => ipcRenderer.on('update-board', (event, state) => callback(state)),
   syncPing: (payloadOrX, y) => {

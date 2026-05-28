@@ -662,6 +662,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (Number.isFinite(hp) && Number.isFinite(hpMaximum)) {
                             window.phaserScene.updateTokenHP(token.tokenId, hp, hpMaximum);
                             if (typeof window.updateCharacterHP === 'function') window.updateCharacterHP(token.tokenId, hp, hpMaximum);
+                            if (typeof window.syncPlayerViewDebounced === 'function') window.syncPlayerViewDebounced();
                         }
                     }
                     if (typeof addChatMessage === 'function') {
@@ -706,6 +707,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('context-menu').classList.add('hidden');
+    if (typeof window.syncPlayerViewDebounced === 'function') window.syncPlayerViewDebounced();
 }
 
 function clearContextAuras() {
@@ -723,6 +725,7 @@ function clearContextAuras() {
     }
 
     document.getElementById('context-menu').classList.add('hidden');
+    if (typeof window.syncPlayerViewDebounced === 'function') window.syncPlayerViewDebounced();
 }
 
 
