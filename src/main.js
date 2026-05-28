@@ -57,6 +57,9 @@ app.whenReady().then(() => {
   runCharacterEquipmentCompendiumMigration().catch(error => {
     console.error('Erro ao importar equipamentos das fichas para o compendio:', error);
   });
+  bootstrapAssetsLibraryIfEmpty().catch(error => {
+    console.error('Erro ao inicializar biblioteca de assets:', error);
+  });
   createWindow();
 
   app.on('activate', () => {
@@ -219,6 +222,18 @@ function getAssetTargetDir(type) {
   return map[type] || map.image;
 }
 
+function getAssetScanFolders() {
+  const root = path.join(__dirname, '../assets');
+  return [
+    { type: 'map', dir: path.join(root, 'cenarios') },
+    { type: 'token', dir: path.join(root, 'persons') },
+    { type: 'portrait', dir: path.join(root, 'portraits') },
+    { type: 'image', dir: path.join(root, 'imagens') },
+    { type: 'video', dir: path.join(root, 'videos') },
+    { type: 'audio', dir: path.join(root, 'audio') }
+  ];
+}
+
 function getAssetMimeType(filePath) {
   const ext = path.extname(filePath).toLowerCase();
   const mime = {
@@ -280,6 +295,16 @@ function normalizeLookupKey(value) {
     .trim()
     .toLowerCase()
     .replace(/\s+/g, ' ');
+}
+
+function makeAssetIdFromRelativePath(type, relativePath) {
+  const slug = String(relativePath || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'asset';
+  return `asset_${type}_${slug}`;
 }
 
 function makeCompendiumIdFromCharacterEquipment(name, type) {
@@ -446,6 +471,88 @@ async function getAssetById(assetId) {
   return normalizeAsset(JSON.parse(row.data));
 }
 
+function makeScannedAsset(file, folder) {
+  const relativePath = getRelativeAssetPath(file.path);
+  const category = path.relative(folder.dir, path.dirname(file.path)) || '';
+  return {
+    id: makeAssetIdFromRelativePath(folder.type, relativePath),
+    type: folder.type,
+    name: path.basename(file.path, path.extname(file.path)),
+    fileName: path.basename(file.path),
+    category: category === '.' ? '' : category,
+    tags: [],
+    favorite: false,
+    path: file.path,
+    relativePath,
+    mimeType: getAssetMimeType(file.path),
+    sizeBytes: file.stat.size,
+    missing: false
+  };
+}
+
+async function scanAssetsFolders(options = {}) {
+  const { force = false, onlyIfEmpty = false } = options;
+  const existing = await getAllAssets();
+  if (onlyIfEmpty && existing.length > 0) return existing;
+
+  const byPath = new Map();
+  const byRelativePath = new Map();
+  existing.forEach(asset => {
+    if (asset.path) byPath.set(path.resolve(asset.path), asset);
+    if (asset.relativePath) byRelativePath.set(asset.relativePath, asset);
+  });
+
+  const seenIds = new Set();
+  for (const folder of getAssetScanFolders()) {
+    const files = discoverAssetFiles(folder.dir, folder.type);
+    for (const file of files) {
+      const scanned = makeScannedAsset(file, folder);
+      const existingAsset = byPath.get(path.resolve(file.path)) || byRelativePath.get(scanned.relativePath);
+
+      if (existingAsset) {
+        seenIds.add(existingAsset.id);
+        if (!force) continue;
+
+        await saveAsset({
+          ...existingAsset,
+          fileName: scanned.fileName,
+          path: scanned.path,
+          relativePath: scanned.relativePath,
+          mimeType: scanned.mimeType,
+          sizeBytes: scanned.sizeBytes,
+          missing: false,
+          updatedAt: new Date().toISOString()
+        });
+        continue;
+      }
+
+      const saved = await saveAsset(scanned);
+      seenIds.add(saved.id);
+      byPath.set(path.resolve(saved.path), saved);
+      byRelativePath.set(saved.relativePath, saved);
+    }
+  }
+
+  if (force) {
+    for (const asset of existing) {
+      if (seenIds.has(asset.id) || asset.missing) continue;
+      await saveAsset({
+        ...asset,
+        missing: asset.path ? !fs.existsSync(asset.path) : true,
+        updatedAt: new Date().toISOString()
+      });
+    }
+  }
+
+  return getAllAssets();
+}
+
+async function bootstrapAssetsLibraryIfEmpty() {
+  const row = await getDb("SELECT COUNT(*) AS count FROM assets_library");
+  if (Number(row?.count || 0) > 0) return;
+  await scanAssetsFolders({ onlyIfEmpty: true });
+}
+
 function discoverAssetFiles(dir, type, list = []) {
   if (!fs.existsSync(dir)) return list;
   fs.readdirSync(dir).forEach(file => {
@@ -598,6 +705,7 @@ ipcMain.handle('import-character-equipment-compendium', async () => {
 });
 
 ipcMain.handle('get-assets-library', async () => {
+  await bootstrapAssetsLibraryIfEmpty();
   return getAllAssets();
 });
 
@@ -696,46 +804,7 @@ ipcMain.handle('rename-asset', async (event, payloadJSON) => {
 });
 
 ipcMain.handle('scan-assets-folders', async () => {
-  const root = path.join(__dirname, '../assets');
-  const folders = [
-    { type: 'map', dir: path.join(root, 'cenarios') },
-    { type: 'token', dir: path.join(root, 'persons') },
-    { type: 'portrait', dir: path.join(root, 'portraits') },
-    { type: 'image', dir: path.join(root, 'imagens') },
-    { type: 'video', dir: path.join(root, 'videos') },
-    { type: 'audio', dir: path.join(root, 'audio') }
-  ];
-
-  const existing = await getAllAssets();
-  const knownPaths = new Set(existing.map(asset => path.resolve(asset.path)));
-  const knownRelatives = new Set(existing.map(asset => asset.relativePath));
-  const scanned = [];
-
-  for (const folder of folders) {
-    const files = discoverAssetFiles(folder.dir, folder.type);
-    for (const file of files) {
-      const relativePath = getRelativeAssetPath(file.path);
-      if (knownPaths.has(path.resolve(file.path)) || knownRelatives.has(relativePath)) continue;
-      const category = path.relative(folder.dir, path.dirname(file.path)) || '';
-      const asset = await saveAsset({
-        type: folder.type,
-        name: path.basename(file.path, path.extname(file.path)),
-        fileName: path.basename(file.path),
-        category: category === '.' ? '' : category,
-        tags: [],
-        favorite: false,
-        path: file.path,
-        relativePath,
-        mimeType: getAssetMimeType(file.path),
-        sizeBytes: file.stat.size
-      });
-      scanned.push(asset);
-      knownPaths.add(path.resolve(file.path));
-      knownRelatives.add(relativePath);
-    }
-  }
-
-  return getAllAssets();
+  return scanAssetsFolders({ force: true });
 });
 
 ipcMain.handle('validate-assets-library', async () => {

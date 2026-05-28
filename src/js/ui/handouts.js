@@ -65,7 +65,7 @@
             if (!currentHandoutPayload || !window.api || !window.api.showHandoutToPlayers) return;
             window.api.showHandoutToPlayers(currentHandoutPayload);
             rememberRevealedHandout(currentHandoutPayload);
-            addChatMessage("Sistema", "Handout enviado para a visão dos jogadores.", "#38bdf8");
+            addChatMessage("Sistema", "Pergaminho revelado aos aventureiros.", "#38bdf8");
         }
 
         function showHandoutPathToPlayers(path, type = 'image', title = '') {
@@ -77,7 +77,7 @@
             };
             window.api.showHandoutToPlayers(payload);
             rememberRevealedHandout(payload);
-            addChatMessage("Sistema", "Handout enviado diretamente para os jogadores.", "#38bdf8");
+            addChatMessage("Sistema", "Pergaminho enviado diretamente aos aventureiros.", "#38bdf8");
         }
 
         function rememberRevealedHandout(payload) {
@@ -94,7 +94,7 @@
             if (window.api && window.api.hideHandoutFromPlayers) {
                 window.api.hideHandoutFromPlayers();
             }
-            addChatMessage("Sistema", "Handout fechado na visao dos jogadores.", "#94a3b8");
+            addChatMessage("Sistema", "Pergaminho ocultado da visao dos aventureiros.", "#94a3b8");
         }
 
         function fecharViewer() {

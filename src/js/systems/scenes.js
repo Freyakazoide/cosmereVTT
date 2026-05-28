@@ -45,7 +45,10 @@
         async function confirmLoadScene(sceneName) {
             const stateJSON = await window.api.loadSceneData(sceneName);
             if(stateJSON) {
-                const state = JSON.parse(stateJSON);
+                const rawState = JSON.parse(stateJSON);
+                const state = typeof window.normalizeBoardState === 'function'
+                    ? window.normalizeBoardState(rawState, { sceneName })
+                    : rawState;
                 state.sceneName = state.sceneName || sceneName;
                 if (typeof setCurrentSceneContext === 'function') setCurrentSceneContext(state.sceneName, state.sceneId);
                 window.phaserScene.loadBoardState(state);
@@ -80,7 +83,10 @@ function importBoard() {
         reader.onload = readerEvent => {
             try {
                 const content = readerEvent.target.result;
-                const state = JSON.parse(content);
+                const rawState = JSON.parse(content);
+                const state = typeof window.normalizeBoardState === 'function'
+                    ? window.normalizeBoardState(rawState)
+                    : rawState;
                 window.phaserScene.loadBoardState(state);
                 addChatMessage("Sistema", "Mesa importada com sucesso via arquivo local!", "#60a5fa");
             } catch (err) {

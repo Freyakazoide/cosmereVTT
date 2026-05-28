@@ -107,14 +107,14 @@
 
         const state = ensureSessionState();
         if (status) {
-            status.textContent = state.active ? 'Em andamento' : 'Inativa';
+            status.textContent = state.active ? 'Cronica aberta' : 'Cronica fechada';
         }
 
         if (!state.events.length) {
             list.innerHTML = `
                 <div class="vtt-empty-state vtt-empty-state--library">
                     <i class="fas fa-scroll"></i>
-                    <span>Nenhum evento registrado nesta sessao.</span>
+                    <span>Nenhum acontecimento registrado nesta cronica.</span>
                 </div>
             `;
             return;
@@ -140,7 +140,7 @@
 
     function startSession() {
         const state = ensureSessionState();
-        const name = window.currentSceneName || window.directedSceneDraft?.sceneName || 'Sessao sem nome';
+        const name = window.currentSceneName || window.directedSceneDraft?.sceneName || 'Cronica sem nome';
 
         state.active = true;
         state.sessionName = name;
@@ -148,7 +148,7 @@
         state.endedAt = null;
         persistSessionState();
 
-        addSessionEvent(SESSION_EVENT_TYPES.SESSION_STARTED, 'Sessao iniciada', name);
+        addSessionEvent(SESSION_EVENT_TYPES.SESSION_STARTED, 'Cronica iniciada', name);
     }
 
     function endSession() {
@@ -157,7 +157,7 @@
         state.endedAt = new Date().toISOString();
         persistSessionState();
 
-        addSessionEvent(SESSION_EVENT_TYPES.SESSION_ENDED, 'Sessao encerrada', state.sessionName || '');
+        addSessionEvent(SESSION_EVENT_TYPES.SESSION_ENDED, 'Cronica encerrada', state.sessionName || '');
     }
 
     function generateSessionRecap() {
@@ -167,7 +167,7 @@
         const events = ensureSessionState().events;
         if (!events.length) {
             output.classList.remove('hidden');
-            output.innerHTML = '<p>Nenhum evento registrado para gerar recap.</p>';
+            output.innerHTML = '<p>Nenhum acontecimento registrado para escrever relato.</p>';
             return;
         }
 
@@ -180,12 +180,12 @@
         output.classList.remove('hidden');
         output.innerHTML = `
             <div class="session-recap-card">
-                <h3>Recap da sessao</h3>
+                <h3>Relato da cronica</h3>
                 <p><strong>Cenas jogadas:</strong> ${scenes.length ? escapeSessionHtml(scenes.join(', ')) : 'Nenhuma cena registrada.'}</p>
-                <p><strong>Combates:</strong> ${combats}</p>
-                <p><strong>Handouts revelados:</strong> ${handouts.length ? escapeSessionHtml(handouts.join(', ')) : 'Nenhum.'}</p>
-                <p><strong>Eventos de dano:</strong> ${damageEvents.length}</p>
-                <p><strong>Condicoes aplicadas:</strong> ${conditions.length}</p>
+                <p><strong>Encontros:</strong> ${combats}</p>
+                <p><strong>Pergaminhos revelados:</strong> ${handouts.length ? escapeSessionHtml(handouts.join(', ')) : 'Nenhum.'}</p>
+                <p><strong>Ferimentos marcados:</strong> ${damageEvents.length}</p>
+                <p><strong>Aflicoes aplicadas:</strong> ${conditions.length}</p>
                 <hr>
                 <p><strong>Resumo narrativo:</strong></p>
                 <p>${escapeSessionHtml(buildNarrativeRecap(events))}</p>

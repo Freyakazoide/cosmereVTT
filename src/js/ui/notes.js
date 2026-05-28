@@ -4,7 +4,7 @@ let currentEditingNoteIndex = -1;
 let notasPastasAbertas = {};
 let notesViewMode = localStorage.getItem('notes-view') || 'grid';
 
-const NOTE_TYPES = ['Cena', 'NPC', 'Local', 'Pista', 'Tesouro', 'Faccao', 'Segredo', 'Sessao', 'Sistema'];
+const NOTE_TYPES = ['Cena', 'NPC', 'Local', 'Pista', 'Tesouro', 'Faccao', 'Segredo', 'Sessao', 'Regra'];
 const UNASSIGNED_SCENE_ID = 'campaign';
 
 function createNoteId() {
@@ -22,7 +22,7 @@ function normalizeNote(note) {
 
     return {
         id: note.id || createNoteId(),
-        title: note.title || 'Sem Titulo',
+        title: note.title || 'Pista sem titulo',
         content,
         body: content,
         category: note.category || note.type || 'Geral',
@@ -193,17 +193,17 @@ function renderNotesList() {
         });
 
     if (campaignNotes.length === 0) {
-        list.innerHTML = '<div class="notes-empty">O diario esta vazio. Comece a escrever.</div>';
+        list.innerHTML = '<div class="notes-empty">O diario da campanha esta vazio. Comece uma pista.</div>';
         return;
     }
 
     if (sceneNotes.length === 0) {
-        list.innerHTML = '<div class="notes-empty">Nenhuma anotacao vinculada a esta cena.</div>';
+        list.innerHTML = '<div class="notes-empty">Nenhuma pista vinculada a esta cena.</div>';
         return;
     }
 
     if (visibleNotes.length === 0) {
-        list.innerHTML = `<div class="notes-empty">Nenhuma anotacao encontrada para "${term}".</div>`;
+        list.innerHTML = `<div class="notes-empty">Nenhuma pista encontrada para "${term}".</div>`;
         return;
     }
 
@@ -224,7 +224,7 @@ function renderNotesList() {
             <button class="folder-card note-folder-card" data-note-action="toggle-folder" data-category="${cat}">
                 <i class="fas ${icone} folder-icon"></i>
                 <span class="note-folder-title">${cat}</span>
-                <span class="note-folder-count">${grupos[cat].length} itens</span>
+                <span class="note-folder-count">${grupos[cat].length} pistas</span>
             </button>
         `;
 
@@ -232,23 +232,23 @@ function renderNotesList() {
 
         html += '<div class="note-folder-items">';
         grupos[cat].forEach(({ note, index }) => {
-            const previewText = stripHtml(note.content).substring(0, 80) || 'Sem conteudo...';
+            const previewText = stripHtml(note.content).substring(0, 80) || 'Nada inscrito ainda...';
             const tagHtml = (note.tags || []).slice(0, 3).map(tag => `<span class="note-tag">${tag}</span>`).join('');
             html += `
                 <article class="note-card" data-note-index="${index}">
                     <div class="note-card__head">
                         <span class="note-type">${note.type || 'Cena'}</span>
                         <span class="note-state">
-                            ${note.isPinned ? '<i class="fas fa-thumbtack" title="Fixada"></i>' : ''}
-                            ${note.isRevealed ? '<i class="fas fa-eye" title="Revelada"></i>' : ''}
+                            ${note.isPinned ? '<i class="fas fa-thumbtack" title="Fixada no mural"></i>' : ''}
+                            ${note.isRevealed ? '<i class="fas fa-eye" title="Revelada ao grupo"></i>' : ''}
                         </span>
                     </div>
                     <h4 class="note-card__title">${note.title}</h4>
                     <p class="note-card__preview">${previewText}</p>
                     <div class="note-tags">${tagHtml}</div>
                     <div class="note-actions">
-                        <button class="ui-icon-btn" data-note-action="pin" data-note-index="${index}" title="Fixar na cena atual"><i class="fas fa-thumbtack"></i></button>
-                        <button class="ui-icon-btn" data-note-action="share" data-note-index="${index}" title="Mostrar aos jogadores"><i class="fas fa-share-alt"></i></button>
+                        <button class="ui-icon-btn" data-note-action="pin" data-note-index="${index}" title="Fixar no mural da cena"><i class="fas fa-thumbtack"></i></button>
+                        <button class="ui-icon-btn" data-note-action="share" data-note-index="${index}" title="Revelar aos aventureiros"><i class="fas fa-scroll"></i></button>
                         <button class="ui-icon-btn" data-note-action="duplicate" data-note-index="${index}" title="Duplicar"><i class="fas fa-copy"></i></button>
                         <button class="ui-icon-btn note-danger" data-note-action="delete" data-note-index="${index}" title="Apagar"><i class="fas fa-trash"></i></button>
                     </div>
@@ -276,7 +276,7 @@ function shareNote(index, e) {
 
     if (window.api && window.api.syncBoard) {
         window.api.syncBoard({ type: 'show-note', note: payload });
-        addChatMessage('Sistema', `Anotacao "<strong>${note.title}</strong>" enviada aos jogadores.`, '#38bdf8');
+        addChatMessage('Sistema', `Pista "<strong>${note.title}</strong>" revelada aos aventureiros.`, '#38bdf8');
     } else {
         addChatMessage('Sistema', `<strong>${note.title}</strong>: ${stripHtml(note.content)}`, '#38bdf8');
     }
@@ -410,7 +410,7 @@ function duplicateNote(index) {
     campaignNotes.splice(index + 1, 0, normalizeNote({
         ...note,
         id: createNoteId(),
-        title: `${note.title} (copia)`,
+        title: `${note.title} (eco)`,
         isRevealed: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()

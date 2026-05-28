@@ -128,11 +128,11 @@
         if (typeof window.addSessionEvent === 'function') {
             window.addSessionEvent(
                 'combat_started',
-                'Combate iniciado',
+                'Encontro iniciado',
                 `${window.combatState.participants.length} participante(s)`
             );
         }
-        if (typeof addChatMessage === 'function') addChatMessage('Sistema', 'Combate iniciado.', '#fbbf24');
+        if (typeof addChatMessage === 'function') addChatMessage('Sistema', 'Encontro iniciado.', '#fbbf24');
     }
 
     function addSelectedTokenToCombat() {
@@ -194,7 +194,7 @@
         window.phaserScene?.clearCurrentTurnHighlight?.();
         renderCombatTracker();
         if (typeof window.addSessionEvent === 'function') {
-            window.addSessionEvent('combat_ended', 'Combate encerrado', `Rodada ${endedRound}`);
+            window.addSessionEvent('combat_ended', 'Encontro encerrado', `Rodada ${endedRound}`);
         }
     }
 
@@ -204,10 +204,10 @@
         if (!container) return;
 
         const state = window.combatState;
-        if (roundEl) roundEl.textContent = state.active ? `Rodada ${state.round}` : 'Inativo';
+        if (roundEl) roundEl.textContent = state.active ? `Rodada ${state.round}` : 'Fora de encontro';
 
         if (!state.participants.length) {
-            container.innerHTML = '<div class="vtt-empty-state vtt-empty-state--library"><i class="fas fa-shield-halved"></i><span>Nenhum participante em combate.</span></div>';
+            container.innerHTML = '<div class="vtt-empty-state vtt-empty-state--library"><i class="fas fa-shield-halved"></i><span>Nenhuma miniatura no encontro.</span></div>';
             return;
         }
 
@@ -223,10 +223,10 @@
                     <button class="combat-row__turn" type="button" onclick="setCombatTurn(${index})">${isCurrent ? '<i class="fas fa-play"></i>' : index + 1}</button>
                     <div class="combat-row__main">
                         <strong>${escapeCombatHtml(participant.name)}</strong>
-                        <span>Inic ${participant.initiative || 0} | HP ${hp}</span>
-                        <div class="combat-row__conditions">${conditions || '<em>Sem condicoes</em>'}</div>
+                        <span>Iniciativa ${participant.initiative || 0} | Vitalidade ${hp}</span>
+                        <div class="combat-row__conditions">${conditions || '<em>Sem aflicoes</em>'}</div>
                     </div>
-                    <button class="ui-icon-btn" type="button" onclick="removeParticipantFromCombat('${participant.id}')" title="Remover"><i class="fas fa-times"></i></button>
+                    <button class="ui-icon-btn" type="button" onclick="removeParticipantFromCombat('${participant.id}')" title="Retirar do encontro"><i class="fas fa-times"></i></button>
                 </article>
             `;
         }).join('');
@@ -267,11 +267,11 @@
         bar.className = 'token-quick-bar';
         bar.innerHTML = `
             <button type="button" onclick="openSelectedTokenSheet()" title="Abrir ficha"><i class="fas fa-address-card"></i></button>
-            <button type="button" onclick="promptDamageToSelectedToken()" title="Dano"><i class="fas fa-heart-crack"></i></button>
-            <button type="button" onclick="promptHealToSelectedToken()" title="Cura"><i class="fas fa-kit-medical"></i></button>
-            <button type="button" onclick="openConditionMenu()" title="Condicao"><i class="fas fa-tag"></i></button>
-            <button type="button" onclick="addSelectedTokenToCombat()" title="Adicionar ao combate"><i class="fas fa-khanda"></i></button>
-            <button type="button" onclick="removeSelectedToken()" title="Remover token"><i class="fas fa-trash"></i></button>
+            <button type="button" onclick="promptDamageToSelectedToken()" title="Ferimento"><i class="fas fa-heart-crack"></i></button>
+            <button type="button" onclick="promptHealToSelectedToken()" title="Recuperacao"><i class="fas fa-hand-holding-medical"></i></button>
+            <button type="button" onclick="openConditionMenu()" title="Aflicao"><i class="fas fa-skull-crossbones"></i></button>
+            <button type="button" onclick="addSelectedTokenToCombat()" title="Entrar no encontro"><i class="fas fa-shield-halved"></i></button>
+            <button type="button" onclick="removeSelectedToken()" title="Retirar miniatura"><i class="fas fa-skull"></i></button>
         `;
         document.body.appendChild(bar);
         positionQuickBar(token, bar);
@@ -329,21 +329,21 @@
         const modal = document.createElement('div');
         modal.className = 'hp-adjust-modal';
         modal.innerHTML = `
-            <div class="hp-adjust-modal__dialog" role="dialog" aria-modal="true" aria-label="${isHealing ? 'Aplicar cura' : 'Aplicar dano'}">
+            <div class="hp-adjust-modal__dialog" role="dialog" aria-modal="true" aria-label="${isHealing ? 'Recuperar vitalidade' : 'Marcar ferimento'}">
                 <header class="hp-adjust-modal__header">
-                    <strong>${isHealing ? 'Aplicar Cura' : 'Aplicar Dano'}</strong>
+                    <strong>${isHealing ? 'Recuperar Vitalidade' : 'Marcar Ferimento'}</strong>
                     <button class="ui-icon-btn" type="button" data-hp-adjust-action="close" title="Fechar"><i class="fas fa-times"></i></button>
                 </header>
                 <div class="hp-adjust-modal__quick">
                     ${[1, 5, 10].map(value => `<button type="button" data-hp-adjust-value="${value}">${isHealing ? '+' : '-'}${value}</button>`).join('')}
                 </div>
                 <label class="hp-adjust-modal__field">
-                    <span>Quantidade</span>
+                    <span>Pontos</span>
                     <input class="vtt-input" type="number" min="1" value="1" data-hp-adjust-input>
                 </label>
                 <div class="hp-adjust-modal__actions">
                     <button class="ui-btn" type="button" data-hp-adjust-action="close">Cancelar</button>
-                    <button class="ui-btn ui-btn--primary" type="button" data-hp-adjust-action="apply">${isHealing ? 'Curar' : 'Aplicar'}</button>
+                    <button class="ui-btn ui-btn--primary" type="button" data-hp-adjust-action="apply">${isHealing ? 'Restaurar' : 'Marcar'}</button>
                 </div>
             </div>
         `;

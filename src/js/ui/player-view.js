@@ -39,9 +39,12 @@ if (isPlayerView) {
             if (!state) return;
 
             if (window.phaserScene) {
-                window.phaserScene.loadBoardState(state);
-                renderPlayerSceneNotes(state);
-                if (state.weather) window.phaserScene.setAdvancedWeather(state.weather);
+                const boardState = typeof window.normalizeBoardState === 'function'
+                    ? window.normalizeBoardState(state)
+                    : state;
+                window.phaserScene.loadBoardState(boardState);
+                renderPlayerSceneNotes(boardState);
+                if (boardState.weather) window.phaserScene.setAdvancedWeather(boardState.weather);
             }
         });
     }

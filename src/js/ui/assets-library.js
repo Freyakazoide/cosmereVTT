@@ -10,22 +10,22 @@
     };
 
     const TYPE_LABELS = {
-        map: 'Mapa',
-        token: 'Token',
-        portrait: 'Retrato',
-        image: 'Imagem',
-        video: 'Video',
-        audio: 'Audio',
-        handout: 'Handout'
+        map: 'Regiao',
+        token: 'Miniatura',
+        portrait: 'Retrato de heroi',
+        image: 'Ilustracao',
+        video: 'Visao',
+        audio: 'Trilha',
+        handout: 'Pergaminho'
     };
 
     const TYPE_ICONS = {
-        map: 'fa-map',
-        token: 'fa-user-ninja',
+        map: 'fa-map-location-dot',
+        token: 'fa-chess-knight',
         portrait: 'fa-id-card',
         image: 'fa-image',
-        video: 'fa-film',
-        audio: 'fa-music',
+        video: 'fa-eye',
+        audio: 'fa-drum',
         handout: 'fa-scroll'
     };
 
@@ -117,14 +117,14 @@
 
         const state = ensureAssetsState();
         const assets = getFilteredAssets();
-        if (count) count.textContent = `${assets.length} asset${assets.length === 1 ? '' : 's'}`;
+        if (count) count.textContent = `${assets.length} reliquia${assets.length === 1 ? '' : 's'}`;
         syncAssetFilterControls();
 
         if (!assets.length) {
             grid.innerHTML = `
                 <div class="vtt-empty-state vtt-empty-state--library">
-                    <i class="fas fa-box-archive"></i>
-                    <span>Nenhum asset encontrado.</span>
+                    <i class="fas fa-box-open"></i>
+                    <span>Nenhuma reliquia encontrada.</span>
                 </div>
             `;
             return;
@@ -145,7 +145,7 @@
                 <div class="asset-card__body">
                     <strong>${escapeAssetHtml(asset.name)}</strong>
                     <span>${escapeAssetHtml(TYPE_LABELS[asset.type] || asset.type)} · ${escapeAssetHtml(asset.category || 'Sem categoria')}</span>
-                    <small>${asset.missing ? 'Arquivo ausente' : formatAssetSize(asset.sizeBytes)}</small>
+                    <small>${asset.missing ? 'Reliquia perdida' : formatAssetSize(asset.sizeBytes)}</small>
                     <div class="asset-card__tags">
                         <em class="asset-type-pill">${escapeAssetHtml(asset.type)}</em>
                         ${(asset.tags || []).slice(0, 3).map(tag => `<em class="asset-tag">${escapeAssetHtml(tag)}</em>`).join('')}
@@ -171,7 +171,7 @@
             return `<video src="file://${escapeAssetAttr(asset.path)}" muted preload="metadata"></video>`;
         }
         if (asset.type === 'audio') {
-            return '<div class="asset-preview asset-preview--audio"><i class="fas fa-music"></i></div>';
+            return '<div class="asset-preview asset-preview--audio"><i class="fas fa-drum"></i></div>';
         }
         return '<div class="asset-preview"><i class="fas fa-file"></i></div>';
     }
@@ -402,7 +402,7 @@
         }
         handout.value = asset.path;
         if (typeof window.addSessionEvent === 'function') {
-            window.addSessionEvent('handout_revealed', 'Asset vinculado ao Diretor', asset.name, { assetId: asset.id });
+            window.addSessionEvent('handout_revealed', 'Pergaminho vinculado ao Orquestrador', asset.name, { assetId: asset.id });
         }
     }
 
@@ -465,12 +465,12 @@
         const tag = document.getElementById('assets-tag-filter');
         if (category) {
             const current = category.value;
-            category.innerHTML = '<option value="all">Todas as categorias</option>' + getUniqueValues('category').map(value => `<option value="${escapeAssetAttr(value)}">${escapeAssetHtml(value)}</option>`).join('');
+            category.innerHTML = '<option value="all">Todas as gavetas</option>' + getUniqueValues('category').map(value => `<option value="${escapeAssetAttr(value)}">${escapeAssetHtml(value)}</option>`).join('');
             category.value = current || 'all';
         }
         if (tag) {
             const current = tag.value;
-            tag.innerHTML = '<option value="all">Todas as tags</option>' + getUniqueTags().map(value => `<option value="${escapeAssetAttr(value)}">${escapeAssetHtml(value)}</option>`).join('');
+            tag.innerHTML = '<option value="all">Todos os selos</option>' + getUniqueTags().map(value => `<option value="${escapeAssetAttr(value)}">${escapeAssetHtml(value)}</option>`).join('');
             tag.value = current || 'all';
         }
     }

@@ -99,9 +99,9 @@ function populateDirectorSelects() {
     const mapEl = getDirectorEl('director-map');
     const audioEl = getDirectorEl('director-audio');
     const handoutEl = getDirectorEl('director-handout');
-    if (mapEl) mapEl.innerHTML = '<option value="">Manter mapa atual</option>' + directorAssets.maps.map(directorOption).join('');
-    if (audioEl) audioEl.innerHTML = '<option value="">Sem musica vinculada</option>' + directorAssets.audios.map(directorOption).join('');
-    if (handoutEl) handoutEl.innerHTML = '<option value="">Sem handout</option>' + directorAssets.handouts.map(directorOption).join('');
+    if (mapEl) mapEl.innerHTML = '<option value="">Manter terreno atual</option>' + directorAssets.maps.map(directorOption).join('');
+    if (audioEl) audioEl.innerHTML = '<option value="">Sem trilha vinculada</option>' + directorAssets.audios.map(directorOption).join('');
+    if (handoutEl) handoutEl.innerHTML = '<option value="">Sem pergaminho</option>' + directorAssets.handouts.map(directorOption).join('');
     applyDirectedSceneDraftToUI(directedSceneDraft);
 }
 
@@ -110,17 +110,17 @@ function renderDirectorPinnedNotes() {
     if (!container) return;
     const notes = (window.pinnedNotes || []).filter(note => !note.isArchived);
     if (notes.length === 0) {
-        container.innerHTML = '<div class="director-empty">Nenhuma nota fixada ainda.</div>';
+        container.innerHTML = '<div class="director-empty">Nenhuma pista fixada ainda.</div>';
         return;
     }
 
     container.innerHTML = notes.map(note => `
         <div class="director-note-item" data-note-id="${escapeDirectorText(note.id)}">
-            <strong>${escapeDirectorText(note.title || 'Nota')}</strong>
-            <span>${escapeDirectorText(note.type || 'Nota')}${note.tags?.length ? ' / ' + escapeDirectorText(note.tags.join(', ')) : ''}</span>
+            <strong>${escapeDirectorText(note.title || 'Pista')}</strong>
+            <span>${escapeDirectorText(note.type || 'Pista')}${note.tags?.length ? ' / ' + escapeDirectorText(note.tags.join(', ')) : ''}</span>
             <div class="director-note-actions">
-                <button class="ui-icon-btn" onclick="revealNoteById('${escapeDirectorText(note.id)}')" title="Revelar aos jogadores"><i class="fas fa-eye"></i></button>
-                <button class="ui-icon-btn" onclick="unpinNoteById('${escapeDirectorText(note.id)}')" title="Soltar da cena"><i class="fas fa-times"></i></button>
+                <button class="ui-icon-btn" onclick="revealNoteById('${escapeDirectorText(note.id)}')" title="Revelar aos aventureiros"><i class="fas fa-scroll"></i></button>
+                <button class="ui-icon-btn" onclick="unpinNoteById('${escapeDirectorText(note.id)}')" title="Remover do mural"><i class="fas fa-times"></i></button>
             </div>
         </div>
     `).join('');
@@ -173,7 +173,7 @@ function prepareDirectedScene() {
             weather: draft.weather
         });
     }
-    addChatMessage('Diretor de Cena', `Cena preparada: <strong>${draft.sceneName || 'Sem nome'}</strong>.`, '#fbbf24');
+    addChatMessage('Orquestrador', `Cena preparada: <strong>${draft.sceneName || 'Sem nome'}</strong>.`, '#fbbf24');
 }
 
 function startDirectedScene() {
@@ -193,7 +193,7 @@ function playDirectorMusic() {
     const name = draft.audioPath.split(/[\\/]/).pop();
     if (typeof playMusic === 'function') playMusic(draft.audioPath, name);
     if (typeof window.addSessionEvent === 'function') {
-        window.addSessionEvent('music_started', 'Musica iniciada', name, { audioPath: draft.audioPath });
+        window.addSessionEvent('music_started', 'Trilha iniciada', name, { audioPath: draft.audioPath });
     }
 }
 
@@ -225,12 +225,12 @@ function showDirectorIntroToPlayers() {
     if (typeof window.addSessionEvent === 'function' && (draft.playerText || draft.handoutPath)) {
         window.addSessionEvent(
             'handout_revealed',
-            'Handout/introducao revelado',
+            'Pergaminho/prologo revelado',
             draft.handoutPath ? draft.handoutPath.split(/[\\/]/).pop() : draft.sceneName || '',
             { handoutPath: draft.handoutPath, hasPlayerText: !!draft.playerText }
         );
     }
-    addChatMessage('Diretor de Cena', 'Introducao/handout enviados para a visao dos jogadores.', '#38bdf8');
+    addChatMessage('Orquestrador', 'Prologo/pergaminho enviados para a visao dos aventureiros.', '#38bdf8');
 }
 
 function closeDirectorHandoutForPlayers() {
@@ -250,7 +250,7 @@ function syncDirectorSceneToPlayers() {
             pinnedNotes: window.pinnedNotes || []
         };
         window.api.syncBoard(state);
-        addChatMessage('Diretor de Cena', 'Cena sincronizada com os jogadores.', '#e879f9');
+        addChatMessage('Orquestrador', 'Cena sincronizada com os aventureiros.', '#e879f9');
     }
 }
 
@@ -272,7 +272,7 @@ function endDirectedScene() {
     if (typeof window.addSessionEvent === 'function') {
         window.addSessionEvent('scene_ended', 'Cena encerrada', directedSceneDraft.sceneName || 'Sem nome');
     }
-    addChatMessage('Diretor de Cena', `Cena encerrada: <strong>${directedSceneDraft.sceneName || 'Sem nome'}</strong>.`, '#ef4444');
+    addChatMessage('Orquestrador', `Cena encerrada: <strong>${directedSceneDraft.sceneName || 'Sem nome'}</strong>.`, '#ef4444');
 }
 
 document.addEventListener('DOMContentLoaded', () => {

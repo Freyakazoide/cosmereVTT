@@ -174,6 +174,154 @@ function renderVttGroupedLibrary(groups, renderItem, emptyMessage) {
     }).join('');
 }
 
+function criarSceneIdVtt(nome) {
+    const value = String(nome || '').trim();
+    if (!value) return 'campaign';
+    return value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'campaign';
+}
+
+function getDefaultCombatStateVtt() {
+    return {
+        active: false,
+        round: 1,
+        currentTurnIndex: 0,
+        participants: []
+    };
+}
+
+function getDefaultSessionStateVtt() {
+    return {
+        active: false,
+        sessionName: '',
+        startedAt: null,
+        endedAt: null,
+        events: []
+    };
+}
+
+function getDefaultSceneSettingsVtt() {
+    return {
+        gridEnabled: true,
+        gridSize: PIXELS_POR_UNIDADE,
+        snapToGrid: true,
+        distancePerCell: METROS_POR_QUADRADO,
+        distanceUnit: 'm'
+    };
+}
+
+function normalizeBoardAssetListVtt(primary, fallback) {
+    if (Array.isArray(primary)) return primary;
+    if (Array.isArray(fallback)) return fallback;
+    return [];
+}
+
+function normalizeBoardState(state, options = {}) {
+    const source = state && typeof state === 'object' ? state : {};
+    const sceneName = source.sceneName || source.sceneDirector?.sceneName || options.sceneName || window.currentSceneName || '';
+    const sceneId = source.sceneId || (sceneName ? criarSceneIdVtt(sceneName) : '');
+    const mapas = normalizeBoardAssetListVtt(source.mapas, source.maps).map(mapa => ({
+        ...(mapa || {}),
+        key: mapa?.key || mapa?.textureKey || '',
+        textureKey: mapa?.textureKey || mapa?.key || '',
+        path: mapa?.path || mapa?.caminhoAbsoluto || ''
+    }));
+    const tokens = normalizeBoardAssetListVtt(source.tokens, []).map(token => ({
+        ...(token || {}),
+        key: token?.key || token?.textureKey || '',
+        textureKey: token?.textureKey || token?.key || '',
+        path: token?.path || token?.caminhoAbsoluto || '',
+        elev: token?.elev ?? token?.elevation ?? '',
+        elevation: token?.elevation ?? token?.elev ?? '',
+        gridSize: token?.gridSize || 1,
+        visibleToPlayers: token?.visibleToPlayers !== false,
+        locked: !!token?.locked,
+        notes: token?.notes || '',
+        conditions: Array.isArray(token?.conditions) ? token.conditions : []
+    }));
+    const sceneSettings = {
+        ...getDefaultSceneSettingsVtt(),
+        ...(window.sceneSettings || {}),
+        ...(source.sceneSettings || {}),
+        ...(source.grid || {})
+    };
+    sceneSettings.gridSize = Number(sceneSettings.gridSize || sceneSettings.size) || PIXELS_POR_UNIDADE;
+    sceneSettings.gridEnabled = sceneSettings.gridEnabled ?? sceneSettings.visible ?? true;
+    sceneSettings.distancePerCell = Number(sceneSettings.distancePerCell || sceneSettings.metersPerSquare) || METROS_POR_QUADRADO;
+    sceneSettings.distanceUnit = sceneSettings.distanceUnit || 'm';
+
+    const grid = {
+        visible: source.grid?.visible ?? sceneSettings.gridEnabled,
+        size: Number(source.grid?.size || sceneSettings.gridSize) || PIXELS_POR_UNIDADE,
+        metersPerSquare: Number(source.grid?.metersPerSquare || sceneSettings.distancePerCell) || METROS_POR_QUADRADO
+    };
+    const fogAlpha = Number(source.fog?.alpha ?? source.fogOpacity ?? 0.9);
+    const fog = {
+        ...(source.fog || {}),
+        alpha: Number.isFinite(fogAlpha) ? fogAlpha : 0.9,
+        mode: source.fog?.mode || window.toolConfig?.fogMode || 'reveal',
+        snapshot: source.fog?.snapshot || null
+    };
+    const combatState = {
+        ...getDefaultCombatStateVtt(),
+        ...(source.combatState || {}),
+        participants: Array.isArray(source.combatState?.participants) ? source.combatState.participants : []
+    };
+    const sessionState = {
+        ...getDefaultSessionStateVtt(),
+        ...(source.sessionState || {}),
+        events: Array.isArray(source.sessionState?.events) ? source.sessionState.events : []
+    };
+    const pinnedNotes = Array.isArray(source.pinnedNotes) ? source.pinnedNotes : [];
+    const revealedNotes = Array.isArray(source.revealedNotes) ? source.revealedNotes : [];
+    const sceneNotes = Array.isArray(source.sceneNotes)
+        ? source.sceneNotes
+        : [
+            ...pinnedNotes,
+            ...revealedNotes.filter(note => !pinnedNotes.some(pinned => pinned?.id && pinned.id === note?.id))
+        ];
+
+    return {
+        ...source,
+        version: Math.max(Number(source.version) || 1, 2),
+        sceneName,
+        sceneId,
+        camera: {
+            x: Number(source.camera?.x) || 0,
+            y: Number(source.camera?.y) || 0,
+            zoom: Number(source.camera?.zoom) || 1
+        },
+        grid,
+        sceneSettings,
+        combatState,
+        sessionState,
+        weather: source.weather || null,
+        fog,
+        fogOpacity: fog.alpha,
+        mapas,
+        maps: mapas,
+        tokens,
+        drawings: Array.isArray(source.drawings) ? source.drawings : [],
+        initiative: Array.isArray(source.initiative) ? source.initiative : [],
+        round: source.round || combatState.round || 1,
+        audio: {
+            currentTrack: source.audio?.currentTrack || null,
+            volume: Number(source.audio?.volume ?? 0.5)
+        },
+        pinnedNotes,
+        revealedNotes,
+        sceneNotes,
+        revealedHandouts: Array.isArray(source.revealedHandouts) ? source.revealedHandouts : [],
+        sceneDirector: source.sceneDirector || null
+    };
+}
+
+window.normalizeBoardState = normalizeBoardState;
+
 
 
 class MainScene extends Phaser.Scene {
@@ -907,6 +1055,9 @@ class MainScene extends Phaser.Scene {
 
     loadBoardState(state) {
         if (!state) return;
+        state = typeof window.normalizeBoardState === 'function'
+            ? window.normalizeBoardState(state)
+            : state;
         state.mapas = state.mapas || state.maps || [];
         state.tokens = state.tokens || [];
         this.loadSceneGridSettings(state.sceneSettings || state.grid || {});

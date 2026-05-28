@@ -38,54 +38,54 @@
     <div id="dice-box-container" class="dice-box-layer"></div>
     
 <aside id="global-actions" aria-label="Acoes globais da mesa">
-    <button class="tool-btn tool-btn--accent" onclick="saveBoard()" title="Salvar Cena (Banco)"><i class="fas fa-save"></i></button>
-    <button class="tool-btn" onclick="loadBoard()" title="Gerenciar Cenas Salvas"><i class="fas fa-folder-open"></i></button>
-    <button class="tool-btn tool-btn--success" onclick="exportBoard()" title="Exportar Mesa (Download)"><i class="fas fa-download"></i></button>
-    <button class="tool-btn tool-btn--info" onclick="importBoard()" title="Importar Mesa (Upload)"><i class="fas fa-upload"></i></button>
-    <button class="tool-btn tool-btn--purple" onclick="openPlayerScreen()" title="Lancar Tela do Jogador"><i class="fas fa-desktop"></i></button>
-    <button class="tool-btn tool-btn--pink" onclick="forceSyncToPlayer()" title="Sincronizar Visao"><i class="fas fa-sync-alt"></i></button>
-    <button class="tool-btn tool-btn--accent" onclick="abrirPuzzle1()" title="Puzzle: O Primeiro Ideal"><i class="fas fa-puzzle-piece"></i></button>
+    <button class="tool-btn tool-btn--accent" onclick="saveBoard()" title="Registrar cena no tomo"><i class="fas fa-book-bookmark"></i></button>
+    <button class="tool-btn" onclick="loadBoard()" title="Abrir arquivo de cenas"><i class="fas fa-book-atlas"></i></button>
+    <button class="tool-btn tool-btn--success" onclick="exportBoard()" title="Exportar campanha"><i class="fas fa-scroll"></i></button>
+    <button class="tool-btn tool-btn--info" onclick="importBoard()" title="Importar campanha"><i class="fas fa-file-import"></i></button>
+    <button class="tool-btn tool-btn--purple" onclick="openPlayerScreen()" title="Abrir tela dos aventureiros"><i class="fas fa-users-viewfinder"></i></button>
+    <button class="tool-btn tool-btn--pink" onclick="forceSyncToPlayer()" title="Sincronizar visao do grupo"><i class="fas fa-eye"></i></button>
+    <button class="tool-btn tool-btn--accent" onclick="abrirPuzzle1()" title="Enigma: O Primeiro Ideal"><i class="fas fa-dungeon"></i></button>
 </aside>
 
 <aside id="vtt-dock-shell" class="vtt-dock-shell">
     <nav id="vtt-dock" class="tools-bar vtt-dock glass-dock" aria-label="Ferramentas e paineis">
         <div class="tool-group-wrapper">
-            <button id="master-tool-btn" class="tool-btn master-tool-btn active" type="button" onclick="toggleToolSubmenu(event)" title="Ferramenta atual" aria-expanded="false"><i class="fas fa-hand-pointer"></i></button>
+            <button id="master-tool-btn" class="tool-btn master-tool-btn active" type="button" onclick="toggleToolSubmenu(event)" title="Ferramenta do mestre" aria-expanded="false"><i class="fas fa-hat-wizard"></i></button>
             <div class="tool-submenu" aria-label="Ferramentas de canvas">
-                <button class="tool-btn active" onclick="setTool('select', this)" title="Mover Tokens (S)"><i class="fas fa-hand-pointer"></i></button>
-                <button class="tool-btn" onclick="setTool('map-edit', this)" title="Mover Mapas (M)"><i class="fas fa-map"></i></button>
-                <button class="tool-btn" onclick="setTool('draw', this)" title="Lapis (D)"><i class="fas fa-pen-nib"></i></button>
-                <button class="tool-btn" onclick="setTool('eraser', this)" title="Borracha (E)"><i class="fas fa-eraser"></i></button>
-                <button class="tool-btn" onclick="setTool('ruler', this)" title="Regua (R)"><i class="fas fa-ruler-combined"></i></button>
-                <button class="tool-btn" onclick="setTool('aoe', this)" title="Area de Efeito (A)"><i class="fas fa-bullseye"></i></button>
-                <button class="tool-btn" onclick="setTool('fog', this)" title="Neblina (N)"><i class="fas fa-cloud-moon"></i></button>
-                <button class="tool-btn tool-btn--info" onclick="setTool('weather', this)" title="Clima (W)"><i class="fas fa-cloud-showers-heavy"></i></button>
-                <button class="tool-btn tool-btn--purple" onclick="setTool('dice', this)" title="Rolar Dados (G)"><i class="fas fa-dice-d20"></i></button>
-                <button class="tool-btn tool-btn--danger" onclick="clearDraw()" title="Limpar Desenhos (C)"><i class="fas fa-trash-alt"></i></button>
+                <button class="tool-btn active" onclick="setTool('select', this)" title="Mover miniaturas (S)"><i class="fas fa-chess-knight"></i></button>
+                <button class="tool-btn" onclick="setTool('map-edit', this)" title="Arrastar terreno (M)"><i class="fas fa-map-location-dot"></i></button>
+                <button class="tool-btn" onclick="setTool('draw', this)" title="Traçar runas (D)"><i class="fas fa-feather-pointed"></i></button>
+                <button class="tool-btn" onclick="setTool('eraser', this)" title="Dissipar marcas (E)"><i class="fas fa-broom"></i></button>
+                <button class="tool-btn" onclick="setTool('ruler', this)" title="Medir alcance (R)"><i class="fas fa-ruler-combined"></i></button>
+                <button class="tool-btn" onclick="setTool('aoe', this)" title="Conjurar area (A)"><i class="fas fa-burst"></i></button>
+                <button class="tool-btn" onclick="setTool('fog', this)" title="Veo de guerra (N)"><i class="fas fa-cloud-moon"></i></button>
+                <button class="tool-btn tool-btn--info" onclick="setTool('weather', this)" title="Pressagio do clima (W)"><i class="fas fa-cloud-bolt"></i></button>
+                <button class="tool-btn tool-btn--purple" onclick="setTool('dice', this)" title="Invocar dados (G)"><i class="fas fa-dice-d20"></i></button>
+                <button class="tool-btn tool-btn--danger" onclick="clearDraw()" title="Limpar glifos (C)"><i class="fas fa-fire-flame-curved"></i></button>
             </div>
         </div>
 
         <div class="tool-separator"></div>
 
         <div class="dock-section" aria-label="Paineis">
-            <button class="tool-btn tab-btn" data-target-id="director-content" data-title="Diretor de Cena" title="Diretor de Cena"><i class="fas fa-clapperboard"></i></button>
-            <button class="tool-btn tab-btn" data-target-id="assets-library-content" data-title="Biblioteca" title="Biblioteca de Assets"><i class="fas fa-box-archive"></i></button>
-            <button class="tool-btn tab-btn" data-target-id="maps-content" data-title="Mapas" title="Mapas e Cenarios"><i class="fas fa-map-marked-alt"></i></button>
-            <button class="tool-btn tab-btn" data-target-id="tokens-content" data-title="Atores e Tokens" title="Atores / NPCs"><i class="fas fa-users"></i></button>
-            <button class="tool-btn tab-btn" data-target-id="combat-content" data-title="Combate" title="Combate"><i class="fas fa-khanda"></i></button>
-            <button class="tool-btn tab-btn" data-target-id="session-content" data-title="Sessao" title="Sessao"><i class="fas fa-scroll"></i></button>
-            <button class="tool-btn tab-btn" data-target-id="chat-content" data-title="Chat" title="Chat Log"><i class="fas fa-comments"></i></button>
-            <button class="tool-btn tab-btn" data-target-id="notes-content" data-title="Notas" title="Diarios / Anotacoes"><i class="fas fa-book-journal-whills"></i></button>
-            <button class="tool-btn tab-btn" data-target-id="items-content" data-title="Compendio" title="Compendio e Monstros"><i class="fas fa-book-open"></i></button>
-            <button class="tool-btn tab-btn" data-target-id="images-content" data-title="Handouts" title="Imagens e Handouts"><i class="fas fa-image"></i></button>
-            <button class="tool-btn tab-btn" data-target-id="videos-content" data-title="Videos" title="Videos e Cenas"><i class="fas fa-video"></i></button>
-            <button class="tool-btn tab-btn" data-target-id="playlists-content" data-title="Audio" title="Musicas e Playlists"><i class="fas fa-music"></i></button>
+            <button class="tool-btn tab-btn" data-target-id="director-content" data-title="Orquestrador" title="Orquestrador de cenas"><i class="fas fa-hat-wizard"></i></button>
+            <button class="tool-btn tab-btn" data-target-id="assets-library-content" data-title="Arsenal" title="Arsenal da campanha"><i class="fas fa-box-open"></i></button>
+            <button class="tool-btn tab-btn" data-target-id="maps-content" data-title="Regioes" title="Mapas e regioes"><i class="fas fa-map-location-dot"></i></button>
+            <button class="tool-btn tab-btn" data-target-id="tokens-content" data-title="Elenco" title="Herois, aliados e ameacas"><i class="fas fa-users"></i></button>
+            <button class="tool-btn tab-btn" data-target-id="combat-content" data-title="Encontro" title="Encontro de combate"><i class="fas fa-shield-halved"></i></button>
+            <button class="tool-btn tab-btn" data-target-id="session-content" data-title="Cronica" title="Cronica da sessao"><i class="fas fa-scroll"></i></button>
+            <button class="tool-btn tab-btn" data-target-id="chat-content" data-title="Sussurros" title="Mensagens da mesa"><i class="fas fa-comments"></i></button>
+            <button class="tool-btn tab-btn" data-target-id="notes-content" data-title="Diario" title="Diario do mestre"><i class="fas fa-book-journal-whills"></i></button>
+            <button class="tool-btn tab-btn" data-target-id="items-content" data-title="Compendio" title="Bestiario e tesouros"><i class="fas fa-book-open"></i></button>
+            <button class="tool-btn tab-btn" data-target-id="images-content" data-title="Pergaminhos" title="Pergaminhos e revelacoes"><i class="fas fa-scroll"></i></button>
+            <button class="tool-btn tab-btn" data-target-id="videos-content" data-title="Visoes" title="Cenas e visoes"><i class="fas fa-eye"></i></button>
+            <button class="tool-btn tab-btn" data-target-id="playlists-content" data-title="Bardos" title="Trilhas e ambiencias"><i class="fas fa-drum"></i></button>
         </div>
 
         <div class="tool-separator"></div>
 
-        <div class="dock-section" aria-label="Configuracoes">
-            <button class="tool-btn tab-btn" data-target-id="settings-content" data-title="Configuracoes" title="Configuracoes"><i class="fas fa-cog"></i></button>
+        <div class="dock-section" aria-label="Grimorio de ajustes">
+            <button class="tool-btn tab-btn" data-target-id="settings-content" data-title="Grimorio" title="Grimorio de ajustes"><i class="fas fa-gears"></i></button>
         </div>
     </nav>
 
@@ -97,7 +97,7 @@
             <button class="ui-icon-btn" type="button" onclick="closeFlyoutPanel()" title="Fechar painel"><i class="fas fa-times"></i></button>
         </header>
         <div class="vtt-flyout-search">
-            <input type="text" id="universal-search" placeholder="Pesquisar itens, mapas, sons..." onkeyup="filtrarSidebar(this.value)">
+            <input type="text" id="universal-search" placeholder="Procurar grimorios, regioes, reliquias..." onkeyup="filtrarSidebar(this.value)">
         </div>
         <div id="vtt-flyout-body" class="vtt-flyout-body">
     <div id="maps-content" class="content-area">
@@ -108,43 +108,43 @@
         <div class="assets-library-panel">
             <div class="assets-library-header">
                 <div>
-                    <div class="director-kicker">Arquivos</div>
-                    <h2>Biblioteca de Assets</h2>
+                    <div class="director-kicker">Inventario</div>
+                    <h2>Arsenal da Campanha</h2>
                 </div>
-                <span id="assets-library-count" class="combat-round-pill">0 assets</span>
+                <span id="assets-library-count" class="combat-round-pill">0 reliquias</span>
             </div>
             <div class="assets-library-actions">
-                <button class="ui-btn ui-btn--primary" onclick="importAssetFromDialog()"><i class="fas fa-upload"></i> Importar</button>
-                <button class="ui-btn" onclick="scanAssetsFolders()"><i class="fas fa-rotate"></i> Escanear pastas</button>
-                <button class="ui-btn" onclick="validateAssetsLibrary()"><i class="fas fa-shield-halved"></i> Validar</button>
-                <button class="ui-btn" onclick="exportAssetsManifest()"><i class="fas fa-file-export"></i> Manifesto</button>
+                <button class="ui-btn ui-btn--primary" onclick="importAssetFromDialog()"><i class="fas fa-file-import"></i> Trazer reliquia</button>
+                <button class="ui-btn" onclick="scanAssetsFolders()"><i class="fas fa-compass"></i> Vasculhar pastas</button>
+                <button class="ui-btn" onclick="validateAssetsLibrary()"><i class="fas fa-shield-halved"></i> Conferir arsenal</button>
+                <button class="ui-btn" onclick="exportAssetsManifest()"><i class="fas fa-scroll"></i> Manifesto</button>
             </div>
             <div class="assets-library-filters">
-                <input id="assets-search" class="vtt-input" placeholder="Buscar asset..." oninput="setAssetsSearch(this.value)">
+                <input id="assets-search" class="vtt-input" placeholder="Buscar reliquia..." oninput="setAssetsSearch(this.value)">
                 <select id="assets-type-filter" class="vtt-select" onchange="setAssetsTypeFilter(this.value)">
-                    <option value="all">Todos os tipos</option>
-                    <option value="map">Mapas</option>
-                    <option value="token">Tokens</option>
-                    <option value="portrait">Retratos</option>
-                    <option value="image">Imagens</option>
-                    <option value="video">Videos</option>
-                    <option value="audio">Audios</option>
-                    <option value="handout">Handouts</option>
+                    <option value="all">Todas as reliquias</option>
+                    <option value="map">Regioes</option>
+                    <option value="token">Miniaturas</option>
+                    <option value="portrait">Retratos de heroi</option>
+                    <option value="image">Ilustracoes</option>
+                    <option value="video">Visoes</option>
+                    <option value="audio">Trilhas de bardo</option>
+                    <option value="handout">Pergaminhos</option>
                 </select>
                 <select id="assets-category-filter" class="vtt-select" onchange="setAssetsCategoryFilter(this.value)">
-                    <option value="all">Todas as categorias</option>
+                    <option value="all">Todas as gavetas</option>
                 </select>
                 <select id="assets-tag-filter" class="vtt-select" onchange="setAssetsTagFilter(this.value)">
-                    <option value="all">Todas as tags</option>
+                    <option value="all">Todos os selos</option>
                 </select>
                 <select id="assets-sort-filter" class="vtt-select" onchange="setAssetsSort(this.value)">
-                    <option value="az">A-Z</option>
-                    <option value="type">Tipo</option>
-                    <option value="recent">Mais recentes</option>
-                    <option value="size">Tamanho</option>
+                    <option value="az">Ordem alfabetica</option>
+                    <option value="type">Por reliquia</option>
+                    <option value="recent">Achados recentes</option>
+                    <option value="size">Peso do arquivo</option>
                 </select>
-                <button id="assets-favorites-filter" class="ui-btn" onclick="toggleAssetsFavoritesOnly()"><i class="fas fa-star"></i> Favoritos</button>
-                <button id="assets-missing-filter" class="ui-btn" onclick="toggleAssetsMissingOnly()"><i class="fas fa-triangle-exclamation"></i> Quebrados</button>
+                <button id="assets-favorites-filter" class="ui-btn" onclick="toggleAssetsFavoritesOnly()"><i class="fas fa-star"></i> Lendarios</button>
+                <button id="assets-missing-filter" class="ui-btn" onclick="toggleAssetsMissingOnly()"><i class="fas fa-triangle-exclamation"></i> Perdidos</button>
             </div>
             <div id="assets-library-grid" class="assets-library-grid"></div>
         </div>
@@ -153,19 +153,19 @@
     <div id="tokens-content" class="content-area hidden">
         <div class="sidebar-action-row">
             <button class="ui-btn ui-btn--primary btn-create-new" onclick="criarNovoPersonagem()">
-                <i class="fas fa-user-plus"></i> Nova Ficha
+                <i class="fas fa-user-plus"></i> Novo heroi
             </button>
             <button class="ui-btn ui-btn--primary btn-create-new" onclick="criarNovaPasta()">
-                <i class="fas fa-folder-plus"></i> Nova Pasta
+                <i class="fas fa-folder-tree"></i> Novo grupo
             </button>
         </div>
         <div class="sidebar-filter-row">
-            <input class="vtt-input sidebar-search actor-search-input" type="text" id="search-actor" placeholder="Buscar ator..." onkeyup="renderizarListaTokens()">
+            <input class="vtt-input sidebar-search actor-search-input" type="text" id="search-actor" placeholder="Buscar heroi, aliado ou ameaca..." onkeyup="renderizarListaTokens()">
             <select class="vtt-select sidebar-select" id="filter-actor-type" onchange="renderizarListaTokens()">
-                <option value="all">Todos</option>
-                <option value="PC">Jogadores</option>
-                <option value="NPC">NPCs</option>
-                <option value="Monster">Monstros</option>
+                <option value="all">Todo o elenco</option>
+                <option value="PC">Herois dos jogadores</option>
+                <option value="NPC">Aliados e figurantes</option>
+                <option value="Monster">Ameacas</option>
             </select>
         </div>
         <div id="token-list" class="token-grid"></div>
@@ -178,11 +178,11 @@
         <div class="chat-composer">
             <div class="chat-target-row">
                 <select class="vtt-select" id="chat-target">
-                    <option value="todos">Todos</option>
-                    <option value="mestre">Apenas Mestre</option>
+                    <option value="todos">Toda a mesa</option>
+                    <option value="mestre">Sussurro ao mestre</option>
                 </select>
             </div>
-            <input class="vtt-input" type="text" id="chat-input" placeholder="Digite algo ou /r 1d20...">
+            <input class="vtt-input" type="text" id="chat-input" placeholder="Fale em cena ou role /r 1d20...">
         </div>
     </div>
 
@@ -190,17 +190,17 @@
         <div class="combat-panel">
             <div class="combat-panel__header">
                 <div>
-                    <div class="director-kicker">Turnos</div>
-                    <h2>Combate</h2>
+                    <div class="director-kicker">Iniciativa</div>
+                    <h2>Encontro</h2>
                 </div>
                 <span id="combat-round-value" class="combat-round-pill">Inativo</span>
             </div>
             <div class="combat-actions">
-                <button class="ui-btn ui-btn--primary" onclick="startCombat()"><i class="fas fa-play"></i> Iniciar</button>
-                <button class="ui-btn" onclick="addSelectedTokenToCombat()"><i class="fas fa-user-plus"></i> Add token</button>
-                <button class="ui-btn" onclick="rollInitiativeForCombat()"><i class="fas fa-dice-d20"></i> Iniciativa</button>
-                <button class="ui-btn" onclick="nextTurn()"><i class="fas fa-forward"></i> Proximo</button>
-                <button class="ui-btn ui-btn--danger" onclick="endCombat()"><i class="fas fa-stop"></i> Encerrar</button>
+                <button class="ui-btn ui-btn--primary" onclick="startCombat()"><i class="fas fa-play"></i> Comecar duelo</button>
+                <button class="ui-btn" onclick="addSelectedTokenToCombat()"><i class="fas fa-user-plus"></i> Chamar miniatura</button>
+                <button class="ui-btn" onclick="rollInitiativeForCombat()"><i class="fas fa-dice-d20"></i> Rolar iniciativa</button>
+                <button class="ui-btn" onclick="nextTurn()"><i class="fas fa-forward"></i> Proximo turno</button>
+                <button class="ui-btn ui-btn--danger" onclick="endCombat()"><i class="fas fa-flag-checkered"></i> Encerrar encontro</button>
             </div>
             <div id="combat-tracker-list" class="combat-tracker-list"></div>
         </div>
@@ -210,15 +210,15 @@
         <div class="session-panel">
             <div class="session-panel__header">
                 <div>
-                    <div class="director-kicker">Historico</div>
-                    <h2>Sessao</h2>
+                    <div class="director-kicker">Registro</div>
+                    <h2>Cronica</h2>
                 </div>
                 <span id="session-status-pill" class="combat-round-pill">Inativa</span>
             </div>
             <div class="session-actions">
-                <button class="ui-btn ui-btn--primary" onclick="startSession()"><i class="fas fa-play"></i> Iniciar sessao</button>
-                <button class="ui-btn" onclick="generateSessionRecap()"><i class="fas fa-file-lines"></i> Gerar recap</button>
-                <button class="ui-btn ui-btn--danger" onclick="endSession()"><i class="fas fa-stop"></i> Encerrar</button>
+                <button class="ui-btn ui-btn--primary" onclick="startSession()"><i class="fas fa-play"></i> Abrir sessao</button>
+                <button class="ui-btn" onclick="generateSessionRecap()"><i class="fas fa-scroll"></i> Escrever relato</button>
+                <button class="ui-btn ui-btn--danger" onclick="endSession()"><i class="fas fa-book-dead"></i> Fechar sessao</button>
             </div>
             <div id="session-recap-output" class="session-recap-output hidden"></div>
             <div id="session-timeline-list" class="session-timeline-list"></div>
@@ -226,102 +226,102 @@
     </div>
 
     <div id="items-content" class="content-area hidden">
-        <input class="vtt-input compendium-search" type="text" id="search-compendium" placeholder="Buscar no compêndio..." onkeyup="filtrarCompendio(this.value)">
+        <input class="vtt-input compendium-search" type="text" id="search-compendium" placeholder="Buscar no grimorio..." onkeyup="filtrarCompendio(this.value)">
         <button class="ui-btn ui-btn--primary btn-create-new" onclick="abrirModalItem()">
-            <i class="fas fa-plus"></i> Criar Novo Item / Arma
+            <i class="fas fa-wand-sparkles"></i> Criar reliquia / arma
         </button>
-        <div class="category-header">Meu Compêndio</div>
+        <div class="category-header">Grimorio da Campanha</div>
     </div>
 
     <div id="director-content" class="content-area hidden scene-director">
         <div class="director-header">
             <div>
-                <div class="director-kicker">Mesa</div>
-                <h2>Diretor de Cena</h2>
+                <div class="director-kicker">Mestre</div>
+                <h2>Orquestrador de Cenas</h2>
             </div>
-            <button class="ui-icon-btn" onclick="refreshSceneDirector()" title="Atualizar assets"><i class="fas fa-rotate"></i></button>
+            <button class="ui-icon-btn" onclick="refreshSceneDirector()" title="Atualizar reliquias"><i class="fas fa-rotate"></i></button>
         </div>
 
         <details class="director-tutorial">
-            <summary><i class="fas fa-circle-question"></i> Mini tutorial</summary>
+            <summary><i class="fas fa-circle-question"></i> Roteiro rapido</summary>
             <ol>
-                <li>Preencha nome, textos, mapa, música, clima e handout.</li>
-                <li>Fixe notas na aba Notas para elas aparecerem aqui.</li>
-                <li>Clique em Preparar para carregar mapa e clima no mestre.</li>
-                <li>Clique em Iniciar para tocar música, mostrar introdução/handout e sincronizar jogadores.</li>
-                <li>Use Salvar Cena na barra do mapa para guardar também este Diretor.</li>
-                <li>Ao carregar ou importar a cena, este painel é restaurado automaticamente.</li>
+                <li>Defina titulo, mapa, trilha, clima e pergaminho da cena.</li>
+                <li>Fixe pistas no Diario para elas surgirem aqui.</li>
+                <li>Clique em Preparar para montar terreno e pressagios do mestre.</li>
+                <li>Clique em Iniciar para tocar a trilha, revelar introducao e sincronizar aventureiros.</li>
+                <li>Use Registrar cena no tomo para guardar tambem este roteiro.</li>
+                <li>Ao carregar ou importar a cena, este orquestrador volta ao estado salvo.</li>
             </ol>
         </details>
 
         <label class="director-field">
-            <span>Nome da cena</span>
+            <span>Titulo da cena</span>
             <input id="director-scene-name" type="text" placeholder="Ex: Emboscada na ponte">
         </label>
 
         <label class="director-field">
-            <span>Texto para o mestre</span>
-            <textarea id="director-gm-text" placeholder="Notas privadas, objetivos ocultos, gatilhos..."></textarea>
+            <span>Segredos do mestre</span>
+            <textarea id="director-gm-text" placeholder="Notas privadas, ameacas ocultas, gatilhos..."></textarea>
         </label>
 
         <label class="director-field">
-            <span>Texto para os jogadores</span>
-            <textarea id="director-player-text" placeholder="Introducao revelada quando a cena comecar..."></textarea>
+            <span>Narracao aos aventureiros</span>
+            <textarea id="director-player-text" placeholder="Texto revelado quando a cena comecar..."></textarea>
         </label>
 
         <div class="director-grid">
             <label class="director-field">
-                <span>Mapa principal</span>
+                <span>Terreno principal</span>
                 <select id="director-map"></select>
             </label>
             <label class="director-field">
-                <span>Musica</span>
+                <span>Trilha</span>
                 <select id="director-audio"></select>
             </label>
             <label class="director-field">
-                <span>Clima</span>
+                <span>Pressagio</span>
                 <select id="director-weather">
-                    <option value="none">Sem clima</option>
-                    <option value="rain">Chuva</option>
-                    <option value="ash">Cinzas</option>
-                    <option value="sun">Sol forte</option>
-                    <option value="storm">Tempestade</option>
+                    <option value="none">Ceu limpo</option>
+                    <option value="rain">Chuva de pressagio</option>
+                    <option value="ash">Cinzas no ar</option>
+                    <option value="sun">Sol inclemente</option>
+                    <option value="storm">Tempestade arcana</option>
                 </select>
             </label>
             <label class="director-field">
-                <span>Handout</span>
+                <span>Pergaminho</span>
                 <select id="director-handout"></select>
             </label>
         </div>
 
         <div class="director-section">
-            <div class="director-section__title">Notas fixadas</div>
+            <div class="director-section__title">Pistas fixadas</div>
             <div id="director-pinned-notes" class="director-note-list"></div>
         </div>
 
         <div class="director-grid">
             <label class="director-field">
-                <span>Objetivo</span>
-                <input id="director-objective" type="text" placeholder="O que a cena precisa resolver">
+                <span>Missao</span>
+                <input id="director-objective" type="text" placeholder="O que os aventureiros precisam resolver">
             </label>
             <label class="director-field">
-                <span>Condicao de vitoria</span>
-                <input id="director-victory" type="text" placeholder="Como os jogadores vencem">
+                <span>Triunfo</span>
+                <input id="director-victory" type="text" placeholder="Como a mesa vence a cena">
             </label>
             <label class="director-field">
-                <span>Condicao de falha</span>
-                <input id="director-failure" type="text" placeholder="O que acontece se falharem">
+                <span>Complicacao</span>
+                <input id="director-failure" type="text" placeholder="O que desperta se falharem">
             </label>
         </div>
 
         <div class="director-actions">
-            <button class="ui-btn ui-btn--primary" onclick="prepareDirectedScene()"><i class="fas fa-wand-magic-sparkles"></i> Preparar</button>
-            <button class="ui-btn" onclick="startDirectedScene()"><i class="fas fa-play"></i> Iniciar</button>
-            <button class="ui-btn" onclick="showDirectorIntroToPlayers()"><i class="fas fa-scroll"></i> Introducao</button>
-            <button class="ui-btn" onclick="playDirectorMusic()"><i class="fas fa-music"></i> Musica</button>
-            <button class="ui-btn" onclick="closeDirectorHandoutForPlayers()"><i class="fas fa-eye-slash"></i> Fechar handout</button>
-            <button class="ui-btn" onclick="syncDirectorSceneToPlayers()"><i class="fas fa-users-viewfinder"></i> Sync</button>
-            <button class="ui-btn ui-btn--danger" onclick="endDirectedScene()"><i class="fas fa-stop"></i> Encerrar</button>
+            <button class="ui-btn ui-btn--primary" onclick="prepareDirectedScene()"><i class="fas fa-wand-sparkles"></i> Preparar cena</button>
+            <button class="ui-btn" onclick="startDirectedScene()"><i class="fas fa-play"></i> Abrir cena</button>
+            <button class="ui-btn" onclick="showDirectorIntroToPlayers()"><i class="fas fa-scroll"></i> Revelar prologo</button>
+            <button class="ui-btn" onclick="playDirectorMusic()"><i class="fas fa-drum"></i> Tocar trilha</button>
+            <button class="ui-btn" onclick="closeDirectorHandoutForPlayers()"><i class="fas fa-eye-slash"></i> Ocultar pergaminho</button>
+            <button class="ui-btn" onclick="syncDirectorSceneToPlayers()"><i class="fas fa-users-viewfinder"></i> Unir visoes</button>
+            <button class="ui-btn ui-btn--danger" onclick="endDirectedScene()"><i class="fas fa-flag-checkered"></i> Fechar cena</button>
         </div>
     </div>
 
@@ -396,10 +396,10 @@
         </div>
     </div>
 
-    <div class="category-header">Dados</div>
+    <div class="category-header">Dados de Destino</div>
     <div class="vtt-control-panel">
         <label class="vtt-control-label">
-            <i class="fas fa-dice-d20"></i>Cor dos Dados
+            <i class="fas fa-dice-d20"></i>Cor dos Dados de Destino
         </label>
         <div class="vtt-range-row">
             <input class="vtt-color-input" type="color" id="player-dice-color" value="#fbbf24" onchange="localStorage.setItem('dice-color', this.value)">
@@ -477,39 +477,39 @@
    <div id="notes-content" class="content-area hidden notes-panel">
         <div id="notes-list-view" class="notes-list-view">
             <div class="notes-topbar">
-                <button onclick="createNewNote()" class="glass-btn primary notes-new-btn"><i class="fas fa-plus"></i> Nova Anotacao</button>
+                <button onclick="createNewNote()" class="glass-btn primary notes-new-btn"><i class="fas fa-feather"></i> Nova pista</button>
                 <button class="view-toggle-btn" onclick="toggleNotesView()" id="btn-notes-view" title="Alternar visualizacao">
                     <i class="fas fa-th-large"></i>
                 </button>
             </div>
-            <input type="text" id="search-note" class="notes-search" placeholder="Buscar nas anotacoes..." onkeyup="renderNotesList()">
+            <input type="text" id="search-note" class="notes-search" placeholder="Buscar no diario da campanha..." onkeyup="renderNotesList()">
             <div id="notes-list" class="notes-grid"></div>
         </div>
 
        <div id="note-editor-view" class="hidden note-editor-view">
             <div class="note-editor-header">
-                <button onclick="closeNoteEditor()" class="ui-btn ui-btn--ghost"><i class="fas fa-arrow-left"></i> Voltar</button>
-                <button onclick="saveCurrentNote()" class="glass-btn success note-save-btn"><i class="fas fa-save"></i> Salvar</button>
+                <button onclick="closeNoteEditor()" class="ui-btn ui-btn--ghost"><i class="fas fa-arrow-left"></i> Voltar ao diario</button>
+                <button onclick="saveCurrentNote()" class="glass-btn success note-save-btn"><i class="fas fa-book-bookmark"></i> Registrar</button>
             </div>
 
-            <input type="text" id="note-title" class="note-input note-title-input" placeholder="Titulo da Anotacao">
+            <input type="text" id="note-title" class="note-input note-title-input" placeholder="Titulo da pista">
 
             <div class="note-meta-grid">
                 <select id="note-type" class="note-input note-select"></select>
-                <input type="text" id="note-category" class="note-input" placeholder="Pasta (ex: Geral, Missoes, Lore...)" value="Geral">
-                <input type="text" id="note-tags" class="note-input" placeholder="Tags separadas por virgula">
-                <input type="text" id="note-scene-id" class="note-input" placeholder="Cena vinculada (auto ao fixar)">
-                <input type="text" id="note-character-id" class="note-input" placeholder="Personagem vinculado (opcional)">
+                <input type="text" id="note-category" class="note-input" placeholder="Tomo (ex: Geral, Missoes, Lore...)" value="Geral">
+                <input type="text" id="note-tags" class="note-input" placeholder="Selos separados por virgula">
+                <input type="text" id="note-scene-id" class="note-input" placeholder="Cena vinculada ao mural">
+                <input type="text" id="note-character-id" class="note-input" placeholder="Heroi ou NPC vinculado">
             </div>
 
             <div class="note-status-row">
-                <label><input type="checkbox" id="note-pinned"> Fixada na cena</label>
-                <label><input type="checkbox" id="note-revealed"> Revelada aos jogadores</label>
+                <label><input type="checkbox" id="note-pinned"> Fixada no mural da cena</label>
+                <label><input type="checkbox" id="note-revealed"> Revelada aos aventureiros</label>
             </div>
 
             <div class="note-editor-actions">
-                <button class="ui-btn ui-btn--ghost" data-note-action="pin-current"><i class="fas fa-thumbtack"></i> Fixar na cena</button>
-                <button class="ui-btn ui-btn--ghost" data-note-action="share-current"><i class="fas fa-share-alt"></i> Mostrar</button>
+                <button class="ui-btn ui-btn--ghost" data-note-action="pin-current"><i class="fas fa-thumbtack"></i> Fixar no mural</button>
+                <button class="ui-btn ui-btn--ghost" data-note-action="share-current"><i class="fas fa-scroll"></i> Revelar</button>
                 <button class="ui-btn ui-btn--ghost" data-note-action="duplicate-current"><i class="fas fa-copy"></i> Duplicar</button>
                 <button class="ui-btn ui-btn--danger" data-note-action="archive-current"><i class="fas fa-box-archive"></i> Arquivar</button>
             </div>
@@ -812,21 +812,21 @@
         <img id="viewer-img-src" src="" class="hidden">
         <video id="viewer-video-src" src="" controls class="hidden"></video>
         <button class="glass-btn primary gm-only viewer-share-btn" onclick="event.stopPropagation(); showCurrentHandoutToPlayers()">
-            <i class="fas fa-users"></i> Mostrar aos jogadores
+            <i class="fas fa-users"></i> Revelar aos aventureiros
         </button>
         <button class="glass-btn danger gm-only viewer-hide-btn" onclick="event.stopPropagation(); hideHandoutFromPlayers()">
-            <i class="fas fa-eye-slash"></i> Fechar para jogadores
+            <i class="fas fa-eye-slash"></i> Ocultar dos aventureiros
         </button>
         <div class="viewer-close-hint">Clique fora para fechar</div>
     </div>
 
     <div id="save-scene-modal" class="vtt-modal-backdrop hidden">
         <div class="vtt-modal vtt-modal--compact">
-            <h3 class="vtt-modal-title">Nome da Cena</h3>
+            <h3 class="vtt-modal-title">Titulo da Cena</h3>
             <input class="vtt-input scene-name-input" type="text" id="scene-name-input" placeholder="Ex: Acampamento Skaa">
             <div class="modal-actions-end">
                 <button class="glass-btn danger" onclick="document.getElementById('save-scene-modal').classList.add('hidden')">Cancelar</button>
-                <button class="glass-btn success" onclick="confirmSaveScene()">Salvar Mesa</button>
+                <button class="glass-btn success" onclick="confirmSaveScene()">Registrar no tomo</button>
             </div>
         </div>
     </div>
@@ -834,7 +834,7 @@
     <div id="load-scene-modal" class="vtt-modal-backdrop hidden">
         <div class="vtt-modal vtt-modal--scene">
             <div class="vtt-modal-header">
-                <h3 class="vtt-modal-title">Carregar Cena</h3>
+                <h3 class="vtt-modal-title">Abrir Cena Arquivada</h3>
                 <button class="ui-icon-btn" onclick="document.getElementById('load-scene-modal').classList.add('hidden')"><i class="fas fa-times"></i></button>
             </div>
             <div id="scene-list-container" class="vtt-modal-body scene-list-container"></div>
@@ -845,7 +845,7 @@
     
    <div id="init-tracker" class="hidden">
         <div class="init-header">
-            <span><i class="fas fa-list-ol"></i> Ordem de Combate</span>
+            <span><i class="fas fa-dice-d20"></i> Ordem de Iniciativa</span>
             <span id="round-counter" class="round-counter">Round: 1</span>
             <button class="init-action-btn init-action-btn--success" onclick="sortInitiative()" title="Ordenar por iniciativa"><i class="fas fa-sort-amount-down"></i></button>
             <button class="init-action-btn init-action-btn--accent" onclick="collapseInitiative()" title="Minimizar"><i class="fas fa-minus"></i></button>
@@ -857,45 +857,45 @@
             <div class="init-input-row">
                 <input class="vtt-input init-name-input" type="text" id="init-name" placeholder="Nome">
                 <input class="vtt-input init-value-input" type="number" id="init-val" placeholder="Iniciativa">
-                <button onclick="addInitiative()" class="glass-btn primary init-add-btn">+ ADD</button>
+                <button onclick="addInitiative()" class="glass-btn primary init-add-btn">+ TURNO</button>
             </div>
-            <button onclick="nextTurn()" class="glass-btn primary init-next-btn"><i class="fas fa-forward"></i> Próximo Turno</button>
-            <button onclick="clearInitiative()" class="glass-btn danger init-clear-btn">Limpar Combate</button>
+            <button onclick="nextTurn()" class="glass-btn primary init-next-btn"><i class="fas fa-forward"></i> Proximo Turno</button>
+            <button onclick="clearInitiative()" class="glass-btn danger init-clear-btn">Limpar encontro</button>
         </div>
     </div>
 
    <div id="token-sound-menu" class="hidden"></div>
     <div id="context-menu" class="hidden">
-        <div class="ctx-item" onclick="openTokenInfoPanel()"><i class="fas fa-circle-info"></i> Informacoes do Token</div>
-        <div class="ctx-item" onclick="abrirSonsToken()"><i class="fas fa-volume-up"></i> Sons do Personagem</div>
-        <div class="ctx-item" onclick="ativarRedimensionamento()"><i class="fas fa-crop-alt"></i> Redimensionar (Enter p/ Confirmar)</div>
-        <div class="ctx-item" onclick="setContextElevation()"><i class="fas fa-sort-amount-up-alt"></i> Definir Elevação</div>
-        <div class="ctx-item" onclick="contextTrazerFrente()"><i class="fas fa-layer-group"></i> Trazer pra Frente</div>
-        <div class="ctx-item" onclick="contextEnviarTras()"><i class="fas fa-layer-group ctx-icon-muted"></i> Enviar pra Trás</div>
+        <div class="ctx-item" onclick="openTokenInfoPanel()"><i class="fas fa-address-card"></i> Dossie da miniatura</div>
+        <div class="ctx-item" onclick="abrirSonsToken()"><i class="fas fa-drum"></i> Voz e sons do personagem</div>
+        <div class="ctx-item" onclick="ativarRedimensionamento()"><i class="fas fa-expand"></i> Ajustar escala (Enter confirma)</div>
+        <div class="ctx-item" onclick="setContextElevation()"><i class="fas fa-mountain"></i> Definir altura</div>
+        <div class="ctx-item" onclick="contextTrazerFrente()"><i class="fas fa-layer-group"></i> Colocar em destaque</div>
+        <div class="ctx-item" onclick="contextEnviarTras()"><i class="fas fa-layer-group ctx-icon-muted"></i> Mandar ao fundo</div>
         <div class="ctx-item ctx-item--danger ctx-item--separated" onclick="setContextAura('#ef4444', 'Sangrando', '🩸')"><i class="fas fa-tint"></i> Sangrando</div>
         <div class="ctx-item ctx-item--warning" onclick="setContextAura('#f59e0b', 'Queimando', '🔥')"><i class="fas fa-fire"></i> Queimando</div>
         <div class="ctx-item ctx-item--info" onclick="setContextAura('#3b82f6', 'Investido', '⚡')"><i class="fas fa-shield-alt"></i> Investido</div>
-        <div class="ctx-item ctx-item--danger ctx-item--separated" onclick="deleteContextToken()"><i class="fas fa-trash"></i> Remover do Mapa</div>
-        <div class="ctx-item ctx-item--muted ctx-item--separated" onclick="clearContextAuras()"><i class="fas fa-eraser"></i> Limpar Condições</div>
+        <div class="ctx-item ctx-item--danger ctx-item--separated" onclick="deleteContextToken()"><i class="fas fa-skull"></i> Retirar do campo</div>
+        <div class="ctx-item ctx-item--muted ctx-item--separated" onclick="clearContextAuras()"><i class="fas fa-broom"></i> Dissipar condicoes</div>
     </div>
 
     <div id="map-context-menu" class="hidden">
-        <div class="ctx-item" onclick="if(window.phaserScene) window.phaserScene.coverFog()"><i class="fas fa-cloud"></i> Cobrir Neblina</div>
-        <div class="ctx-item" onclick="if(window.phaserScene) window.phaserScene.clearFog()"><i class="fas fa-eye"></i> Limpar Neblina</div>
-        <div class="ctx-item" onclick="toggleMapLock()"><i class="fas fa-lock"></i> Travas/Destravar Mapa</div>
-        <div class="ctx-item" onclick="clearDraw()"><i class="fas fa-eraser"></i> Limpar Desenhos</div>
+        <div class="ctx-item" onclick="if(window.phaserScene) window.phaserScene.coverFog()"><i class="fas fa-cloud"></i> Cobrir com nevoa</div>
+        <div class="ctx-item" onclick="if(window.phaserScene) window.phaserScene.clearFog()"><i class="fas fa-eye"></i> Revelar territorio</div>
+        <div class="ctx-item" onclick="toggleMapLock()"><i class="fas fa-lock"></i> Travar/libertar mapa</div>
+        <div class="ctx-item" onclick="clearDraw()"><i class="fas fa-broom"></i> Limpar glifos</div>
     </div>
 
     <div id="help-modal" class="help-modal hidden">
         <h4 class="help-modal-title">Atalhos e Comandos</h4>
         <ul class="help-shortcut-list">
-            <li><b class="help-key">Tecla I</b> Abrir Combate (Iniciativa)</li>
-            <li><b class="help-key">ALT + Esq</b> Ping de Radar no mapa</li>
-            <li><b class="help-key">Bot. Direito</b> no Token = Menu Z/Auras</li>
-            <li><b class="help-key">Tecla S</b> Mover Tokens | <b class="help-key">M</b> Mover Mapas</li>
-            <li><b class="help-key">Tecla R</b> Régua | <b class="help-key">D</b> Lápis | <b class="help-key">A</b> Área de Efeito</li>
-            <li><b class="help-key">Tecla N</b> Neblina | <b class="help-key">W</b> Clima | <b class="help-key">G</b> Dados</li>
-            <li><b class="help-key">Tecla E</b> Borracha | <b class="help-key">C</b> Limpar Desenhos</li>
+            <li><b class="help-key">Tecla I</b> Abrir encontro (iniciativa)</li>
+            <li><b class="help-key">ALT + Esq</b> Sinalizar ponto no territorio</li>
+            <li><b class="help-key">Bot. Direito</b> na miniatura = menu de cena e auras</li>
+            <li><b class="help-key">Tecla S</b> Mover miniaturas | <b class="help-key">M</b> Arrastar terreno</li>
+            <li><b class="help-key">Tecla R</b> Medir alcance | <b class="help-key">D</b> Tracar runas | <b class="help-key">A</b> Conjurar area</li>
+            <li><b class="help-key">Tecla N</b> Veo de guerra | <b class="help-key">W</b> Pressagio | <b class="help-key">G</b> Dados de destino</li>
+            <li><b class="help-key">Tecla E</b> Dissipar marcas | <b class="help-key">C</b> Limpar glifos</li>
             <li><b class="help-key">ESC</b> Fechar Fichas/Menus</li>
         </ul>
     </div>
@@ -995,7 +995,7 @@
     <div id="asset-editor-modal" class="vtt-modal-backdrop hidden">
         <div class="vtt-modal vtt-modal--asset">
             <div class="vtt-modal-header">
-                <h3 class="vtt-modal-title">Editar asset</h3>
+                <h3 class="vtt-modal-title">Editar reliquia</h3>
                 <button class="ui-icon-btn" type="button" onclick="closeAssetEditor()" title="Fechar"><i class="fas fa-times"></i></button>
             </div>
             <div class="asset-editor-body">
@@ -1007,31 +1007,31 @@
                 <label class="vtt-field">
                     <span>Tipo</span>
                     <select id="asset-editor-type" class="vtt-select">
-                        <option value="map">Mapa</option>
-                        <option value="token">Token</option>
-                        <option value="portrait">Retrato</option>
-                        <option value="image">Imagem</option>
-                        <option value="video">Video</option>
-                        <option value="audio">Audio</option>
-                        <option value="handout">Handout</option>
+                        <option value="map">Regiao</option>
+                        <option value="token">Miniatura</option>
+                        <option value="portrait">Retrato de heroi</option>
+                        <option value="image">Ilustracao</option>
+                        <option value="video">Visao</option>
+                        <option value="audio">Trilha</option>
+                        <option value="handout">Pergaminho</option>
                     </select>
                 </label>
                 <label class="vtt-field">
-                    <span>Categoria</span>
+                    <span>Gaveta</span>
                     <input id="asset-editor-category" class="vtt-input">
                 </label>
                 <label class="vtt-field">
-                    <span>Tags</span>
+                    <span>Selos</span>
                     <input id="asset-editor-tags" class="vtt-input" placeholder="cidade, noite, ponte">
                 </label>
                 <label class="vtt-checkbox-row">
-                    <span>Favorito</span>
+                    <span>Lendario</span>
                     <input id="asset-editor-favorite" type="checkbox" class="vtt-checkbox">
                 </label>
             </div>
             <div class="vtt-modal-footer">
                 <button class="ui-btn" type="button" onclick="closeAssetEditor()">Cancelar</button>
-                <button class="ui-btn ui-btn--primary" type="button" onclick="saveAssetMetadataFromEditor()"><i class="fas fa-save"></i> Salvar</button>
+                <button class="ui-btn ui-btn--primary" type="button" onclick="saveAssetMetadataFromEditor()"><i class="fas fa-book-bookmark"></i> Registrar</button>
             </div>
         </div>
     </div>

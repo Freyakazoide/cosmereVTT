@@ -32,29 +32,29 @@ document.addEventListener('dblclick', (e) => {
     };
 
     const TYPE_LABELS = {
-        item: 'Itens gerais',
+        item: 'Reliquias gerais',
         weapon: 'Armas',
         armor: 'Armaduras',
         power: 'Poderes',
         talent: 'Talentos',
-        condition: 'Condicoes',
-        creature: 'Criaturas',
+        condition: 'Aflicoes',
+        creature: 'Ameacas',
         npc: 'NPCs',
-        handout: 'Handouts',
-        scene: 'Cenas modelo'
+        handout: 'Pergaminhos',
+        scene: 'Cenas lendarias'
     };
 
     const TYPE_ICONS = {
-        item: 'fa-box',
-        weapon: 'fa-gavel',
+        item: 'fa-box-open',
+        weapon: 'fa-wand-sparkles',
         armor: 'fa-shield-halved',
         power: 'fa-wand-sparkles',
         talent: 'fa-star',
-        condition: 'fa-tag',
+        condition: 'fa-skull-crossbones',
         creature: 'fa-dragon',
-        npc: 'fa-user',
-        handout: 'fa-image',
-        scene: 'fa-clapperboard'
+        npc: 'fa-user-secret',
+        handout: 'fa-scroll',
+        scene: 'fa-dungeon'
     };
 
     const MECHANIC_FIELDS = {
@@ -88,7 +88,7 @@ document.addEventListener('dblclick', (e) => {
             ['effect', 'Efeito mecanico'],
             ['duration', 'Duracao padrao'],
             ['removeWith', 'Remove com'],
-            ['icon', 'Icone']
+            ['icon', 'Selo visual']
         ],
         creature: [
             ['hpAtual', 'HP atual'],
@@ -98,7 +98,7 @@ document.addEventListener('dblclick', (e) => {
             ['attacks', 'Ataques'],
             ['tokenPath', 'Token'],
             ['behavior', 'Comportamento'],
-            ['gmNotes', 'Notas do mestre']
+            ['gmNotes', 'Segredos do mestre']
         ],
         npc: [
             ['hpAtual', 'HP atual'],
@@ -108,17 +108,17 @@ document.addEventListener('dblclick', (e) => {
             ['attacks', 'Ataques'],
             ['tokenPath', 'Token'],
             ['behavior', 'Comportamento'],
-            ['gmNotes', 'Notas do mestre']
+            ['gmNotes', 'Segredos do mestre']
         ],
         handout: [
-            ['path', 'Arquivo'],
+            ['path', 'Pergaminho'],
             ['effect', 'Uso em cena']
         ],
         scene: [
-            ['mapPath', 'Mapa'],
-            ['audioPath', 'Musica'],
-            ['weather', 'Clima'],
-            ['handoutPath', 'Handout']
+            ['mapPath', 'Terreno'],
+            ['audioPath', 'Trilha'],
+            ['weather', 'Pressagio'],
+            ['handoutPath', 'Pergaminho']
         ],
         item: [
             ['weight', 'Peso'],
@@ -327,27 +327,27 @@ document.addEventListener('dblclick', (e) => {
         return `
             <div class="compendium-toolbar">
                 <div class="compendium-filter-row">
-                    <input class="vtt-input" type="text" data-compendium-filter="search" value="${escapeHtml(state.filters.search)}" placeholder="Buscar no compendio...">
+                    <input class="vtt-input" type="text" data-compendium-filter="search" value="${escapeHtml(state.filters.search)}" placeholder="Buscar no grimorio...">
                     <select class="vtt-select" data-compendium-filter="type">
-                        <option value="all">Todos os tipos</option>
+                        <option value="all">Todo o grimorio</option>
                         ${TYPE_ORDER.map(type => `<option value="${type}" ${state.filters.type === type ? 'selected' : ''}>${TYPE_LABELS[type]}</option>`).join('')}
                     </select>
                     <select class="vtt-select" data-compendium-filter="tag">
-                        <option value="all">Todas as tags</option>
+                        <option value="all">Todos os selos</option>
                         ${tags.map(tag => `<option value="${escapeHtml(tag)}" ${state.filters.tag === tag ? 'selected' : ''}>${escapeHtml(tag)}</option>`).join('')}
                     </select>
                     <select class="vtt-select" data-compendium-filter="sort">
-                        <option value="az" ${state.filters.sort === 'az' ? 'selected' : ''}>A-Z</option>
-                        <option value="type" ${state.filters.sort === 'type' ? 'selected' : ''}>Tipo</option>
-                        <option value="recent" ${state.filters.sort === 'recent' ? 'selected' : ''}>Mais recentes</option>
+                        <option value="az" ${state.filters.sort === 'az' ? 'selected' : ''}>Ordem alfabetica</option>
+                        <option value="type" ${state.filters.sort === 'type' ? 'selected' : ''}>Por tomo</option>
+                        <option value="recent" ${state.filters.sort === 'recent' ? 'selected' : ''}>Inscricoes recentes</option>
                     </select>
                 </div>
                 <div class="compendium-filter-row compendium-filter-row--actions">
-                    <button class="ui-btn ui-btn--primary" type="button" data-compendium-action="new"><i class="fas fa-plus"></i> Novo registro</button>
-                    <button class="ui-btn" type="button" data-compendium-action="seed"><i class="fas fa-seedling"></i> Popular exemplos</button>
-                    <button class="ui-btn" type="button" data-compendium-action="import-equipment"><i class="fas fa-file-import"></i> Importar fichas</button>
-                    <button class="ui-btn" type="button" data-compendium-action="import"><i class="fas fa-upload"></i> Importar</button>
-                    <button class="ui-btn" type="button" data-compendium-action="export"><i class="fas fa-download"></i> Exportar</button>
+                    <button class="ui-btn ui-btn--primary" type="button" data-compendium-action="new"><i class="fas fa-feather"></i> Nova entrada</button>
+                    <button class="ui-btn" type="button" data-compendium-action="seed"><i class="fas fa-seedling"></i> Semear exemplos</button>
+                    <button class="ui-btn" type="button" data-compendium-action="import-equipment"><i class="fas fa-suitcase"></i> Saquear fichas</button>
+                    <button class="ui-btn" type="button" data-compendium-action="import"><i class="fas fa-file-import"></i> Importar tomo</button>
+                    <button class="ui-btn" type="button" data-compendium-action="export"><i class="fas fa-scroll"></i> Exportar tomo</button>
                 </div>
             </div>
         `;
@@ -397,7 +397,7 @@ document.addEventListener('dblclick', (e) => {
         return `
             <div class="vtt-empty-state vtt-empty-state--library">
                 <i class="fas fa-book-open"></i>
-                <span>Nenhum registro encontrado no compendio.</span>
+                <span>Nenhuma entrada encontrada no grimorio.</span>
             </div>
         `;
     }
@@ -461,7 +461,7 @@ document.addEventListener('dblclick', (e) => {
         modal.innerHTML = `
             <div class="vtt-modal vtt-modal--item compendium-editor">
                 <div class="vtt-modal-header">
-                    <h3 class="vtt-modal-title">${entry.id ? 'Registro do compendio' : 'Novo registro'}</h3>
+                    <h3 class="vtt-modal-title">${entry.id ? 'Entrada do grimorio' : 'Nova entrada'}</h3>
                     <button class="ui-icon-btn" type="button" data-compendium-editor-action="close" title="Fechar"><i class="fas fa-times"></i></button>
                 </div>
                 <div class="vtt-modal-body compendium-editor__body">
@@ -480,19 +480,19 @@ document.addEventListener('dblclick', (e) => {
                         <input class="vtt-input" id="compendium-entry-category" type="text" value="${escapeHtml(entry.category)}">
                     </label>
                     <label class="vtt-field">
-                        <span>Imagem / arquivo</span>
+                        <span>Arte / arquivo</span>
                         <input class="vtt-input" id="compendium-entry-image" type="text" value="${escapeHtml(entry.image)}" placeholder="lanca.png ou caminho completo">
                     </label>
                     <label class="vtt-field">
-                        <span>Resumo</span>
+                        <span>Resumo de mesa</span>
                         <input class="vtt-input" id="compendium-entry-summary" type="text" value="${escapeHtml(entry.summary)}">
                     </label>
                     <label class="vtt-field compendium-editor__wide">
-                        <span>Descricao</span>
+                        <span>Lore e regras</span>
                         <textarea class="vtt-textarea" id="compendium-entry-description">${escapeHtml(entry.description)}</textarea>
                     </label>
                     <label class="vtt-field">
-                        <span>Tags</span>
+                        <span>Selos</span>
                         <input class="vtt-input" id="compendium-entry-tags" type="text" value="${escapeHtml((entry.tags || []).join(', '))}">
                     </label>
                     <label class="vtt-field">
@@ -504,7 +504,7 @@ document.addEventListener('dblclick', (e) => {
                         <input class="vtt-input" id="compendium-entry-source" type="text" value="${escapeHtml(entry.source)}">
                     </label>
                     <section class="compendium-editor__wide">
-                        <div class="compendium-group-header"><strong>Dados mecanicos</strong><span>${TYPE_LABELS[entry.type] || entry.type}</span></div>
+                        <div class="compendium-group-header"><strong>Regras de mesa</strong><span>${TYPE_LABELS[entry.type] || entry.type}</span></div>
                         <div class="compendium-mechanics-grid">
                             ${fields.map(([key, label]) => `
                                 <label class="vtt-field">
@@ -517,7 +517,7 @@ document.addEventListener('dblclick', (e) => {
                 </div>
                 <div class="vtt-modal-footer">
                     <button class="ui-btn" type="button" data-compendium-editor-action="close">Cancelar</button>
-                    <button class="ui-btn ui-btn--primary" type="button" data-compendium-editor-action="save"><i class="fas fa-save"></i> Salvar</button>
+                    <button class="ui-btn ui-btn--primary" type="button" data-compendium-editor-action="save"><i class="fas fa-book-bookmark"></i> Registrar</button>
                 </div>
             </div>
         `;
