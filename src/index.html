@@ -22,7 +22,6 @@
     <link rel="stylesheet" href="css/16-session-timeline.css">
     <link rel="stylesheet" href="css/17-compendium.css">
     <link rel="stylesheet" href="css/18-assets-library.css">
-    <link rel="stylesheet" href="css/99-legacy.css">
     <link rel="stylesheet" href="css/16-polish.css">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://unpkg.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com data:; img-src 'self' file: data: blob: https://unpkg.com; worker-src blob: 'self';">
 </head>
@@ -101,7 +100,7 @@
         <div id="map-list"></div>
     </div>
 
-    <div id="assets-library-content" class="content-area hidden">
+    <div id="assets-library-content" class="content-area">
         <div class="assets-library-panel">
             <div class="assets-library-header">
                 <div>
@@ -147,7 +146,7 @@
         </div>
     </div>
     
-    <div id="tokens-content" class="content-area hidden">
+    <div id="tokens-content" class="content-area">
         <div class="sidebar-action-row">
             <button class="ui-btn ui-btn--primary btn-create-new" onclick="criarNovoPersonagem()">
                 <i class="fas fa-user-plus"></i> Novo heroi
@@ -168,7 +167,7 @@
         <div id="token-list" class="token-grid"></div>
     </div>
 
-    <div id="chat-content" class="content-area hidden chat-panel">
+    <div id="chat-content" class="content-area chat-panel">
         <div id="chat-log" class="chat-log">
             <div class="chat-welcome">Bem-vindo ao Cosmere VTT...</div>
         </div>
@@ -183,7 +182,7 @@
         </div>
     </div>
 
-    <div id="combat-content" class="content-area hidden">
+    <div id="combat-content" class="content-area">
         <div class="combat-panel">
             <div class="combat-panel__header">
                 <div>
@@ -199,11 +198,17 @@
                 <button class="ui-btn" onclick="nextTurn()"><i class="fas fa-forward"></i> Proximo turno</button>
                 <button class="ui-btn ui-btn--danger" onclick="endCombat()"><i class="fas fa-flag-checkered"></i> Encerrar encontro</button>
             </div>
+            <div class="combat-participant-form">
+                <input class="vtt-input" id="combat-participant-name" placeholder="Participante sem token">
+                <input class="vtt-input" id="combat-participant-initiative" type="number" placeholder="Iniciativa">
+                <input class="vtt-input" id="combat-participant-hp" type="number" min="0" placeholder="HP">
+                <button class="ui-btn" type="button" onclick="addManualCombatParticipant()"><i class="fas fa-plus"></i> Adicionar</button>
+            </div>
             <div id="combat-tracker-list" class="combat-tracker-list"></div>
         </div>
     </div>
 
-    <div id="session-content" class="content-area hidden">
+    <div id="session-content" class="content-area">
         <div class="session-panel">
             <div class="session-panel__header">
                 <div>
@@ -222,7 +227,7 @@
         </div>
     </div>
 
-    <div id="items-content" class="content-area hidden">
+    <div id="items-content" class="content-area">
         <input class="vtt-input compendium-search" type="text" id="search-compendium" placeholder="Buscar no grimorio..." onkeyup="filtrarCompendio(this.value)">
         <button class="ui-btn ui-btn--primary btn-create-new" onclick="abrirModalItem()">
             <i class="fas fa-wand-sparkles"></i> Criar reliquia / arma
@@ -230,7 +235,7 @@
         <div class="category-header">Grimorio da Campanha</div>
     </div>
 
-    <div id="director-content" class="content-area hidden scene-director">
+    <div id="director-content" class="content-area scene-director">
         <div class="director-header">
             <div>
                 <div class="director-kicker">Mestre</div>
@@ -321,7 +326,7 @@
         </div>
     </div>
 
-    <div id="playlists-content" class="content-area hidden">
+    <div id="playlists-content" class="content-area">
        <div id="audio-player-ui" class="media-player-panel">
             <div id="current-track-name" class="current-track-name">Nenhuma faixa tocando</div>
             
@@ -344,7 +349,7 @@
         <div id="audio-list"></div>
     </div>
 
-    <div id="settings-content" class="content-area hidden">
+    <div id="settings-content" class="content-area">
 
     <div class="category-header">Aparência</div>
     <div class="vtt-control-panel">
@@ -462,15 +467,15 @@
     </div>
 
 </div>
-    <div id="images-content" class="content-area hidden">
+    <div id="images-content" class="content-area">
         <div id="images-list"></div>
     </div>
 
-    <div id="videos-content" class="content-area hidden">
+    <div id="videos-content" class="content-area">
         <div id="videos-list"></div>
     </div>
 
-   <div id="notes-content" class="content-area hidden notes-panel">
+   <div id="notes-content" class="content-area notes-panel">
         <div id="notes-list-view" class="notes-list-view">
             <div class="notes-topbar">
                 <button onclick="createNewNote()" class="glass-btn primary notes-new-btn"><i class="fas fa-feather"></i> Nova pista</button>
@@ -833,35 +838,11 @@
 
     <button id="btn-help" onclick="toggleHelp()">?</button>
     
-   <div id="init-tracker" class="hidden">
-        <div class="init-header">
-            <span><i class="fas fa-dice-d20"></i> Ordem de Iniciativa</span>
-            <span id="round-counter" class="round-counter">Round: 1</span>
-            <button class="init-action-btn init-action-btn--success" onclick="sortInitiative()" title="Ordenar por iniciativa"><i class="fas fa-sort-amount-down"></i></button>
-            <button class="init-action-btn init-action-btn--accent" onclick="collapseInitiative()" title="Minimizar"><i class="fas fa-minus"></i></button>
-            <button class="init-action-btn" onclick="toggleInitiative()"><i class="fas fa-times"></i></button>
-        </div>
-        <ul class="init-list" id="init-list">
-            </ul>
-       <div class="init-controls">
-            <div class="init-input-row">
-                <input class="vtt-input init-name-input" type="text" id="init-name" placeholder="Nome">
-                <input class="vtt-input init-value-input" type="number" id="init-val" placeholder="Iniciativa">
-                <button onclick="addInitiative()" class="glass-btn primary init-add-btn">+ TURNO</button>
-            </div>
-            <button onclick="nextTurn()" class="glass-btn primary init-next-btn"><i class="fas fa-forward"></i> Proximo Turno</button>
-            <button onclick="clearInitiative()" class="glass-btn danger init-clear-btn">Limpar encontro</button>
-        </div>
-    </div>
-
    <div id="token-sound-menu" class="hidden"></div>
     <div id="context-menu" class="hidden">
         <div class="ctx-item" onclick="openTokenInfoPanel()"><i class="fas fa-address-card"></i> Dossie da miniatura</div>
         <div class="ctx-item" onclick="abrirSonsToken()"><i class="fas fa-drum"></i> Voz e sons do personagem</div>
-        <div class="ctx-item" onclick="ativarRedimensionamento()"><i class="fas fa-expand"></i> Ajustar escala (Enter confirma)</div>
         <div class="ctx-item" onclick="setContextElevation()"><i class="fas fa-mountain"></i> Definir altura</div>
-        <div class="ctx-item" onclick="contextTrazerFrente()"><i class="fas fa-layer-group"></i> Colocar em destaque</div>
-        <div class="ctx-item" onclick="contextEnviarTras()"><i class="fas fa-layer-group ctx-icon-muted"></i> Mandar ao fundo</div>
         <div class="ctx-item ctx-item--danger ctx-item--separated" onclick="setContextAura('#ef4444', 'Sangrando', '🩸')"><i class="fas fa-tint"></i> Sangrando</div>
         <div class="ctx-item ctx-item--warning" onclick="setContextAura('#f59e0b', 'Queimando', '🔥')"><i class="fas fa-fire"></i> Queimando</div>
         <div class="ctx-item ctx-item--info" onclick="setContextAura('#3b82f6', 'Investido', '⚡')"><i class="fas fa-shield-alt"></i> Investido</div>
@@ -956,11 +937,11 @@
             <div class="vtt-modal-body item-compendium-editor">
                 <aside class="item-compendium-media">
                     <div class="item-compendium-preview">
-                        <img id="item-image-preview" src="../assets/itens/default.png" alt="" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100%\' height=\'100%\'><rect width=\'100%\' height=\'100%\' fill=\'%23111827\'/><text x=\'50%\' y=\'50%\' fill=\'%23fbbf24\' font-size=\'40\' text-anchor=\'middle\' dy=\'.3em\' font-family=\'Arial\'>?</text></svg>'">
+                        <img id="item-image-preview" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%'><rect width='100%' height='100%' fill='%23111827'/><text x='50%' y='50%' fill='%23fbbf24' font-size='40' text-anchor='middle' dy='.3em' font-family='Arial'>?</text></svg>" data-placeholder="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%'><rect width='100%' height='100%' fill='%23111827'/><text x='50%' y='50%' fill='%23fbbf24' font-size='40' text-anchor='middle' dy='.3em' font-family='Arial'>?</text></svg>" alt="" onerror="this.src=this.dataset.placeholder">
                     </div>
                     <label class="vtt-field">
                         <span>Arquivo da imagem</span>
-                        <input class="vtt-input item-image-input" type="text" id="item-image-path" placeholder="nome_da_imagem.png" onchange="document.getElementById('item-image-preview').src = '../assets/itens/' + (this.value || 'default.png')">
+                        <input class="vtt-input item-image-input" type="text" id="item-image-path" placeholder="nome_da_imagem.png" onchange="const preview=document.getElementById('item-image-preview'); preview.src=this.value ? '../assets/itens/' + this.value : preview.dataset.placeholder">
                     </label>
                     <p class="vtt-help-text vtt-help-text--compact">Dentro de assets/itens/</p>
                 </aside>
@@ -1026,12 +1007,21 @@
         </div>
     </div>
 
+    <div id="portrait-selector-modal" class="hidden">
+        <div class="portrait-selector-dialog">
+            <div class="portrait-selector-header">
+                <h2 class="portrait-selector-title">Selecionar Retrato</h2>
+                <button class="glass-btn danger" onclick="document.getElementById('portrait-selector-modal').classList.add('hidden')">FECHAR</button>
+            </div>
+            <div id="portrait-grid"></div>
+        </div>
+    </div>
+
     <script src="../node_modules/phaser/dist/phaser.js"></script>
     <script src="renderer.js"></script>
     <script src="js/ui/toolbar.js"></script>
     <script src="js/ui/audio.js"></script>
     <script src="js/ui/dice.js"></script>
-    <script src="js/ui/initiative.js"></script>
     <script src="js/ui/combat.js"></script>
     <script src="js/ui/session-timeline.js"></script>
     <script src="js/ui/notes.js"></script>
@@ -1044,15 +1034,5 @@
     <script src="js/ui/session-tools.js"></script>
     <script src="js/systems/scenes.js"></script>
     <script src="js/app.js"></script>
-
-    <div id="portrait-selector-modal" class="hidden">
-        <div class="portrait-selector-dialog">
-            <div class="portrait-selector-header">
-                <h2 class="portrait-selector-title">Selecionar Retrato</h2>
-                <button class="glass-btn danger" onclick="document.getElementById('portrait-selector-modal').classList.add('hidden')">FECHAR</button>
-            </div>
-            <div id="portrait-grid"></div>
-        </div>
-    </div>
 </body>
 </html> 

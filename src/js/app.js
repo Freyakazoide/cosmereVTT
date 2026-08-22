@@ -12,7 +12,6 @@
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.content-area').forEach(c => {
                 c.classList.remove('active');
-                c.classList.add('hidden');
             });
             currentActivePanel = null;
         }
@@ -32,12 +31,10 @@
 
             document.querySelectorAll('.content-area').forEach(c => {
                 c.classList.remove('active');
-                c.classList.add('hidden');
             });
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             if (optionsPanel) optionsPanel.classList.add('hidden');
 
-            target.classList.remove('hidden');
             target.classList.add('active');
             panel.classList.remove('is-closed');
             if (titleEl) titleEl.textContent = title || targetId.replace('-content', '');
@@ -49,10 +46,6 @@
         function toggleMenu() {
             if (currentActivePanel) closeFlyoutPanel();
             else switchTab('maps');
-        }
-
-        function toggleSidebarCollapse() {
-            closeFlyoutPanel();
         }
 
        function toggleRosterCardTouch(card) {
@@ -80,10 +73,9 @@
             if (!submenu || !wrapper) return;
 
             hideVttTooltip();
-            wrapper.classList.remove('is-hover-open');
             const shouldOpen = !submenu.classList.contains('is-open');
             submenu.classList.toggle('is-open', shouldOpen);
-            wrapper.classList.toggle('is-click-open', shouldOpen);
+            submenu.dataset.pinned = String(shouldOpen);
             document.getElementById('master-tool-btn')?.setAttribute('aria-expanded', String(shouldOpen));
         }
 
@@ -96,17 +88,16 @@
             const openDelay = 180;
 
             wrapper.addEventListener('mouseenter', () => {
-                if (wrapper.classList.contains('is-click-open')) return;
+                if (submenu.dataset.pinned === 'true') return;
                 window.clearTimeout(hoverTimer);
                 hoverTimer = window.setTimeout(() => {
-                    wrapper.classList.add('is-hover-open');
+                    submenu.classList.add('is-open');
                 }, openDelay);
             });
 
             wrapper.addEventListener('mouseleave', () => {
                 window.clearTimeout(hoverTimer);
-                if (wrapper.classList.contains('is-click-open')) return;
-                wrapper.classList.remove('is-hover-open');
+                if (submenu.dataset.pinned === 'true') return;
                 submenu.classList.remove('is-open');
             });
 
@@ -116,8 +107,8 @@
 
             document.addEventListener('click', (event) => {
                 if (event.target.closest('.tool-group-wrapper')) return;
-                wrapper.classList.remove('is-hover-open', 'is-click-open');
                 submenu.classList.remove('is-open');
+                submenu.dataset.pinned = 'false';
                 document.getElementById('master-tool-btn')?.setAttribute('aria-expanded', 'false');
             });
 
@@ -365,7 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const submenu = btnElement?.closest('.tool-submenu');
             if (submenu) {
                 submenu.classList.remove('is-open');
-                submenu.closest('.tool-group-wrapper')?.classList.remove('is-hover-open', 'is-click-open');
+                submenu.dataset.pinned = 'false';
                 document.getElementById('master-tool-btn')?.setAttribute('aria-expanded', 'false');
             }
             
@@ -549,7 +540,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else if (key === 'c') { clearDraw(); } 
             else if (key === 'f') { toggleMenu(); } 
-            else if (key === 'i') { toggleInitiative(); }
+            else if (key === 'i') { switchTab('combat'); }
             else if (e.ctrlKey && key === 'z') {
                 e.preventDefault();
                 if (window.phaserScene) window.phaserScene.undoLastDrawing();
@@ -671,8 +662,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (window.phaserScene) {
                         window.phaserScene.setTokenElevation(token, elev || '');
                         if (Number.isFinite(hp) && Number.isFinite(hpMaximum)) {
-                            window.phaserScene.updateTokenHP(token.tokenId, hp, hpMaximum);
-                            if (typeof window.updateCharacterHP === 'function') window.updateCharacterHP(token.tokenId, hp, hpMaximum);
+                            if (typeof window.updateEntityVitals === 'function') window.updateEntityVitals(token.tokenId, hp, hpMaximum);
+                            else window.phaserScene.updateTokenHP(token.tokenId, hp, hpMaximum);
                         }
                     }
                     if (typeof addChatMessage === 'function') {
@@ -690,31 +681,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.phaserScene.setTokenAura(activeTokenForContext, hexColor, emoji);
     addChatMessage('Sistema', `${emoji} <strong>${activeTokenForContext.texture.key.replace('tk_','')}</strong>: ${condicaoLabel}`, hexColor);
-
-    const tokenNome = activeTokenForContext.charName || activeTokenForContext.texture.key.replace('tk_', '').split('_')[0];
-    const initEntry = initiativeList.find(e => e.name.toLowerCase() === tokenNome.toLowerCase());
-    if (initEntry) {
-        const cond = CONDICOES.find(c => c.label === condicaoLabel);
-        if (cond && !initEntry.conditions.find(c => c.id === cond.id)) {
-            initEntry.conditions.push({ id: cond.id });
-            renderInitiative();
-        }
-    }
-
-    document.querySelectorAll('.token-item').forEach(item => {
-        const nameEl = item.querySelector('[style*="font-size: 12px"], [style*="font-size:12px"]');
-        if (nameEl && nameEl.textContent.trim().toLowerCase() === tokenNome.toLowerCase()) {
-            item.style.boxShadow = `0 0 8px ${hexColor}44, inset 0 0 8px ${hexColor}22`;
-            item.style.borderLeftColor = hexColor;
-            let badge = item.querySelector('.condition-badge');
-            if (!badge) {
-                badge = document.createElement('span');
-                badge.className = 'condition-badge';
-                item.appendChild(badge);
-            }
-            badge.textContent = emoji || '';
-        }
-    });
+    window.addCondition?.(activeTokenForContext.tokenId, condicaoLabel);
 
     document.getElementById('context-menu').classList.add('hidden');
 }
@@ -724,14 +691,8 @@ function clearContextAuras() {
 
     window.phaserScene.setTokenAura(activeTokenForContext, null, null);
     window.phaserScene.setTokenElevation(activeTokenForContext, null);
+    window.clearConditionsForEntity?.(activeTokenForContext.tokenId);
     addChatMessage('Sistema', 'Condições removidas.', '#94a3b8');
-
-    const tokenNome = activeTokenForContext.charName || activeTokenForContext.texture.key.replace('tk_', '').split('_')[0];
-    const initEntry = initiativeList.find(e => e.name.toLowerCase() === tokenNome.toLowerCase());
-    if (initEntry) {
-        initEntry.conditions = [];
-        renderInitiative();
-    }
 
     document.getElementById('context-menu').classList.add('hidden');
 }

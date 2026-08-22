@@ -25,6 +25,16 @@
             }[char]));
         }
 
+        const SHEET_IMAGE_PLACEHOLDER = 'data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22320%22%3E%3Crect%20width=%22320%22%20height=%22320%22%20fill=%22%23111827%22/%3E%3Ctext%20x=%22160%22%20y=%22178%22%20fill=%22%23fbbf24%22%20font-size=%2280%22%20text-anchor=%22middle%22%20font-family=%22Arial%22%3E%3F%3C/text%3E%3C/svg%3E';
+
+        function getSheetImageSource(path) {
+            const normalized = String(path || '').replace(/\\/g, '/');
+            if (!normalized) return SHEET_IMAGE_PLACEHOLDER;
+            if (/^(data:|https?:|file:)/i.test(normalized)) return normalized;
+            if (/^\/?[a-z]:\//i.test(normalized)) return `file:///${normalized.replace(/^\//, '')}`;
+            return normalized;
+        }
+
         function renderSkillDots(rank = 0) {
             let dots = '';
             for (let i = 0; i < 9; i++) {
@@ -457,7 +467,7 @@
                         const safeTokenPath = escapeSheetHtml((ficha.tokenPath || ficha.portraitPath || '').replace(/\\/g, '/'));
 
                         card.innerHTML = `
-                            <img class="roster-img" src="file://${escapeSheetHtml(ficha.portraitPath || '')}" onerror="this.src='../assets/persons/default.png'">
+                            <img class="roster-img" src="${escapeSheetHtml(getSheetImageSource(ficha.portraitPath || ficha.tokenPath))}" onerror="this.onerror=null;this.src='${SHEET_IMAGE_PLACEHOLDER}'">
 
                             <div class="roster-info">
                                 <div class="roster-name">${safeName}</div>
@@ -518,10 +528,11 @@
         function salvarHPInline(input, id) {
             const novoHP = parseInt(input.value) || 0;
             fichasSalvas[id].hpAtual = novoHP;
-            
-            if (window.api) window.api.saveCharacter(id, JSON.stringify(fichasSalvas[id]));
-            if (window.phaserScene) window.phaserScene.updateTokenHP(id, novoHP, fichasSalvas[id].hpMax);
-            
+            if (typeof window.updateEntityVitals === 'function') {
+                window.updateEntityVitals(id, novoHP, fichasSalvas[id].hpMax);
+            } else if (window.api) {
+                window.api.saveCharacter(id, JSON.stringify(fichasSalvas[id]));
+            }
             renderizarListaTokens();
         }
 
@@ -728,15 +739,15 @@ container.innerHTML += `
                 connCont.appendChild(div);
             });
             
-            // Carrega a foto associada ou tenta o padrão .png na pasta correta
+            // Retrato e token usam um placeholder autocontido quando nao ha arte vinculada.
             const portraitImg = document.getElementById('char-portrait');
-            portraitImg.src = ficha.portraitPath ? `file://${ficha.portraitPath}` : `../assets/persons/${ficha.nome}.png`;
+            portraitImg.src = getSheetImageSource(ficha.portraitPath || ficha.tokenPath);
             portraitImg.style.objectPosition = ficha.portraitPos || '50% 50%'; 
             portraitImg.style.transform = `scale(${ficha.portraitScale || 1})`; 
             currentScale = ficha.portraitScale || 1;
             
             const tokenImg = document.getElementById('char-token-img');
-            tokenImg.src = ficha.tokenPath ? `file://${ficha.tokenPath}` : portraitImg.src;
+            tokenImg.src = getSheetImageSource(ficha.tokenPath || ficha.portraitPath);
             
             // Tipo de ator
             const tipoSelect = document.getElementById('char-type');
@@ -808,7 +819,7 @@ container.innerHTML += `
             const hpAtual = parseInt(ficha.hpAtual) || 0;
             const hpMax = parseInt(ficha.hpMax) || 0;
             const hpPct = hpMax > 0 ? Math.max(0, Math.min(100, Math.round((hpAtual / hpMax) * 100))) : 0;
-            const portrait = ficha.portraitPath ? `file://${ficha.portraitPath}` : (ficha.tokenPath ? `file://${ficha.tokenPath}` : '../assets/persons/default.png');
+            const portrait = getSheetImageSource(ficha.portraitPath || ficha.tokenPath);
             const conditions = normalizeSheetConditions(ficha);
             const defenses = [
                 ['Fisico', document.querySelectorAll('#tab-stats .char-card input')[3]?.value || ficha.defFisico || '10'],
@@ -879,9 +890,12 @@ container.innerHTML += `
 
         function persistCombatCharacter(characterId) {
             if (!characterId || !fichasSalvas[characterId]) return;
-            if (window.api) window.api.saveCharacter(characterId, JSON.stringify(fichasSalvas[characterId]));
-            if (window.phaserScene) window.phaserScene.updateTokenHP(characterId, fichasSalvas[characterId].hpAtual, fichasSalvas[characterId].hpMax);
             window.fichasSalvas = fichasSalvas;
+            if (typeof window.updateEntityVitals === 'function') {
+                window.updateEntityVitals(characterId, fichasSalvas[characterId].hpAtual, fichasSalvas[characterId].hpMax);
+            } else if (window.api) {
+                window.api.saveCharacter(characterId, JSON.stringify(fichasSalvas[characterId]));
+            }
             renderizarListaTokens();
         }
 
@@ -917,14 +931,11 @@ container.innerHTML += `
             const wasRemoved = existing >= 0;
             if (wasRemoved) conditions.splice(existing, 1);
             else conditions.push({ id: `cond_${Date.now()}`, name: condition, icon: '', color: '#fbbf24', durationType: 'custom', remaining: null, description: '' });
-            const token = window.phaserScene?.camadaTokens?.list?.find(t => t.tokenId === characterId);
-            if (token) {
-                token.conditions = conditions.map(c => c.name || c).filter(Boolean);
-                window.phaserScene.renderTokenConditions?.(token);
+            if (typeof window.updateEntityConditions === 'function') {
+                window.updateEntityConditions(characterId, conditions);
+            } else if (window.api) {
+                window.api.saveCharacter(characterId, JSON.stringify(fichasSalvas[characterId]));
             }
-            const participant = window.combatState?.participants?.find(p => p.id === characterId);
-            if (participant) participant.conditions = conditions.map(c => c.name || c).filter(Boolean);
-            persistCombatCharacter(characterId);
             renderCombatSheet(fichasSalvas[characterId]);
             if (typeof window.addSessionEvent === 'function') {
                 window.addSessionEvent(
@@ -1080,15 +1091,15 @@ container.innerHTML += `
 
        async function abrirSeletorRetrato(tipo = 'portrait') {
             tipoSeletorRetrato = tipo;
-            
-            // Aqui está o pulo do gato: usamos as APIs separadas que JÁ EXISTEM no seu Main.js
-            const imagens = tipo === 'token' ? await window.api.getTokens() : await window.api.getPortraits();
-            
+            const assetType = tipo === 'token' ? 'token' : 'portrait';
+            const assets = await window.api.getAssetsLibrary();
+            const imagens = assets.filter(asset => asset.type === assetType && !asset.missing);
+
             const grid = document.getElementById('portrait-grid');
             grid.innerHTML = imagens.map(p => `
-                <div onclick="vincularRetrato('${p.path.replace(/\\/g, '/')}')" style="cursor:pointer; border:1px solid rgba(255,255,255,0.1); border-radius:8px; overflow:hidden; background:#000; text-align:center; transition:0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.1)'">
-                    <img src="file://${p.path}" style="width:100%; aspect-ratio:1; object-fit:cover;">
-                    <div style="padding:5px; font-size:10px; color:var(--text-dim); overflow:hidden; text-overflow:ellipsis;">${p.name}</div>
+                <div data-path="${escapeSheetHtml(p.path.replace(/\\/g, '/'))}" onclick="vincularRetrato(this.dataset.path)" style="cursor:pointer; border:1px solid rgba(255,255,255,0.1); border-radius:8px; overflow:hidden; background:#000; text-align:center; transition:0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.1)'">
+                    <img src="file://${escapeSheetHtml(p.path)}" style="width:100%; aspect-ratio:1; object-fit:cover;">
+                    <div style="padding:5px; font-size:10px; color:var(--text-dim); overflow:hidden; text-overflow:ellipsis;">${escapeSheetHtml(p.name)}</div>
                 </div>
             `).join('');
             document.getElementById('portrait-selector-modal').classList.remove('hidden');
@@ -1258,7 +1269,11 @@ container.innerHTML += `
 
            // Persistência Real via API do Electron
             if (window.api) {
-                window.api.saveCharacter(fichaAtualId, JSON.stringify(ficha));
+                if (typeof window.updateEntityVitals === 'function') {
+                    window.updateEntityVitals(fichaAtualId, ficha.hpAtual, ficha.hpMax);
+                } else {
+                    window.api.saveCharacter(fichaAtualId, JSON.stringify(ficha));
+                }
                 
                 // ATUALIZA A LISTA DA BARRA LATERAL IMEDIATAMENTE (Magia acontece aqui!)
                 if (typeof renderizarListaTokens === 'function') {
@@ -1275,8 +1290,11 @@ container.innerHTML += `
             fichasSalvas[fichaAtualId].hpMax = parseInt(document.getElementById('hp-max-input').value) || 10;
             fichasSalvas[fichaAtualId].hpAtual = parseInt(document.getElementById('hp-atual-input').value) || 10;
             
-            if (window.api) window.api.saveCharacter(fichaAtualId, JSON.stringify(fichasSalvas[fichaAtualId]));
-            if (window.phaserScene) window.phaserScene.updateTokenHP(fichaAtualId, fichasSalvas[fichaAtualId].hpAtual, fichasSalvas[fichaAtualId].hpMax);
+            if (typeof window.updateEntityVitals === 'function') {
+                window.updateEntityVitals(fichaAtualId, fichasSalvas[fichaAtualId].hpAtual, fichasSalvas[fichaAtualId].hpMax);
+            } else if (window.api) {
+                window.api.saveCharacter(fichaAtualId, JSON.stringify(fichasSalvas[fichaAtualId]));
+            }
             
             const charId = fichaAtualId;
             const hpAtual = fichasSalvas[charId].hpAtual;
@@ -1382,9 +1400,9 @@ renderizarAtributosEPericias();
 // --- Extracted block: portrait-link ---
 function vincularRetrato(path) {
             if (tipoSeletorRetrato === 'portrait') {
-                document.getElementById('char-portrait').src = `file://${path}`;
+                document.getElementById('char-portrait').src = getSheetImageSource(path);
             } else if (tipoSeletorRetrato === 'token') {
-                document.getElementById('char-token-img').src = `file://${path}`;
+                document.getElementById('char-token-img').src = getSheetImageSource(path);
             }
             document.getElementById('portrait-selector-modal').classList.add('hidden');
             salvarFichaCompleta();

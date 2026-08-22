@@ -1,31 +1,95 @@
 (function initCombatSystem() {
-    const DEFAULT_CONDITIONS = [
-        'Caido',
-        'Atordoado',
-        'Sangrando',
-        'Concentrando',
-        'Invisivel',
-        'Marcado',
-        'Morrendo'
+    const CONDITION_DEFINITIONS = [
+        { id: 'abalado', name: 'Abalado', emoji: '⚠️', color: '#eab308' },
+        { id: 'atordoado', name: 'Atordoado', emoji: '💫', color: '#a78bfa' },
+        { id: 'caido', name: 'Caido', emoji: '↩️', color: '#94a3b8' },
+        { id: 'concentrando', name: 'Concentrando', emoji: '🎯', color: '#38bdf8' },
+        { id: 'envenenado', name: 'Envenenado', emoji: '☠️', color: '#22c55e', startTurnDamage: '1d4', effectMessage: 'sofre dano de veneno' },
+        { id: 'ferido', name: 'Ferido', emoji: '🩸', color: '#ef4444' },
+        { id: 'invisivel', name: 'Invisivel', emoji: '👁️', color: '#94a3b8' },
+        { id: 'investido', name: 'Investido', emoji: '⚡', color: '#3b82f6' },
+        { id: 'marcado', name: 'Marcado', emoji: '🎯', color: '#f97316' },
+        { id: 'morrendo', name: 'Morrendo', emoji: '💀', color: '#ef4444' },
+        { id: 'queimando', name: 'Queimando', emoji: '🔥', color: '#f59e0b', startTurnDamage: '1d6', effectMessage: 'sofre dano de fogo' },
+        { id: 'sangrando', name: 'Sangrando', emoji: '🩸', color: '#ef4444', startTurnDamage: '1d4', effectMessage: 'sofre dano de sangramento' }
     ];
 
-    window.CONDITIONS = window.CONDITIONS || DEFAULT_CONDITIONS;
-    window.combatState = window.combatState || {
-        active: false,
-        round: 1,
-        currentTurnIndex: 0,
-        participants: []
-    };
-    window.sceneSettings = window.sceneSettings || {
-        gridEnabled: true,
-        gridSize: 70,
-        snapToGrid: true,
-        distancePerCell: 2,
-        distanceUnit: 'm'
-    };
-    window.selectedToken = window.selectedToken || null;
+    function normalizeLookup(value) {
+        return String(value || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-');
+    }
 
-    const legacyNextTurn = window.nextTurn;
+    function getConditionDefinition(value) {
+        const lookup = normalizeLookup(value?.id || value?.name || value?.nome || value);
+        return CONDITION_DEFINITIONS.find(condition => condition.id === lookup || normalizeLookup(condition.name) === lookup) || null;
+    }
+
+    function normalizeCombatCondition(condition) {
+        const source = condition && typeof condition === 'object' ? condition : { name: condition };
+        const definition = getConditionDefinition(source);
+        const name = source.name || source.nome || definition?.name || String(condition || 'Condicao');
+        const durationValue = source.duration ?? source.duracao ?? source.remaining ?? null;
+        const duration = durationValue === null || durationValue === '' ? null : Math.max(0, Number(durationValue) || 0);
+
+        return {
+            id: source.id || definition?.id || normalizeLookup(name) || `condition-${Date.now()}`,
+            name,
+            emoji: source.emoji || source.icon || definition?.emoji || '',
+            color: source.color || source.cor || definition?.color || '#fbbf24',
+            duration,
+            startTurnDamage: source.startTurnDamage || source.dano || definition?.startTurnDamage || null,
+            effectMessage: source.effectMessage || source.msg || definition?.effectMessage || ''
+        };
+    }
+
+    function normalizeCombatParticipant(participant, index = 0) {
+        const source = participant && typeof participant === 'object' ? participant : {};
+        const id = String(source.id || source.tokenId || source.characterId || `participant-${index}`);
+        const hpAtual = source.hpAtual ?? source.hp ?? null;
+        const hpMax = source.hpMax ?? null;
+
+        return {
+            id,
+            name: source.name || source.nome || 'Participante',
+            initiative: Number(source.initiative ?? source.val) || 0,
+            hpAtual: hpAtual === null ? null : Number(hpAtual),
+            hpMax: hpMax === null ? null : Number(hpMax),
+            conditions: Array.isArray(source.conditions) ? source.conditions.map(normalizeCombatCondition) : [],
+            tokenId: source.tokenId || source.link?.tokenId || null,
+            characterId: source.characterId || source.link?.characterId || null,
+            updatedAt: source.updatedAt || null,
+            tokenRef: source.tokenRef || null
+        };
+    }
+
+    function getEmptyCombatState() {
+        return { active: false, round: 1, currentTurnIndex: 0, participants: [] };
+    }
+
+    function normalizeCombatState(state) {
+        const source = state && typeof state === 'object' ? state : {};
+        const participants = Array.isArray(source.participants)
+            ? source.participants.map(normalizeCombatParticipant)
+            : [];
+        const maxIndex = Math.max(0, participants.length - 1);
+
+        return {
+            active: Boolean(source.active) && participants.length > 0,
+            round: Math.max(1, Number(source.round) || 1),
+            currentTurnIndex: Math.min(maxIndex, Math.max(0, Number(source.currentTurnIndex) || 0)),
+            participants
+        };
+    }
+
+    window.COMBAT_CONDITIONS = CONDITION_DEFINITIONS;
+    window.normalizeCombatCondition = normalizeCombatCondition;
+    window.normalizeCombatState = normalizeCombatState;
+    window.combatState = normalizeCombatState(window.combatState || getEmptyCombatState());
+    window.selectedToken = window.selectedToken || null;
 
     function getTokenId(token) {
         return token?.tokenId || token?.characterId || token?.texture?.key || '';
@@ -36,123 +100,218 @@
     }
 
     function findTokenById(id) {
+        if (!id) return null;
         return window.phaserScene?.camadaTokens?.list?.find(token => getTokenId(token) === id) || null;
     }
 
-    function getCharacterByToken(tokenId) {
-        if (!tokenId) return null;
-        return window.fichasSalvas?.[tokenId] || null;
+    function getCharacterByToken(characterId) {
+        if (!characterId) return null;
+        return window.fichasSalvas?.[characterId] || null;
     }
 
-    function syncParticipantFromToken(token) {
-        if (!token) return;
-        const participant = window.combatState.participants.find(p => p.id === getTokenId(token));
+    function findParticipantByEntityId(id) {
+        if (!id) return null;
+        return window.combatState.participants.find(participant => (
+            participant.id === id || participant.tokenId === id || participant.characterId === id
+        )) || null;
+    }
+
+    function getParticipantToken(participant) {
+        return participant?.tokenRef || findTokenById(participant?.tokenId || participant?.id);
+    }
+
+    function getParticipantCharacter(participant) {
+        return getCharacterByToken(participant?.characterId || participant?.id);
+    }
+
+    function conditionNames(conditions) {
+        return (conditions || []).map(condition => normalizeCombatCondition(condition).name).filter(Boolean);
+    }
+
+    function characterConditionsFromCombat(participant, character) {
+        const existing = Array.isArray(character?.conditions) ? character.conditions : [];
+        return participant.conditions.map(condition => {
+            const current = existing.find(item => normalizeLookup(item?.id || item?.name || item) === normalizeLookup(condition.id || condition.name));
+            return {
+                ...(current && typeof current === 'object' ? current : {}),
+                id: current?.id || condition.id,
+                name: condition.name,
+                icon: condition.emoji || current?.icon || '',
+                color: condition.color || current?.color || '#fbbf24',
+                durationType: condition.duration === null ? (current?.durationType || 'custom') : 'turns',
+                remaining: condition.duration,
+                description: current?.description || ''
+            };
+        });
+    }
+
+    function persistParticipantCharacter(participant) {
+        const characterId = participant.characterId || participant.id;
+        const character = getCharacterByToken(characterId);
+        if (!character) return;
+        if (Number.isFinite(participant.hpAtual)) character.hpAtual = participant.hpAtual;
+        if (Number.isFinite(participant.hpMax)) character.hpMax = participant.hpMax;
+        character.conditions = characterConditionsFromCombat(participant, character);
+        window.api?.saveCharacter?.(characterId, JSON.stringify(character));
+    }
+
+    function syncParticipantMirrors(participant, options = {}) {
         if (!participant) return;
-        participant.name = getTokenName(token);
-        participant.hpAtual = Number.isFinite(Number(token.hpAtual)) ? Number(token.hpAtual) : participant.hpAtual;
-        participant.hpMax = Number.isFinite(Number(token.hpMax)) ? Number(token.hpMax) : participant.hpMax;
-        participant.conditions = Array.isArray(token.conditions) ? [...token.conditions] : participant.conditions || [];
-        participant.tokenRef = token;
+        participant.updatedAt = new Date().toISOString();
+        const token = getParticipantToken(participant);
+        if (token) {
+            participant.tokenId = getTokenId(token);
+            participant.tokenRef = token;
+            token.hpAtual = participant.hpAtual;
+            token.hpMax = participant.hpMax;
+            token.conditions = conditionNames(participant.conditions);
+            if (Number.isFinite(participant.hpAtual) && Number.isFinite(participant.hpMax)) {
+                window.phaserScene?.updateTokenHP?.(getTokenId(token), participant.hpAtual, participant.hpMax);
+            }
+            window.phaserScene?.renderTokenConditions?.(token);
+        }
+        if (options.persistCharacter !== false) persistParticipantCharacter(participant);
+        if (typeof window.renderizarListaTokens === 'function') window.renderizarListaTokens();
+        renderCombatTracker();
+    }
+
+    function hydrateParticipantFromLinkedEntity(participant, { fillConditions = true } = {}) {
+        const token = getParticipantToken(participant);
+        const character = getParticipantCharacter(participant);
+        const characterConditions = Array.isArray(character?.conditions) ? character.conditions : [];
+        const tokenConditions = Array.isArray(token?.conditions) ? token.conditions : [];
+        participant.tokenId = token ? getTokenId(token) : participant.tokenId;
+        participant.characterId = character ? (participant.characterId || participant.id) : participant.characterId;
+        participant.tokenRef = token || null;
+        participant.name = character?.nome || (token ? getTokenName(token) : participant.name);
+        if (!Number.isFinite(participant.hpAtual)) participant.hpAtual = Number(character?.hpAtual ?? token?.hpAtual ?? 10);
+        if (!Number.isFinite(participant.hpMax)) participant.hpMax = Number(character?.hpMax ?? token?.hpMax ?? 10);
+        if (fillConditions && !participant.conditions.length) {
+            participant.conditions = (characterConditions.length ? characterConditions : tokenConditions).map(normalizeCombatCondition);
+        }
+        return participant;
     }
 
     function makeParticipantFromToken(token) {
         const tokenId = getTokenId(token);
-        const ficha = getCharacterByToken(tokenId);
-        const hpAtual = Number.isFinite(Number(token.hpAtual)) ? Number(token.hpAtual) : Number(ficha?.hpAtual ?? ficha?.hp ?? 10);
-        const hpMax = Number.isFinite(Number(token.hpMax)) ? Number(token.hpMax) : Number(ficha?.hpMax ?? 10);
-
-        return {
+        const character = getCharacterByToken(tokenId);
+        return hydrateParticipantFromLinkedEntity(normalizeCombatParticipant({
             id: tokenId,
-            name: ficha?.nome || getTokenName(token),
+            name: character?.nome || getTokenName(token),
             initiative: 0,
-            hpAtual,
-            hpMax,
-            conditions: Array.isArray(token.conditions) ? [...token.conditions] : [],
+            hpAtual: token.hpAtual ?? character?.hpAtual ?? character?.hp ?? 10,
+            hpMax: token.hpMax ?? character?.hpMax ?? 10,
+            conditions: Array.isArray(token.conditions) && token.conditions.length ? token.conditions : character?.conditions,
+            tokenId,
+            characterId: character ? tokenId : null,
             tokenRef: token
-        };
+        }));
     }
 
-    function updateCharacterHP(characterId, hpAtual, hpMax) {
-        if (!characterId || !window.fichasSalvas?.[characterId]) return;
-        window.fichasSalvas[characterId].hpAtual = hpAtual;
-        window.fichasSalvas[characterId].hpMax = hpMax;
-        if (window.api?.saveCharacter) {
-            window.api.saveCharacter(characterId, JSON.stringify(window.fichasSalvas[characterId]));
+    function updateEntityVitals(entityId, hpAtual, hpMax) {
+        const nextHp = Number(hpAtual);
+        const nextMax = Number(hpMax);
+        const participant = findParticipantByEntityId(entityId);
+        if (participant) {
+            if (Number.isFinite(nextHp)) participant.hpAtual = nextHp;
+            if (Number.isFinite(nextMax)) participant.hpMax = nextMax;
+            syncParticipantMirrors(participant);
+            return participant;
+        }
+        const token = findTokenById(entityId);
+        const character = getCharacterByToken(entityId);
+        if (token) {
+            if (Number.isFinite(nextHp)) token.hpAtual = nextHp;
+            if (Number.isFinite(nextMax)) token.hpMax = nextMax;
+            window.phaserScene?.updateTokenHP?.(entityId, token.hpAtual, token.hpMax);
+        }
+        if (character) {
+            if (Number.isFinite(nextHp)) character.hpAtual = nextHp;
+            if (Number.isFinite(nextMax)) character.hpMax = nextMax;
+            window.api?.saveCharacter?.(entityId, JSON.stringify(character));
         }
         if (typeof window.renderizarListaTokens === 'function') window.renderizarListaTokens();
+        return null;
     }
 
-    function updateCharacterConditions(characterId, conditions) {
-        if (!characterId || !window.fichasSalvas?.[characterId]) return;
-        const names = (conditions || []).map(condition => condition?.name || condition).filter(Boolean);
-        const existing = Array.isArray(window.fichasSalvas[characterId].conditions) ? window.fichasSalvas[characterId].conditions : [];
-        window.fichasSalvas[characterId].conditions = names.map(name => {
-            const current = existing.find(condition => (condition?.name || condition) === name);
-            return typeof current === 'object' && current ? current : {
-                id: `cond_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-                name,
-                icon: '',
-                color: '#fbbf24',
-                durationType: 'custom',
-                remaining: null,
-                description: ''
-            };
-        });
-        if (window.api?.saveCharacter) {
-            window.api.saveCharacter(characterId, JSON.stringify(window.fichasSalvas[characterId]));
+    function updateEntityConditions(entityId, conditions) {
+        const normalized = (conditions || []).map(normalizeCombatCondition);
+        const participant = findParticipantByEntityId(entityId);
+        if (participant) {
+            participant.conditions = normalized;
+            syncParticipantMirrors(participant);
+            return participant;
+        }
+        const token = findTokenById(entityId);
+        const character = getCharacterByToken(entityId);
+        if (token) {
+            token.conditions = conditionNames(normalized);
+            window.phaserScene?.renderTokenConditions?.(token);
+        }
+        if (character) {
+            character.conditions = characterConditionsFromCombat({ conditions: normalized }, character);
+            window.api?.saveCharacter?.(entityId, JSON.stringify(character));
         }
         if (typeof window.renderizarListaTokens === 'function') window.renderizarListaTokens();
-    }
-
-    function updateTokenHPBar(token, hpAtual, hpMax) {
-        if (!token || !window.phaserScene) return;
-        window.phaserScene.updateTokenHP(getTokenId(token), hpAtual, hpMax);
-    }
-
-    function updateTokenAndCharacterHP(token, hpAtual, hpMax) {
-        if (!token) return;
-        token.hpAtual = hpAtual;
-        token.hpMax = hpMax;
-        updateTokenHPBar(token, hpAtual, hpMax);
-        updateCharacterHP(getTokenId(token), hpAtual, hpMax);
-        syncParticipantFromToken(token);
-        renderCombatTracker();
+        return null;
     }
 
     function startCombat() {
-        window.combatState.active = true;
-        window.combatState.round = window.combatState.round || 1;
-        window.combatState.currentTurnIndex = window.combatState.currentTurnIndex || 0;
+        const state = window.combatState;
+        if (!state.participants.length) {
+            window.addChatMessage?.('Sistema', 'Adicione ao menos um participante antes de iniciar o encontro.', '#ef4444');
+            return;
+        }
+        state.active = true;
+        state.round = Math.max(1, state.round || 1);
+        state.currentTurnIndex = Math.min(state.currentTurnIndex || 0, state.participants.length - 1);
         renderCombatTracker();
         highlightCurrentTurnToken();
-        if (typeof window.addSessionEvent === 'function') {
-            window.addSessionEvent(
-                'combat_started',
-                'Encontro iniciado',
-                `${window.combatState.participants.length} participante(s)`
-            );
-        }
-        if (typeof addChatMessage === 'function') addChatMessage('Sistema', 'Encontro iniciado.', '#fbbf24');
+        window.addSessionEvent?.('combat_started', 'Encontro iniciado', `${state.participants.length} participante(s)`);
+        window.addChatMessage?.('Sistema', 'Encontro iniciado.', '#fbbf24');
     }
 
     function addSelectedTokenToCombat() {
         const token = window.selectedToken;
         if (!token) {
-            if (typeof addChatMessage === 'function') addChatMessage('Sistema', 'Selecione um token no mapa primeiro.', '#ef4444');
+            window.addChatMessage?.('Sistema', 'Selecione um token no mapa primeiro.', '#ef4444');
             return;
         }
-
         const participant = makeParticipantFromToken(token);
-        if (!participant.id) return;
+        const existing = findParticipantByEntityId(participant.id);
+        if (existing) Object.assign(existing, participant);
+        else window.combatState.participants.push(participant);
+        renderCombatTracker();
+        highlightCurrentTurnToken();
+    }
 
-        const existing = window.combatState.participants.find(p => p.id === participant.id);
-        if (existing) {
-            Object.assign(existing, participant);
-        } else {
-            window.combatState.participants.push(participant);
-        }
+    function addManualCombatParticipant() {
+        const nameInput = document.getElementById('combat-participant-name');
+        const initiativeInput = document.getElementById('combat-participant-initiative');
+        const hpInput = document.getElementById('combat-participant-hp');
+        const name = nameInput?.value.trim();
+        if (!name) return;
+        window.combatState.participants.push(normalizeCombatParticipant({
+            id: `manual-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            name,
+            initiative: Number(initiativeInput?.value) || 0,
+            hpAtual: Number(hpInput?.value) || 10,
+            hpMax: Number(hpInput?.value) || 10,
+            conditions: []
+        }, window.combatState.participants.length));
+        if (nameInput) nameInput.value = '';
+        if (initiativeInput) initiativeInput.value = '';
+        if (hpInput) hpInput.value = '';
+        sortCombatParticipants();
+    }
 
-        window.combatState.active = true;
+    function sortCombatParticipants({ preserveCurrent = true } = {}) {
+        const currentId = window.combatState.participants[window.combatState.currentTurnIndex]?.id;
+        window.combatState.participants.sort((a, b) => b.initiative - a.initiative);
+        const nextIndex = preserveCurrent
+            ? window.combatState.participants.findIndex(participant => participant.id === currentId)
+            : 0;
+        window.combatState.currentTurnIndex = nextIndex < 0 ? 0 : nextIndex;
         renderCombatTracker();
         highlightCurrentTurnToken();
     }
@@ -161,72 +320,103 @@
         window.combatState.participants.forEach(participant => {
             participant.initiative = Math.floor(Math.random() * 20) + 1;
         });
-        window.combatState.participants.sort((a, b) => b.initiative - a.initiative);
         window.combatState.currentTurnIndex = 0;
-        window.combatState.round = window.combatState.round || 1;
-        renderCombatTracker();
-        highlightCurrentTurnToken();
+        window.combatState.round = Math.max(1, window.combatState.round || 1);
+        sortCombatParticipants({ preserveCurrent: false });
     }
 
-    function combatNextTurn() {
+    function rollNotation(notation) {
+        const match = String(notation || '').match(/^(\d+)d(\d+)$/i);
+        if (!match) return 0;
+        let total = 0;
+        for (let index = 0; index < Number(match[1]); index++) total += Math.floor(Math.random() * Number(match[2])) + 1;
+        return total;
+    }
+
+    function processStartTurn(participant) {
+        if (!participant) return;
+        let changed = false;
+        const remainingConditions = [];
+        participant.conditions.forEach(rawCondition => {
+            const condition = normalizeCombatCondition(rawCondition);
+            if (condition.startTurnDamage) {
+                const damage = rollNotation(condition.startTurnDamage);
+                if (damage > 0 && Number.isFinite(participant.hpAtual)) {
+                    participant.hpAtual = Math.max(0, participant.hpAtual - damage);
+                    changed = true;
+                }
+                window.addChatMessage?.('Sistema', `${condition.emoji} <strong>${escapeCombatHtml(participant.name)}</strong> ${condition.effectMessage || 'sofre um efeito'}: <strong style="color:${condition.color}">-${damage} HP</strong>`, condition.color);
+            }
+            if (condition.duration !== null) {
+                condition.duration = Math.max(0, condition.duration - 1);
+                changed = true;
+                if (condition.duration === 0) {
+                    window.addChatMessage?.('Sistema', `${condition.emoji} A condicao <strong>${escapeCombatHtml(condition.name)}</strong> de ${escapeCombatHtml(participant.name)} expirou.`, '#94a3b8');
+                    return;
+                }
+            }
+            remainingConditions.push(condition);
+        });
+        participant.conditions = remainingConditions;
+        if (changed) syncParticipantMirrors(participant);
+    }
+
+    function nextTurn() {
         const state = window.combatState;
         if (!state.active || state.participants.length === 0) return;
         state.currentTurnIndex = (state.currentTurnIndex + 1) % state.participants.length;
         if (state.currentTurnIndex === 0) state.round++;
+        const participant = state.participants[state.currentTurnIndex];
+        processStartTurn(participant);
         renderCombatTracker();
         highlightCurrentTurnToken();
-        const participant = state.participants[state.currentTurnIndex];
-        if (typeof window.addSessionEvent === 'function') {
-            window.addSessionEvent('turn_changed', 'Turno avancado', participant?.name || 'Participante');
-        }
-        if (participant && typeof addChatMessage === 'function') {
-            addChatMessage('Sistema', `Turno de <strong>${participant.name}</strong>.`, '#fbbf24');
-        }
+        window.addSessionEvent?.('turn_changed', 'Turno avancado', participant?.name || 'Participante');
+        if (participant) window.addChatMessage?.('Sistema', `Turno de <strong>${escapeCombatHtml(participant.name)}</strong>.`, '#fbbf24');
     }
 
     function endCombat() {
         const endedRound = window.combatState.round || 1;
-        window.combatState.active = false;
-        window.combatState.round = 1;
-        window.combatState.currentTurnIndex = 0;
-        window.combatState.participants = [];
+        window.combatState = getEmptyCombatState();
         hideTokenQuickBar();
         window.phaserScene?.clearCurrentTurnHighlight?.();
         renderCombatTracker();
-        if (typeof window.addSessionEvent === 'function') {
-            window.addSessionEvent('combat_ended', 'Encontro encerrado', `Rodada ${endedRound}`);
-        }
+        window.addSessionEvent?.('combat_ended', 'Encontro encerrado', `Rodada ${endedRound}`);
+    }
+
+    function getConditionLabel(condition) {
+        const normalized = normalizeCombatCondition(condition);
+        return `${normalized.emoji ? `${normalized.emoji} ` : ''}${normalized.name}${normalized.duration !== null ? ` (${normalized.duration})` : ''}`;
     }
 
     function renderCombatTracker() {
         const container = document.getElementById('combat-tracker-list');
         const roundEl = document.getElementById('combat-round-value');
         if (!container) return;
-
         const state = window.combatState;
         if (roundEl) roundEl.textContent = state.active ? `Rodada ${state.round}` : 'Fora de encontro';
-
         if (!state.participants.length) {
-            container.innerHTML = '<div class="vtt-empty-state vtt-empty-state--library"><i class="fas fa-shield-halved"></i><span>Nenhuma miniatura no encontro.</span></div>';
+            container.innerHTML = '<div class="vtt-empty-state vtt-empty-state--library"><i class="fas fa-shield-halved"></i><span>Nenhum participante no encontro.</span></div>';
             return;
         }
-
         container.innerHTML = state.participants.map((participant, index) => {
             const isCurrent = state.active && index === state.currentTurnIndex;
             const hp = `${participant.hpAtual ?? '-'}/${participant.hpMax ?? '-'}`;
-            const conditions = (participant.conditions || []).map(cond => `
-                <button class="combat-condition-badge" type="button" onclick="removeCondition('${participant.id}', '${cond}')">${cond}</button>
-            `).join('');
-
+            const conditions = participant.conditions.map(condition => {
+                const normalized = normalizeCombatCondition(condition);
+                return `<button class="combat-condition-badge" type="button" data-combat-action="remove-condition" data-participant-id="${escapeCombatAttribute(participant.id)}" data-condition-id="${escapeCombatAttribute(normalized.id)}">${escapeCombatHtml(getConditionLabel(normalized))}</button>`;
+            }).join('');
             return `
                 <article class="combat-row ${isCurrent ? 'is-current' : ''}">
-                    <button class="combat-row__turn" type="button" onclick="setCombatTurn(${index})">${isCurrent ? '<i class="fas fa-play"></i>' : index + 1}</button>
+                    <button class="combat-row__turn" type="button" data-combat-action="set-turn" data-combat-index="${index}">${isCurrent ? '<i class="fas fa-play"></i>' : index + 1}</button>
                     <div class="combat-row__main">
                         <strong>${escapeCombatHtml(participant.name)}</strong>
                         <span>Iniciativa ${participant.initiative || 0} | Vitalidade ${hp}</span>
                         <div class="combat-row__conditions">${conditions || '<em>Sem aflicoes</em>'}</div>
                     </div>
-                    <button class="ui-icon-btn" type="button" onclick="removeParticipantFromCombat('${participant.id}')" title="Retirar do encontro"><i class="fas fa-times"></i></button>
+                    <div class="combat-row__actions">
+                        <button class="ui-icon-btn" type="button" data-combat-action="add-condition" data-participant-id="${escapeCombatAttribute(participant.id)}" title="Adicionar condicao"><i class="fas fa-plus"></i></button>
+                        <button class="ui-icon-btn" type="button" data-combat-action="remove-participant" data-participant-id="${escapeCombatAttribute(participant.id)}" title="Retirar do encontro"><i class="fas fa-times"></i></button>
+                    </div>
                 </article>
             `;
         }).join('');
@@ -241,10 +431,11 @@
     }
 
     function removeParticipantFromCombat(id) {
-        const index = window.combatState.participants.findIndex(p => p.id === id);
+        const index = window.combatState.participants.findIndex(participant => participant.id === id);
         if (index < 0) return;
         window.combatState.participants.splice(index, 1);
         window.combatState.currentTurnIndex = Math.min(window.combatState.currentTurnIndex, Math.max(0, window.combatState.participants.length - 1));
+        if (!window.combatState.participants.length) window.combatState.active = false;
         renderCombatTracker();
         highlightCurrentTurnToken();
     }
@@ -253,8 +444,7 @@
         const state = window.combatState;
         window.phaserScene?.clearCurrentTurnHighlight?.();
         if (!state.active || !state.participants.length) return;
-        const current = state.participants[state.currentTurnIndex];
-        const token = findTokenById(current?.id);
+        const token = getParticipantToken(state.participants[state.currentTurnIndex]);
         if (token) window.phaserScene?.highlightCurrentTurnToken?.(token);
     }
 
@@ -262,7 +452,6 @@
         if (!token) return;
         window.selectedToken = token;
         document.querySelector('.token-quick-bar')?.remove();
-
         const bar = document.createElement('div');
         bar.className = 'token-quick-bar';
         bar.innerHTML = `
@@ -295,33 +484,26 @@
         const token = window.selectedToken;
         const damage = Math.max(0, parseInt(amount, 10) || 0);
         if (!token || damage <= 0) return;
-        const max = Number(token.hpMax || getCharacterByToken(getTokenId(token))?.hpMax || 10);
-        const current = Number(token.hpAtual ?? max);
-        updateTokenAndCharacterHP(token, Math.max(0, current - damage), max);
-        if (typeof window.addSessionEvent === 'function') {
-            window.addSessionEvent('damage_applied', 'Dano aplicado', `${getTokenName(token)} sofreu ${damage} de dano`);
-        }
+        const participant = findParticipantByEntityId(getTokenId(token));
+        const max = Number(participant?.hpMax ?? token.hpMax ?? getCharacterByToken(getTokenId(token))?.hpMax ?? 10);
+        const current = Number(participant?.hpAtual ?? token.hpAtual ?? max);
+        updateEntityVitals(getTokenId(token), Math.max(0, current - damage), max);
+        window.addSessionEvent?.('damage_applied', 'Dano aplicado', `${getTokenName(token)} sofreu ${damage} de dano`);
     }
 
     function applyHealToSelectedToken(amount) {
         const token = window.selectedToken;
         const heal = Math.max(0, parseInt(amount, 10) || 0);
         if (!token || heal <= 0) return;
-        const max = Number(token.hpMax || getCharacterByToken(getTokenId(token))?.hpMax || 10);
-        const current = Number(token.hpAtual ?? max);
-        updateTokenAndCharacterHP(token, Math.min(max, current + heal), max);
-        if (typeof window.addSessionEvent === 'function') {
-            window.addSessionEvent('heal_applied', 'Cura aplicada', `${getTokenName(token)} recuperou ${heal} de HP`);
-        }
+        const participant = findParticipantByEntityId(getTokenId(token));
+        const max = Number(participant?.hpMax ?? token.hpMax ?? getCharacterByToken(getTokenId(token))?.hpMax ?? 10);
+        const current = Number(participant?.hpAtual ?? token.hpAtual ?? max);
+        updateEntityVitals(getTokenId(token), Math.min(max, current + heal), max);
+        window.addSessionEvent?.('heal_applied', 'Cura aplicada', `${getTokenName(token)} recuperou ${heal} de HP`);
     }
 
-    function promptDamageToSelectedToken() {
-        openHpAdjustModal('damage', applyDamageToSelectedToken);
-    }
-
-    function promptHealToSelectedToken() {
-        openHpAdjustModal('healing', applyHealToSelectedToken);
-    }
+    function promptDamageToSelectedToken() { openHpAdjustModal('damage', applyDamageToSelectedToken); }
+    function promptHealToSelectedToken() { openHpAdjustModal('healing', applyHealToSelectedToken); }
 
     function openHpAdjustModal(mode, onApply) {
         document.querySelector('.hp-adjust-modal')?.remove();
@@ -330,48 +512,26 @@
         modal.className = 'hp-adjust-modal';
         modal.innerHTML = `
             <div class="hp-adjust-modal__dialog" role="dialog" aria-modal="true" aria-label="${isHealing ? 'Recuperar vitalidade' : 'Marcar ferimento'}">
-                <header class="hp-adjust-modal__header">
-                    <strong>${isHealing ? 'Recuperar Vitalidade' : 'Marcar Ferimento'}</strong>
-                    <button class="ui-icon-btn" type="button" data-hp-adjust-action="close" title="Fechar"><i class="fas fa-times"></i></button>
-                </header>
-                <div class="hp-adjust-modal__quick">
-                    ${[1, 5, 10].map(value => `<button type="button" data-hp-adjust-value="${value}">${isHealing ? '+' : '-'}${value}</button>`).join('')}
-                </div>
-                <label class="hp-adjust-modal__field">
-                    <span>Pontos</span>
-                    <input class="vtt-input" type="number" min="1" value="1" data-hp-adjust-input>
-                </label>
-                <div class="hp-adjust-modal__actions">
-                    <button class="ui-btn" type="button" data-hp-adjust-action="close">Cancelar</button>
-                    <button class="ui-btn ui-btn--primary" type="button" data-hp-adjust-action="apply">${isHealing ? 'Restaurar' : 'Marcar'}</button>
-                </div>
+                <header class="hp-adjust-modal__header"><strong>${isHealing ? 'Recuperar Vitalidade' : 'Marcar Ferimento'}</strong><button class="ui-icon-btn" type="button" data-hp-adjust-action="close" title="Fechar"><i class="fas fa-times"></i></button></header>
+                <div class="hp-adjust-modal__quick">${[1, 5, 10].map(value => `<button type="button" data-hp-adjust-value="${value}">${isHealing ? '+' : '-'}${value}</button>`).join('')}</div>
+                <label class="hp-adjust-modal__field"><span>Pontos</span><input class="vtt-input" type="number" min="1" value="1" data-hp-adjust-input></label>
+                <div class="hp-adjust-modal__actions"><button class="ui-btn" type="button" data-hp-adjust-action="close">Cancelar</button><button class="ui-btn ui-btn--primary" type="button" data-hp-adjust-action="apply">${isHealing ? 'Restaurar' : 'Marcar'}</button></div>
             </div>
         `;
-
         const close = () => modal.remove();
-        const apply = (amount) => {
+        const apply = amount => {
             const value = Math.max(0, parseInt(amount, 10) || 0);
-            if (value > 0 && typeof onApply === 'function') onApply(value);
+            if (value > 0) onApply?.(value);
             close();
         };
-
         modal.addEventListener('click', event => {
-            if (event.target === modal) {
-                close();
-                return;
-            }
-
+            if (event.target === modal) return close();
             const quick = event.target.closest('[data-hp-adjust-value]');
-            if (quick) {
-                apply(quick.dataset.hpAdjustValue);
-                return;
-            }
-
+            if (quick) return apply(quick.dataset.hpAdjustValue);
             const action = event.target.closest('[data-hp-adjust-action]')?.dataset.hpAdjustAction;
             if (action === 'close') close();
             if (action === 'apply') apply(modal.querySelector('[data-hp-adjust-input]')?.value);
         });
-
         document.body.appendChild(modal);
         const input = modal.querySelector('[data-hp-adjust-input]');
         input?.focus();
@@ -391,68 +551,76 @@
         }
     }
 
-    function openConditionMenu(token = window.selectedToken) {
-        if (!token) return;
+    function buildConditionMenu(onSelect, anchor = document.querySelector('.token-quick-bar')) {
         document.querySelector('.condition-menu')?.remove();
         const menu = document.createElement('div');
         menu.className = 'condition-menu';
-        menu.innerHTML = window.CONDITIONS.map(cond => `
-            <button type="button" onclick="toggleSelectedTokenCondition('${cond}')">${cond}</button>
-        `).join('');
+        CONDITION_DEFINITIONS.forEach(condition => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = `${condition.emoji} ${condition.name}`;
+            button.addEventListener('click', () => {
+                onSelect(condition);
+                menu.remove();
+            });
+            menu.appendChild(button);
+        });
         document.body.appendChild(menu);
-        const bar = document.querySelector('.token-quick-bar');
-        const rect = bar?.getBoundingClientRect();
+        const rect = anchor?.getBoundingClientRect();
         menu.style.left = `${rect ? rect.left : 18}px`;
-        menu.style.top = `${rect ? rect.bottom + 8 : 80}px`;
+        menu.style.top = `${rect ? Math.min(window.innerHeight - menu.offsetHeight - 12, rect.bottom + 8) : 80}px`;
     }
 
-    function toggleSelectedTokenCondition(condition) {
-        const token = window.selectedToken;
+    function openConditionMenu(token = window.selectedToken) {
         if (!token) return;
-        const tokenId = getTokenId(token);
-        if ((token.conditions || []).includes(condition)) removeCondition(tokenId, condition);
-        else addCondition(tokenId, condition);
+        buildConditionMenu(condition => toggleEntityCondition(getTokenId(token), condition));
     }
 
-    function addCondition(tokenId, condition) {
-        const token = findTokenById(tokenId) || (getTokenId(window.selectedToken) === tokenId ? window.selectedToken : null);
-        if (!token || !condition) return;
-        token.conditions = Array.isArray(token.conditions) ? token.conditions : [];
-        if (!token.conditions.includes(condition)) token.conditions.push(condition);
-        window.phaserScene?.renderTokenConditions?.(token);
-        const participant = window.combatState.participants.find(p => p.id === tokenId);
-        if (participant) participant.conditions = [...token.conditions];
-        updateCharacterConditions(tokenId, token.conditions);
-        if (typeof window.addSessionEvent === 'function') {
-            window.addSessionEvent('condition_added', 'Condicao adicionada', `${getTokenName(token)}: ${condition}`);
-        }
-        renderCombatTracker();
+    function openParticipantConditionMenu(participantId, anchor) {
+        buildConditionMenu(condition => addCondition(participantId, condition), anchor);
     }
 
-    function removeCondition(tokenId, condition) {
-        const token = findTokenById(tokenId) || (getTokenId(window.selectedToken) === tokenId ? window.selectedToken : null);
-        if (!token || !condition) return;
-        token.conditions = (token.conditions || []).filter(item => item !== condition);
-        window.phaserScene?.renderTokenConditions?.(token);
-        const participant = window.combatState.participants.find(p => p.id === tokenId);
-        if (participant) participant.conditions = [...token.conditions];
-        updateCharacterConditions(tokenId, token.conditions);
-        if (typeof window.addSessionEvent === 'function') {
-            window.addSessionEvent('condition_removed', 'Condicao removida', `${getTokenName(token)}: ${condition}`);
-        }
-        renderCombatTracker();
+    function toggleEntityCondition(entityId, condition) {
+        const participant = findParticipantByEntityId(entityId);
+        const token = findTokenById(entityId);
+        const current = participant?.conditions || (token?.conditions || []).map(normalizeCombatCondition);
+        const normalized = normalizeCombatCondition(condition);
+        if (current.some(item => normalizeCombatCondition(item).id === normalized.id)) removeCondition(entityId, normalized.id);
+        else addCondition(entityId, normalized);
     }
+
+    function addCondition(entityId, condition, duration = null) {
+        const normalized = normalizeCombatCondition({ ...(condition && typeof condition === 'object' ? condition : { name: condition }), ...(duration === null ? {} : { duration }) });
+        const participant = findParticipantByEntityId(entityId);
+        const token = findTokenById(entityId);
+        const current = participant?.conditions || (token?.conditions || []).map(normalizeCombatCondition);
+        if (!current.some(item => normalizeCombatCondition(item).id === normalized.id)) current.push(normalized);
+        updateEntityConditions(entityId, current);
+        window.addSessionEvent?.('condition_added', 'Condicao adicionada', `${participant?.name || (token ? getTokenName(token) : entityId)}: ${normalized.name}`);
+    }
+
+    function removeCondition(entityId, conditionId) {
+        const participant = findParticipantByEntityId(entityId);
+        const token = findTokenById(entityId);
+        const current = participant?.conditions || (token?.conditions || []).map(normalizeCombatCondition);
+        const removed = current.find(item => {
+            const condition = normalizeCombatCondition(item);
+            return condition.id === conditionId || condition.name === conditionId;
+        });
+        updateEntityConditions(entityId, current.filter(item => {
+            const condition = normalizeCombatCondition(item);
+            return condition.id !== conditionId && condition.name !== conditionId;
+        }));
+        if (removed) window.addSessionEvent?.('condition_removed', 'Condicao removida', `${participant?.name || (token ? getTokenName(token) : entityId)}: ${normalizeCombatCondition(removed).name}`);
+    }
+
+    function clearConditionsForEntity(entityId) { updateEntityConditions(entityId, []); }
 
     function restoreCombatState(state) {
-        window.combatState = {
-            active: !!state?.active,
-            round: state?.round || 1,
-            currentTurnIndex: state?.currentTurnIndex || 0,
-            participants: Array.isArray(state?.participants) ? state.participants.map(participant => ({
-                ...participant,
-                tokenRef: findTokenById(participant.id)
-            })) : []
-        };
+        window.combatState = normalizeCombatState(state);
+        window.combatState.participants.forEach(participant => {
+            hydrateParticipantFromLinkedEntity(participant, { fillConditions: !window.combatState.active });
+        });
         renderCombatTracker();
         highlightCurrentTurnToken();
     }
@@ -460,124 +628,55 @@
     function restoreCombatAfterTokensLoaded(state) {
         restoreCombatState(state);
         window.combatState.participants.forEach(participant => {
-            const token = findTokenById(participant.id);
-            if (!token) return;
-            const ficha = getCharacterByToken(participant.id);
-            if (ficha) {
-                token.hpAtual = ficha.hpAtual;
-                token.hpMax = ficha.hpMax;
-                token.conditions = Array.isArray(ficha.conditions)
-                    ? ficha.conditions.map(condition => condition?.name || condition).filter(Boolean)
-                    : [];
-            } else {
-                token.hpAtual = participant.hpAtual;
-                token.hpMax = participant.hpMax;
-                token.conditions = Array.isArray(participant.conditions) ? [...participant.conditions] : [];
+            hydrateParticipantFromLinkedEntity(participant, { fillConditions: !window.combatState.active });
+            if (window.combatState.active) {
+                syncParticipantMirrors(participant);
+                return;
             }
-            window.phaserScene?.updateTokenHP?.(participant.id, token.hpAtual, token.hpMax);
-            window.phaserScene?.renderTokenConditions?.(token);
-            syncParticipantFromToken(token);
+            const character = getParticipantCharacter(participant);
+            const token = getParticipantToken(participant);
+            if (character) {
+                participant.hpAtual = Number(character.hpAtual ?? participant.hpAtual ?? 10);
+                participant.hpMax = Number(character.hpMax ?? participant.hpMax ?? 10);
+                participant.conditions = (character.conditions || []).map(normalizeCombatCondition);
+            } else if (token) {
+                participant.hpAtual = Number(token.hpAtual ?? participant.hpAtual ?? 10);
+                participant.hpMax = Number(token.hpMax ?? participant.hpMax ?? 10);
+                participant.conditions = (token.conditions || []).map(normalizeCombatCondition);
+            }
+            syncParticipantMirrors(participant, { persistCharacter: false });
         });
         renderCombatTracker();
         highlightCurrentTurnToken();
     }
 
     function escapeCombatHtml(value) {
-        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#39;'
-        }[char]));
+        return String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
     }
+    function escapeCombatAttribute(value) { return escapeCombatHtml(value).replace(/`/g, '&#96;'); }
 
-    function syncSceneSettingsControls() {
-        const settings = window.sceneSettings || {};
-        const gridEnabled = document.getElementById('scene-grid-enabled');
-        const snap = document.getElementById('scene-grid-snap');
-        const gridSize = document.getElementById('scene-grid-size');
-        const distance = document.getElementById('scene-distance-cell');
-        const unit = document.getElementById('scene-distance-unit');
-        if (gridEnabled) gridEnabled.checked = settings.gridEnabled !== false;
-        if (snap) snap.checked = settings.snapToGrid !== false;
-        if (gridSize) gridSize.value = settings.gridSize || 70;
-        if (distance) distance.value = settings.distancePerCell || 2;
-        if (unit) unit.value = settings.distanceUnit || 'm';
-    }
-
-    function toggleGrid() {
-        window.phaserScene?.toggleGrid?.();
-        syncSceneSettingsControls();
-    }
-
-    function setGridSize(size) {
-        window.phaserScene?.setGridSize?.(size);
-        syncSceneSettingsControls();
-    }
-
-    function toggleSnapToGrid() {
-        window.phaserScene?.toggleSnapToGrid?.();
-        syncSceneSettingsControls();
-    }
-
-    function setSceneDistancePerCell(value) {
-        window.sceneSettings = {
-            ...(window.sceneSettings || {}),
-            distancePerCell: Math.max(0.1, parseFloat(value) || 1)
-        };
-        if (window.phaserScene) window.phaserScene.sceneSettings = window.sceneSettings;
-    }
-
-    function setSceneDistanceUnit(value) {
-        window.sceneSettings = {
-            ...(window.sceneSettings || {}),
-            distanceUnit: value || 'm'
-        };
-        if (window.phaserScene) window.phaserScene.sceneSettings = window.sceneSettings;
-    }
-
-    window.startCombat = startCombat;
-    window.addSelectedTokenToCombat = addSelectedTokenToCombat;
-    window.rollInitiativeForCombat = rollInitiativeForCombat;
-    window.endCombat = endCombat;
-    window.renderCombatTracker = renderCombatTracker;
-    window.highlightCurrentTurnToken = highlightCurrentTurnToken;
-    window.showTokenQuickBar = showTokenQuickBar;
-    window.positionTokenQuickBar = positionQuickBar;
-    window.hideTokenQuickBar = hideTokenQuickBar;
-    window.applyDamageToSelectedToken = applyDamageToSelectedToken;
-    window.applyHealToSelectedToken = applyHealToSelectedToken;
-    window.openConditionMenu = openConditionMenu;
-    window.addCondition = addCondition;
-    window.removeCondition = removeCondition;
-    window.restoreCombatState = restoreCombatState;
-    window.restoreCombatAfterTokensLoaded = restoreCombatAfterTokensLoaded;
-    window.getCharacterByToken = getCharacterByToken;
-    window.updateCharacterHP = updateCharacterHP;
-    window.updateCharacterConditions = updateCharacterConditions;
-    window.updateTokenHPBar = updateTokenHPBar;
-    window.setCombatTurn = setCombatTurn;
-    window.removeParticipantFromCombat = removeParticipantFromCombat;
-    window.promptDamageToSelectedToken = promptDamageToSelectedToken;
-    window.promptHealToSelectedToken = promptHealToSelectedToken;
-    window.openHpAdjustModal = openHpAdjustModal;
-    window.openSelectedTokenSheet = openSelectedTokenSheet;
-    window.removeSelectedToken = removeSelectedToken;
-    window.toggleSelectedTokenCondition = toggleSelectedTokenCondition;
-    window.syncSceneSettingsControls = syncSceneSettingsControls;
-    window.toggleGrid = toggleGrid;
-    window.setGridSize = setGridSize;
-    window.toggleSnapToGrid = toggleSnapToGrid;
-    window.setSceneDistancePerCell = setSceneDistancePerCell;
-    window.setSceneDistanceUnit = setSceneDistanceUnit;
-    window.nextTurn = function nextTurnBridge() {
-        if (window.combatState?.active) return combatNextTurn();
-        if (typeof legacyNextTurn === 'function') return legacyNextTurn();
-    };
+    Object.assign(window, {
+        startCombat, addSelectedTokenToCombat, addManualCombatParticipant, rollInitiativeForCombat,
+        sortCombatParticipants, nextTurn, endCombat, renderCombatTracker, highlightCurrentTurnToken,
+        showTokenQuickBar, positionTokenQuickBar: positionQuickBar, hideTokenQuickBar,
+        applyDamageToSelectedToken, applyHealToSelectedToken, openConditionMenu, addCondition,
+        removeCondition, clearConditionsForEntity, restoreCombatState, restoreCombatAfterTokensLoaded,
+        getCharacterByToken, updateEntityVitals, updateEntityConditions,
+        setCombatTurn, removeParticipantFromCombat,
+        promptDamageToSelectedToken, promptHealToSelectedToken, openHpAdjustModal,
+        openSelectedTokenSheet, removeSelectedToken
+    });
 
     document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('combat-tracker-list')?.addEventListener('click', event => {
+            const actionButton = event.target.closest('[data-combat-action]');
+            if (!actionButton) return;
+            const action = actionButton.dataset.combatAction;
+            if (action === 'set-turn') setCombatTurn(Number(actionButton.dataset.combatIndex));
+            if (action === 'remove-participant') removeParticipantFromCombat(actionButton.dataset.participantId);
+            if (action === 'add-condition') openParticipantConditionMenu(actionButton.dataset.participantId, actionButton);
+            if (action === 'remove-condition') removeCondition(actionButton.dataset.participantId, actionButton.dataset.conditionId);
+        });
         renderCombatTracker();
-        syncSceneSettingsControls();
     });
 })();

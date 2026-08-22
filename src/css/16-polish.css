@@ -366,8 +366,7 @@ body::after {
 .combat-row.is-current,
 .asset-card.is-selected,
 .asset-card__actions .ui-icon-btn.is-active,
-.compendium-entry-card.is-selected,
-.init-entry.active-turn {
+.compendium-entry-card.is-selected {
   border-color: rgba(240, 199, 102, 0.72) !important;
   background:
     linear-gradient(145deg, rgba(216, 167, 57, 0.15), rgba(255, 255, 255, 0.035)),

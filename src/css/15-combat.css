@@ -42,6 +42,12 @@
   min-width: 0;
 }
 
+.combat-participant-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px 72px auto;
+  gap: 8px;
+}
+
 .combat-tracker-list {
   display: grid;
   gap: 9px;
@@ -105,6 +111,15 @@
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+}
+
+.combat-row__actions {
+  display: grid;
+  gap: 5px;
+}
+
+@media (max-width: 680px) {
+  .combat-participant-form { grid-template-columns: 1fr 1fr; }
 }
 
 .combat-condition-badge,
