@@ -15,9 +15,6 @@
             const state = window.phaserScene.getBoardState();
             state.sceneName = cleanSceneName;
             state.sceneId = window.currentSceneId || state.sceneId;
-            if (state.sceneDirector && !state.sceneDirector.sceneName) {
-                state.sceneDirector.sceneName = state.sceneName;
-            }
             await window.api.saveScene(cleanSceneName, JSON.stringify(state));
             addChatMessage("Sistema", `Cena <strong>${cleanSceneName}</strong> salva com sucesso!`, "#22c55e");
             document.getElementById('save-scene-modal').classList.add('hidden');

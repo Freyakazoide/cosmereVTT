@@ -21,7 +21,6 @@
 
             chatLog.push({ user, msg, color, timestamp: Date.now() });
             if (chatLog.length > 200) chatLog = chatLog.slice(-200);
-            try { localStorage.setItem('cosmere_chat', JSON.stringify(chatLog)); } catch(e) {}
         }
 
        function rollDice() {
@@ -142,6 +141,7 @@ function loadChatHistory() {
         const savedChat = localStorage.getItem('cosmere_chat');
         if (savedChat) {
             chatLog = JSON.parse(savedChat);
+            localStorage.removeItem('cosmere_chat');
             const log = document.getElementById('chat-log');
             log.innerHTML = '';
             chatLog.forEach(entry => {

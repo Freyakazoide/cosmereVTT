@@ -38,22 +38,21 @@
         };
     }
 
-    function loadPersistedSessionState() {
+    function loadLegacySessionState() {
         try {
             const saved = localStorage.getItem(SESSION_STORAGE_KEY);
-            return saved ? normalizeSessionState(JSON.parse(saved)) : null;
+            if (!saved) return null;
+            const state = normalizeSessionState(JSON.parse(saved));
+            localStorage.removeItem(SESSION_STORAGE_KEY);
+            return state;
         } catch (error) {
-            console.warn('Nao foi possivel restaurar a linha do tempo da sessao.', error);
+            console.warn('Nao foi possivel migrar a linha do tempo legada da sessao.', error);
             return null;
         }
     }
 
     function persistSessionState() {
-        try {
-            localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(ensureSessionState()));
-        } catch (error) {
-            console.warn('Nao foi possivel salvar a linha do tempo da sessao.', error);
-        }
+        return ensureSessionState();
     }
 
     function restoreSessionState(state, options = {}) {
@@ -72,7 +71,7 @@
     }
 
     window.SESSION_EVENT_TYPES = window.SESSION_EVENT_TYPES || SESSION_EVENT_TYPES;
-    window.sessionState = normalizeSessionState(window.sessionState || loadPersistedSessionState());
+    window.sessionState = normalizeSessionState(window.sessionState || loadLegacySessionState());
 
     function ensureSessionState() {
         window.sessionState = normalizeSessionState(window.sessionState);

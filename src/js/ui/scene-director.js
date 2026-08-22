@@ -1,4 +1,6 @@
 // Scene Director: lightweight session orchestration built on existing VTT APIs.
+// Phase 2 boundary: this unsaved draft remains the only campaign-shaped localStorage
+// value. Saved scenes use sceneDirector inside board state and never use this cache as authority.
 let directedSceneDraft = {};
 let directorAssets = {
     maps: [],
@@ -162,7 +164,7 @@ function populateDirectorSelects() {
 function renderDirectorPinnedNotes() {
     const container = getDirectorEl('director-pinned-notes');
     if (!container) return;
-    const notes = (window.pinnedNotes || []).filter(note => !note.isArchived);
+    const notes = (window.getScenePinnedNotes?.() || []).filter(note => !note.isArchived);
     if (notes.length === 0) {
         container.innerHTML = '<div class="director-empty">Nenhuma pista fixada ainda.</div>';
         return;

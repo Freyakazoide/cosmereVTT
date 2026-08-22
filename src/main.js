@@ -96,31 +96,6 @@ ipcMain.handle('get-maps', async () => {
   return discover(mapsDir);
 });
 
-// Handler para ler tokens recursivamente (Migrado do assets.py)
-ipcMain.handle('get-tokens', async () => {
-  const tokensDir = path.join(__dirname, '../assets/persons');
-  if (!fs.existsSync(tokensDir)) return [];
-
-  const discover = (dir, list = []) => {
-    const files = fs.readdirSync(dir);
-    files.forEach(file => {
-      const fullPath = path.join(dir, file);
-      if (fs.statSync(fullPath).isDirectory()) {
-        discover(fullPath, list);
-      } else if (/\.(png|jpg|jpeg|webp)$/i.test(file)) {
-        const category = path.relative(tokensDir, dir) || "Raiz";
-        list.push({
-          name: file.replace(/\.[^/.]+$/, ""),
-          path: fullPath,
-          category: category
-        });
-      }
-    });
-    return list;
-  };
-  return discover(tokensDir);
-});
-
 // --- SISTEMA DE CENAS E FICHAS (SQLITE PRO) ---
 db.serialize(() => {
   db.run("CREATE TABLE IF NOT EXISTS scenes (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, state TEXT)");
@@ -839,19 +814,6 @@ ipcMain.handle('get-videos', async () => {
   return files.filter(file => /\.(mp4|webm|ogg)$/i.test(file)).map(file => ({
     name: file,
     path: path.join(videoDir, file)
-  }));
-});
-
-// Handler para ler retratos (Portraits) e Tokens
-ipcMain.handle('get-portraits', async (event, tipo) => {
-  // Se o tipo for 'token', lê a pasta persons. Se não, lê portraits.
-  const pasta = tipo === 'token' ? 'persons' : 'portraits';
-  const portDir = path.join(__dirname, '../assets/' + pasta);
-  if (!fs.existsSync(portDir)) return [];
-  const files = fs.readdirSync(portDir);
-  return files.filter(file => /\.(png|jpg|jpeg|webp)$/i.test(file)).map(file => ({
-    name: file,
-    path: path.join(portDir, file)
   }));
 });
 

@@ -205,11 +205,7 @@ document.addEventListener('dblclick', (e) => {
             const entries = await window.api.getCompendiumEntries();
             state.entries = Array.isArray(entries) ? entries.map(normalizeCompendiumEntry) : [];
         } else {
-            try {
-                state.entries = JSON.parse(localStorage.getItem('cosmere_compendio') || '[]').map(normalizeLegacyEntry);
-            } catch (error) {
-                state.entries = [];
-            }
+            state.entries = [];
         }
 
         await migrateLegacyLocalCompendium();
@@ -218,7 +214,6 @@ document.addEventListener('dblclick', (e) => {
 
     async function migrateLegacyLocalCompendium() {
         if (!window.api?.saveCompendiumEntry) return;
-        if (window.compendiumState.entries.length > 0) return;
 
         let legacy = [];
         try {
@@ -231,6 +226,7 @@ document.addEventListener('dblclick', (e) => {
         for (const item of legacy) {
             await saveCompendiumEntry(normalizeLegacyEntry(item), { silent: true });
         }
+        localStorage.removeItem('cosmere_compendio');
     }
 
     async function saveCompendiumEntry(entry, options = {}) {
@@ -245,10 +241,6 @@ document.addEventListener('dblclick', (e) => {
         if (index >= 0) state.entries[index] = normalized;
         else state.entries.push(normalized);
 
-        if (!window.api?.saveCompendiumEntry) {
-            localStorage.setItem('cosmere_compendio', JSON.stringify(state.entries));
-        }
-
         if (!options.silent) renderCompendium();
         return normalized;
     }
@@ -257,9 +249,6 @@ document.addEventListener('dblclick', (e) => {
         const state = ensureState();
         if (window.api?.deleteCompendiumEntry) await window.api.deleteCompendiumEntry(id);
         state.entries = state.entries.filter(entry => entry.id !== id);
-        if (!window.api?.deleteCompendiumEntry) {
-            localStorage.setItem('cosmere_compendio', JSON.stringify(state.entries));
-        }
         renderCompendium();
     }
 
@@ -669,7 +658,12 @@ document.addEventListener('dblclick', (e) => {
     function spawnCreatureFromCompendium(entry, x, y) {
         if (!window.phaserScene || !window.fichasSalvas) return;
         const characterId = `actor_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-        const tokenPath = entry.actorTemplate?.tokenPath || entry.mechanics?.tokenPath || entry.image || '../assets/persons/default.png';
+        const libraryToken = window.assetsLibraryState?.assets?.find(asset => asset.type === 'token' && !asset.missing);
+        const tokenPath = entry.actorTemplate?.tokenPath || entry.mechanics?.tokenPath || entry.image || libraryToken?.path || '';
+        if (!tokenPath) {
+            window.mostrarToast?.('Vincule uma arte de token antes de colocar esta criatura no mapa.', 'warning');
+            return;
+        }
         const ficha = {
             id: characterId,
             nome: entry.name,

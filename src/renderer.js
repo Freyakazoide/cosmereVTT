@@ -1,5 +1,6 @@
 const PIXELS_POR_UNIDADE = 70;
 const METROS_POR_QUADRADO = 2;
+const BOARD_STATE_VERSION = 3;
 
 function normalizarCaminhoVtt(path) {
     return String(path || '').replace(/\\/g, '/');
@@ -222,71 +223,116 @@ function normalizeBoardAssetListVtt(primary, fallback) {
 
 function normalizeBoardState(state, options = {}) {
     const source = state && typeof state === 'object' ? state : {};
-    const sceneName = source.sceneName || source.sceneDirector?.sceneName || options.sceneName || window.currentSceneName || '';
+    const sceneName = source.sceneName || source.sceneDirector?.sceneName || options.sceneName || '';
     const sceneId = source.sceneId || (sceneName ? criarSceneIdVtt(sceneName) : '');
-    const mapas = normalizeBoardAssetListVtt(source.mapas, source.maps).map(mapa => ({
-        ...(mapa || {}),
-        key: mapa?.key || mapa?.textureKey || '',
-        textureKey: mapa?.textureKey || mapa?.key || '',
-        path: mapa?.path || mapa?.caminhoAbsoluto || ''
+    const maps = normalizeBoardAssetListVtt(source.maps, source.mapas).map(map => ({
+        textureKey: map?.textureKey || map?.key || '',
+        path: map?.path || map?.caminhoAbsoluto || '',
+        x: Number(map?.x) || 0,
+        y: Number(map?.y) || 0,
+        scaleX: Number(map?.scaleX) || 1,
+        scaleY: Number(map?.scaleY ?? map?.scaleX) || 1,
+        width: Number(map?.width) || null,
+        height: Number(map?.height) || null,
+        locked: Boolean(map?.locked)
     }));
     const tokens = normalizeBoardAssetListVtt(source.tokens, []).map(token => ({
-        ...(token || {}),
-        key: token?.key || token?.textureKey || '',
         textureKey: token?.textureKey || token?.key || '',
         path: token?.path || token?.caminhoAbsoluto || '',
-        elev: token?.elev ?? token?.elevation ?? '',
+        x: Number(token?.x) || 0,
+        y: Number(token?.y) || 0,
+        scaleX: Number(token?.scaleX) || 1,
+        scaleY: Number(token?.scaleY ?? token?.scaleX) || 1,
+        tokenId: token?.tokenId || token?.characterId || token?.id || '',
+        charName: token?.charName || token?.name || '',
         elevation: token?.elevation ?? token?.elev ?? '',
         gridSize: token?.gridSize || 1,
         locked: !!token?.locked,
         notes: token?.notes || '',
+        hpAtual: token?.hpAtual ?? token?.hp ?? null,
+        hpMax: token?.hpMax ?? null,
+        aura: token?.aura || null,
+        auraEmoji: token?.auraEmoji || token?.status || null,
         conditions: Array.isArray(token?.conditions) ? token.conditions : []
     }));
+    const legacyGrid = source.grid || {};
     const sceneSettings = {
         ...getDefaultSceneSettingsVtt(),
-        ...(window.sceneSettings || {}),
-        ...(source.sceneSettings || {}),
-        ...(source.grid || {})
+        ...(legacyGrid.visible !== undefined ? { gridEnabled: legacyGrid.visible } : {}),
+        ...(legacyGrid.size !== undefined ? { gridSize: legacyGrid.size } : {}),
+        ...(legacyGrid.metersPerSquare !== undefined ? { distancePerCell: legacyGrid.metersPerSquare } : {}),
+        ...(source.sceneSettings || {})
     };
     sceneSettings.gridSize = Number(sceneSettings.gridSize || sceneSettings.size) || PIXELS_POR_UNIDADE;
     sceneSettings.gridEnabled = sceneSettings.gridEnabled ?? sceneSettings.visible ?? true;
     sceneSettings.distancePerCell = Number(sceneSettings.distancePerCell || sceneSettings.metersPerSquare) || METROS_POR_QUADRADO;
     sceneSettings.distanceUnit = sceneSettings.distanceUnit || 'm';
-
-    const grid = {
-        visible: source.grid?.visible ?? sceneSettings.gridEnabled,
-        size: Number(source.grid?.size || sceneSettings.gridSize) || PIXELS_POR_UNIDADE,
-        metersPerSquare: Number(source.grid?.metersPerSquare || sceneSettings.distancePerCell) || METROS_POR_QUADRADO
+    const normalizedSceneSettings = {
+        gridEnabled: sceneSettings.gridEnabled !== false,
+        gridSize: sceneSettings.gridSize,
+        snapToGrid: sceneSettings.snapToGrid !== false,
+        distancePerCell: sceneSettings.distancePerCell,
+        distanceUnit: sceneSettings.distanceUnit
     };
     const fogAlpha = Number(source.fog?.alpha ?? source.fogOpacity ?? 0.9);
     const fog = {
-        ...(source.fog || {}),
         alpha: Number.isFinite(fogAlpha) ? fogAlpha : 0.9,
-        mode: source.fog?.mode || window.toolConfig?.fogMode || 'reveal',
+        mode: source.fog?.mode || 'reveal',
         snapshot: source.fog?.snapshot || null
     };
-    const combatState = {
-        ...getDefaultCombatStateVtt(),
-        ...(source.combatState || {}),
-        participants: Array.isArray(source.combatState?.participants) ? source.combatState.participants : []
-    };
+    const legacyInitiative = Array.isArray(source.initiative) ? source.initiative : [];
+    const rawCombatState = source.combatState && Array.isArray(source.combatState.participants)
+        ? source.combatState
+        : {
+            active: legacyInitiative.length > 0,
+            round: source.round || 1,
+            currentTurnIndex: 0,
+            participants: legacyInitiative.map((entry, index) => ({
+                id: `legacy-${criarSceneIdVtt(entry?.name || `participant-${index}`)}-${index}`,
+                name: entry?.name || 'Participante',
+                initiative: Number(entry?.initiative ?? entry?.val) || 0,
+                hpAtual: entry?.hpAtual ?? entry?.hp ?? null,
+                hpMax: entry?.hpMax ?? null,
+                conditions: Array.isArray(entry?.conditions) ? entry.conditions : [],
+                tokenId: entry?.tokenId || null,
+                characterId: entry?.characterId || null
+            }))
+        };
+    const combatState = typeof window.normalizeCombatState === 'function'
+        ? window.normalizeCombatState(rawCombatState)
+        : {
+            ...getDefaultCombatStateVtt(),
+            ...rawCombatState,
+            round: Math.max(1, Number(rawCombatState.round) || 1),
+            participants: Array.isArray(rawCombatState.participants) ? rawCombatState.participants : []
+        };
     const sessionState = {
         ...getDefaultSessionStateVtt(),
         ...(source.sessionState || {}),
         events: Array.isArray(source.sessionState?.events) ? source.sessionState.events : []
     };
-    const pinnedNotes = Array.isArray(source.pinnedNotes) ? source.pinnedNotes : [];
-    const revealedNotes = Array.isArray(source.revealedNotes) ? source.revealedNotes : [];
-    const sceneNotes = Array.isArray(source.sceneNotes)
+    const pinnedNotes = Array.isArray(source.pinnedNotes) ? source.pinnedNotes.map(note => ({ ...note, isPinned: true })) : [];
+    const revealedNotes = Array.isArray(source.revealedNotes) ? source.revealedNotes.map(note => ({ ...note, isRevealed: true })) : [];
+    const rawSceneNotes = Array.isArray(source.sceneNotes)
         ? source.sceneNotes
         : [
             ...pinnedNotes,
             ...revealedNotes.filter(note => !pinnedNotes.some(pinned => pinned?.id && pinned.id === note?.id))
         ];
+    const sceneNotes = rawSceneNotes.map(note => {
+        const { body, ...canonicalNote } = note || {};
+        return {
+            ...canonicalNote,
+            content: canonicalNote.content ?? body ?? ''
+        };
+    });
+    const sceneDirector = source.sceneDirector && typeof source.sceneDirector === 'object'
+        ? { ...source.sceneDirector }
+        : null;
+    if (sceneDirector) delete sceneDirector.sceneName;
 
     return {
-        ...source,
-        version: Math.max(Number(source.version) || 1, 2),
+        version: BOARD_STATE_VERSION,
         sceneName,
         sceneId,
         camera: {
@@ -294,32 +340,49 @@ function normalizeBoardState(state, options = {}) {
             y: Number(source.camera?.y) || 0,
             zoom: Number(source.camera?.zoom) || 1
         },
-        grid,
-        sceneSettings,
+        sceneSettings: normalizedSceneSettings,
         combatState,
         sessionState,
         weather: source.weather || null,
         fog,
-        fogOpacity: fog.alpha,
-        mapas,
-        maps: mapas,
+        maps,
         tokens,
         drawings: Array.isArray(source.drawings) ? source.drawings : [],
-        initiative: Array.isArray(source.initiative) ? source.initiative : [],
-        round: source.round || combatState.round || 1,
         audio: {
             currentTrack: source.audio?.currentTrack || null,
             volume: Number(source.audio?.volume ?? 0.5)
         },
-        pinnedNotes,
-        revealedNotes,
         sceneNotes,
         revealedHandouts: Array.isArray(source.revealedHandouts) ? source.revealedHandouts : [],
-        sceneDirector: source.sceneDirector || null
+        sceneDirector
     };
 }
 
 window.normalizeBoardState = normalizeBoardState;
+
+function getDrawingBoundsVtt(meta, padding = 8) {
+    if (!meta) return null;
+    if (meta.shape === 'circle') {
+        const radius = Math.max(0, Number(meta.radius) || 0);
+        return new Phaser.Geom.Rectangle(meta.x - radius - padding, meta.y - radius - padding, (radius + padding) * 2, (radius + padding) * 2);
+    }
+    if (meta.shape === 'square') {
+        return new Phaser.Geom.Rectangle(meta.x - padding, meta.y - padding, (Number(meta.width) || 0) + padding * 2, (Number(meta.height) || 0) + padding * 2);
+    }
+    if (Array.isArray(meta.points) && meta.points.length) {
+        const xs = meta.points.map(point => Number(point.x) || 0);
+        const ys = meta.points.map(point => Number(point.y) || 0);
+        const minX = Math.min(...xs);
+        const minY = Math.min(...ys);
+        return new Phaser.Geom.Rectangle(
+            minX - padding,
+            minY - padding,
+            Math.max(padding * 2, Math.max(...xs) - minX + padding * 2),
+            Math.max(padding * 2, Math.max(...ys) - minY + padding * 2)
+        );
+    }
+    return null;
+}
 
 class MainScene extends Phaser.Scene {
     constructor() { super({ key: 'MainScene' }); }
@@ -461,7 +524,8 @@ class MainScene extends Phaser.Scene {
                 // Borracha de varredura real: destrói qualquer desenho que o ponteiro encostar
                 const pointerRect = new Phaser.Geom.Rectangle(pMundo.x - 10, pMundo.y - 10, 20, 20);
                 this.camadaTatico.list.forEach(obj => {
-                    if (obj.getBounds && Phaser.Geom.Intersects.RectangleToRectangle(pointerRect, obj.getBounds())) {
+                    const drawingBounds = getDrawingBoundsVtt(obj.drawingMeta);
+                    if (drawingBounds && Phaser.Geom.Intersects.RectangleToRectangle(pointerRect, drawingBounds)) {
                         obj.destroy();
                     }
                 });
@@ -557,7 +621,8 @@ class MainScene extends Phaser.Scene {
                     this.recordDrawing(obj);
 
                 } else if (this.ferramentaAtual === 'draw') {
-                    this.currentDrawingPath.setInteractive(this.currentDrawingPath.getBounds(), Phaser.Geom.Rectangle.Contains);
+                    const drawingBounds = getDrawingBoundsVtt(this.currentDrawingPath.drawingMeta);
+                    if (drawingBounds) this.currentDrawingPath.setInteractive(drawingBounds, Phaser.Geom.Rectangle.Contains);
                     const path = this.currentDrawingPath;
                     path.on('pointerdown', () => { if(this.ferramentaAtual === 'eraser') path.destroy(); });
                     this.recordDrawing(path);
@@ -677,7 +742,7 @@ class MainScene extends Phaser.Scene {
 
     restoreFogState(state) {
         const fogState = state?.fog || {};
-        const alpha = fogState.alpha ?? state?.fogOpacity ?? 0.9;
+        const alpha = fogState.alpha ?? 0.9;
         const mode = fogState.mode || 'reveal';
         const snapshot = fogState.snapshot || null;
 
@@ -946,20 +1011,15 @@ class MainScene extends Phaser.Scene {
         const camera = this.cameras.main;
         const notesState = typeof window.getSceneAwareNotesState === 'function'
             ? window.getSceneAwareNotesState()
-            : { pinnedNotes: window.pinnedNotes || [], revealedNotes: [] };
+            : { sceneNotes: [] };
         const state = {
-            version: 2,
+            version: BOARD_STATE_VERSION,
             sceneName: window.currentSceneName || window.directedSceneDraft?.sceneName || '',
             sceneId: window.currentSceneId || notesState.sceneId || '',
             camera: {
                 x: camera.scrollX,
                 y: camera.scrollY,
                 zoom: camera.zoom
-            },
-            grid: {
-                visible: this.grid ? this.grid.visible : true,
-                size: this.getSceneGridSize(),
-                metersPerSquare: this.getSceneSettings().distancePerCell
             },
             sceneSettings: this.saveSceneGridSettings(),
             combatState: {
@@ -981,30 +1041,21 @@ class MainScene extends Phaser.Scene {
                 mode: window.toolConfig ? window.toolConfig.fogMode : 'reveal',
                 snapshot: this.createFogSnapshot()
             },
-            fogOpacity: this.fogRT ? this.fogRT.alpha : 0.9,
-            mapas: [],
             maps: [],
             tokens: [],
             drawings: [],
-            initiative: window.initiativeList || [],
-            round: window.currentRound || 1,
             audio: {
                 currentTrack: window.currentAudioTrack || null,
                 volume: document.getElementById('audio-volume') ? parseFloat(document.getElementById('audio-volume').value) : 0.5
             },
-            pinnedNotes: notesState.pinnedNotes || [],
-            revealedNotes: notesState.revealedNotes || [],
-            sceneNotes: notesState.sceneNotes || [
-                ...(notesState.pinnedNotes || []),
-                ...(notesState.revealedNotes || []).filter(note => !(notesState.pinnedNotes || []).some(pinned => pinned.id === note.id))
-            ],
+            sceneNotes: notesState.sceneNotes || [],
             revealedHandouts: window.revealedHandouts || [],
             sceneDirector: window.directedSceneDraft || null
         };
         if (this.mapasAtivos) {
             this.mapasAtivos.forEach(m => {
                 const mapState = {
-                    key: m.texture.key.split('_').slice(0, -1).join('_'),
+                    textureKey: m.texture.key,
                     path: m.caminhoAbsoluto,
                     x: m.x,
                     y: m.y,
@@ -1014,15 +1065,14 @@ class MainScene extends Phaser.Scene {
                     height: m.displayHeight,
                     locked: this.mapLocked
                 };
-                state.mapas.push(mapState);
                 state.maps.push(mapState);
             });
         }
         if (this.camadaTokens.list) {
             this.camadaTokens.list.forEach(t => {
                 const ficha = (window.fichasSalvas && t.tokenId) ? window.fichasSalvas[t.tokenId] : null;
+                const participant = window.combatState?.participants?.find(item => item.id === t.tokenId || item.tokenId === t.tokenId);
                 state.tokens.push({
-                    key: t.texture.key,
                     textureKey: t.texture.key,
                     path: t.caminhoAbsoluto,
                     x: t.x,
@@ -1030,18 +1080,18 @@ class MainScene extends Phaser.Scene {
                     scaleX: t.scaleX,
                     scaleY: t.scaleY,
                     gridSize: t.gridSize || 1,
-                    elev: t.elevText ? t.elevText.text : '',
                     elevation: t.elevText ? t.elevText.text : '',
                     tokenId: t.tokenId,
                     aura: t.auraColor || null,
                     auraEmoji: t.statusText ? t.statusText.text : null,
-                    status: t.statusText ? t.statusText.text : null,
                     charName: t.charName,
-                    hp: ficha ? ficha.hpAtual : t.hpAtual,
-                    hpMax: ficha ? ficha.hpMax : t.hpMax,
+                    hpAtual: participant?.hpAtual ?? t.hpAtual ?? ficha?.hpAtual ?? null,
+                    hpMax: participant?.hpMax ?? t.hpMax ?? ficha?.hpMax ?? null,
                     locked: !!t.locked,
                     notes: t.notes || '',
-                    conditions: Array.isArray(t.conditions) ? [...t.conditions] : []
+                    conditions: participant
+                        ? participant.conditions.map(condition => condition.name || condition.id || String(condition))
+                        : (Array.isArray(t.conditions) ? [...t.conditions] : [])
                 });
             });
         }
@@ -1050,7 +1100,7 @@ class MainScene extends Phaser.Scene {
                 .filter(obj => obj.drawingMeta && obj.visible !== false && obj.active !== false)
                 .map(obj => obj.drawingMeta);
         }
-        return state;
+        return normalizeBoardState(state);
     }
 
     loadBoardState(state) {
@@ -1058,48 +1108,35 @@ class MainScene extends Phaser.Scene {
         state = typeof window.normalizeBoardState === 'function'
             ? window.normalizeBoardState(state)
             : state;
-        state.mapas = state.mapas || state.maps || [];
-        state.tokens = state.tokens || [];
-        this.loadSceneGridSettings(state.sceneSettings || state.grid || {});
+        this.loadSceneGridSettings(state.sceneSettings);
         this.camadaMapa.removeAll(true);
         this.clearTokenLayerVtt();
         this.camadaTatico.removeAll(true);
         this.drawingHistory = [];
         this.redoHistory = [];
         this.mapasAtivos = [];
+        const sceneMapLocked = state.maps.some(mapState => mapState.locked);
+        if (typeof window.restoreMapLockState === 'function') window.restoreMapLockState(sceneMapLocked);
+        else this.mapLocked = sceneMapLocked;
         if (state.camera) {
             this.cameras.main.setScroll(state.camera.x || 0, state.camera.y || 0);
             this.cameras.main.setZoom(state.camera.zoom || 1);
         }
-        if (this.grid && state.grid) {
-            this.grid.setVisible(state.grid.visible !== false);
-        }
         if (this.fogRT) {
-            this.fogRT.setAlpha(state.fog?.alpha ?? state.fogOpacity ?? 0.9);
+            this.fogRT.setAlpha(state.fog.alpha);
             if (window.toolConfig && state.fog?.mode) window.toolConfig.fogMode = state.fog.mode;
         }
         if (state.weather && this.setAdvancedWeather) {
             this.setAdvancedWeather(state.weather);
         }
-        if (Array.isArray(state.initiative)) {
-            window.initiativeList = state.initiative;
-            if (typeof initiativeList !== 'undefined') initiativeList = state.initiative;
-            if (typeof renderInitiative === 'function') renderInitiative();
-        }
-        if (state.round) {
-            window.currentRound = state.round;
-            if (typeof currentRound !== 'undefined') currentRound = state.round;
-            const roundCounter = document.getElementById('round-counter');
-            if (roundCounter) roundCounter.textContent = `Round: ${state.round}`;
-        }
         if (state.sceneDirector && typeof restoreDirectedSceneFromState === 'function') {
-            restoreDirectedSceneFromState(state.sceneDirector);
+            restoreDirectedSceneFromState({ ...state.sceneDirector, sceneName: state.sceneName });
         } else if (state.sceneDirector) {
             window.directedSceneDraft = state.sceneDirector;
         }
         if (state.sessionState) {
             if (typeof window.restoreSessionState === 'function') {
-                window.restoreSessionState(state.sessionState);
+                window.restoreSessionState(state.sessionState, { persist: false });
             } else {
                 window.sessionState = state.sessionState;
                 if (typeof window.renderSessionTimeline === 'function') {
@@ -1113,9 +1150,8 @@ class MainScene extends Phaser.Scene {
         if (typeof restoreSceneNotesFromBoardState === 'function') {
             restoreSceneNotesFromBoardState(state);
         } else {
-            window.currentSceneName = state.sceneName || state.sceneDirector?.sceneName || '';
+            window.currentSceneName = state.sceneName || '';
             window.currentSceneId = state.sceneId || '';
-            window.pinnedNotes = Array.isArray(state.pinnedNotes) ? state.pinnedNotes : [];
         }
         if (Array.isArray(state.revealedHandouts)) {
             window.revealedHandouts = state.revealedHandouts;
@@ -1126,66 +1162,79 @@ class MainScene extends Phaser.Scene {
         
         const restoreFogAfterAssets = () => this.restoreFogState(state);
 
-        state.mapas.forEach(m => {
-            const ext = m.path.split('.').pop().toLowerCase();
-            const isVideo = ['webm', 'mp4'].includes(ext);
-            
-            if (isVideo) this.load.video(m.key, `file://${m.path}`);
-            else this.load.image(m.key, `file://${m.path}`);
-            
-            this.load.once('complete', () => {
-                let novoMapa;
-                if (isVideo) {
-                    novoMapa = this.add.video(m.x, m.y, m.key).setInteractive();
-                    novoMapa.play(true);
-                } else {
-                    novoMapa = this.add.image(m.x, m.y, m.key).setInteractive();
-                }
-                
-                novoMapa.caminhoAbsoluto = m.path;
-                this.input.setDraggable(novoMapa, this.ferramentaAtual === 'map-edit');
-                novoMapa.on('drag', (p, dx, dy) => { if(this.ferramentaAtual==='map-edit'){ novoMapa.x=dx; novoMapa.y=dy;} });
-                novoMapa.on('dragend', () => {
-                    const gridSize = this.getSceneGridSize();
-                    novoMapa.x = Math.round(novoMapa.x / gridSize) * gridSize;
-                    novoMapa.y = Math.round(novoMapa.y / gridSize) * gridSize;
-                });
-                if (m.scaleX) novoMapa.setScale(m.scaleX, m.scaleY || m.scaleX);
-                this.mapasAtivos.push(novoMapa);
-                this.camadaMapa.add(novoMapa);
-                this.resetFogArea(this.isFogCovered);
-            });
-        });
-        if (state.mapas.length > 0) {
-            this.load.once('complete', restoreFogAfterAssets);
-        } else {
-            restoreFogAfterAssets();
-        }
-        this.load.start();
+        const isVideoAsset = asset => ['webm', 'mp4'].includes(String(asset?.path || '').split('.').pop().toLowerCase());
+        const hasAssetTexture = (key, isVideo) => isVideo ? this.cache.video.has(key) : this.textures.exists(key);
+        let queuedAssets = 0;
 
-        const pendingTokenSpawns = state.tokens.map(t => new Promise(resolve => {
-            const key = t.key || t.textureKey;
-            const ext = t.path.split('.').pop().toLowerCase();
-            const isVideo = ['webm', 'mp4'].includes(ext);
-            
-           if (!this.textures.exists(key) && !this.cache.video.has(key)) {
-                if (isVideo) this.load.video(key, `file://${t.path}`);
-                else this.load.image(key, `file://${t.path}`);
-                
-                this.load.once('complete', () => {
-                    this.spawnTokenAt(key, t.path, t.x, t.y, t.elev || t.elevation, t.tokenId, isVideo, t.charName, t);
-                    resolve();
+        const queueAsset = asset => {
+            const key = asset.textureKey;
+            const isVideo = isVideoAsset(asset);
+            if (!key || !asset.path || hasAssetTexture(key, isVideo)) return;
+            if (isVideo) this.load.video(key, `file://${asset.path}`);
+            else this.load.image(key, `file://${asset.path}`);
+            queuedAssets++;
+        };
+
+        state.maps.forEach(queueAsset);
+        state.tokens.forEach(queueAsset);
+
+        const restoreLoadedAssets = () => {
+            state.maps.forEach(mapState => {
+                const isVideo = isVideoAsset(mapState);
+                if (!hasAssetTexture(mapState.textureKey, isVideo)) {
+                    console.warn(`Mapa ignorado porque nao foi carregado: ${mapState.path}`);
+                    return;
+                }
+                const map = isVideo
+                    ? this.add.video(mapState.x, mapState.y, mapState.textureKey).setInteractive()
+                    : this.add.image(mapState.x, mapState.y, mapState.textureKey).setInteractive();
+                if (isVideo) map.play(true);
+                map.caminhoAbsoluto = mapState.path;
+                this.input.setDraggable(map, this.ferramentaAtual === 'map-edit');
+                map.on('drag', (pointer, dragX, dragY) => {
+                    if (this.ferramentaAtual === 'map-edit') map.setPosition(dragX, dragY);
                 });
-            } else {
-                this.spawnTokenAt(key, t.path, t.x, t.y, t.elev || t.elevation, t.tokenId, isVideo, t.charName, t);
-                resolve();
-            }
-        }));
-        this.load.start();
-        Promise.all(pendingTokenSpawns).then(() => {
+                map.on('dragend', () => {
+                    const gridSize = this.getSceneGridSize();
+                    map.x = Math.round(map.x / gridSize) * gridSize;
+                    map.y = Math.round(map.y / gridSize) * gridSize;
+                });
+                map.setScale(mapState.scaleX || 1, mapState.scaleY || mapState.scaleX || 1);
+                this.mapasAtivos.push(map);
+                this.camadaMapa.add(map);
+            });
+
+            state.tokens.forEach(tokenState => {
+                const isVideo = isVideoAsset(tokenState);
+                if (!hasAssetTexture(tokenState.textureKey, isVideo)) {
+                    console.warn(`Token ignorado porque nao foi carregado: ${tokenState.path}`);
+                    return;
+                }
+                this.spawnTokenAt(
+                    tokenState.textureKey,
+                    tokenState.path,
+                    tokenState.x,
+                    tokenState.y,
+                    tokenState.elevation,
+                    tokenState.tokenId,
+                    isVideo,
+                    tokenState.charName,
+                    tokenState
+                );
+            });
+
+            if (state.maps.length) this.resetFogArea(this.isFogCovered);
+            restoreFogAfterAssets();
             if (typeof window.restoreCombatAfterTokensLoaded === 'function') window.restoreCombatAfterTokensLoaded(state.combatState);
             else if (typeof window.restoreCombatState === 'function') window.restoreCombatState(state.combatState);
-        });
+        };
+
+        if (queuedAssets > 0) {
+            this.load.once('complete', restoreLoadedAssets);
+            this.load.start();
+        } else {
+            restoreLoadedAssets();
+        }
     }
 
     recordDrawing(obj) {
@@ -1208,7 +1257,8 @@ class MainScene extends Phaser.Scene {
             obj.moveTo(meta.points[0].x, meta.points[0].y);
             meta.points.slice(1).forEach(point => obj.lineTo(point.x, point.y));
             obj.strokePath();
-            obj.setInteractive(obj.getBounds(), Phaser.Geom.Rectangle.Contains);
+            const drawingBounds = getDrawingBoundsVtt(meta);
+            if (drawingBounds) obj.setInteractive(drawingBounds, Phaser.Geom.Rectangle.Contains);
         } else if (meta.shape === 'circle') {
             const hitbox = new Phaser.Geom.Circle(meta.x, meta.y, meta.radius || 0);
             obj.fillCircleShape(hitbox).strokeCircleShape(hitbox);
@@ -1238,7 +1288,6 @@ class MainScene extends Phaser.Scene {
 
     async refreshLibrary() {
         const maps = await window.api.getMaps();
-        const tokens = await window.api.getTokens();
         const audios = await window.api.getAudio();
 
         // Puxa as fichas do banco ANTES de desenhar a interface
@@ -1578,7 +1627,7 @@ class MainScene extends Phaser.Scene {
         token.conditions = Array.isArray(linkedFicha?.conditions)
             ? linkedFicha.conditions.map(condition => condition?.name || condition).filter(Boolean)
             : (Array.isArray(savedState?.conditions) ? [...savedState.conditions] : []);
-        token.hpAtual = linkedFicha ? linkedFicha.hpAtual : savedState?.hp;
+        token.hpAtual = linkedFicha ? linkedFicha.hpAtual : savedState?.hpAtual;
         token.hpMax = linkedFicha ? linkedFicha.hpMax : savedState?.hpMax;
         
         // EFEITO DE RESPIRAÇÃO (PHASER TWEENS)
@@ -1613,7 +1662,7 @@ class MainScene extends Phaser.Scene {
             if (token.statusText) token.statusText.setPosition(token.x + 20, token.y - 20);
             if (token.conditionGroup) token.conditionGroup.setPosition(token.x, token.y);
             const currentCombatant = window.combatState?.participants?.[window.combatState.currentTurnIndex];
-            if (this.currentTurnMarker && currentCombatant?.id === token.tokenId) {
+            if (this.currentTurnMarker && (currentCombatant?.tokenId || currentCombatant?.id) === token.tokenId) {
                 this.currentTurnMarker.setPosition(token.x, token.y);
             }
             if (window.selectedToken === token && typeof window.positionTokenQuickBar === 'function') {
@@ -1772,7 +1821,7 @@ class MainScene extends Phaser.Scene {
         if (!token || !token.hpGraphics) return;
         token.hpAtual = hpAtual;
         token.hpMax = hpMax;
-        const participant = window.combatState?.participants?.find(p => p.id === tokenId);
+        const participant = window.combatState?.participants?.find(p => p.id === tokenId || p.tokenId === tokenId);
         if (participant) {
             participant.hpAtual = hpAtual;
             participant.hpMax = hpMax;
@@ -1827,111 +1876,10 @@ class MainScene extends Phaser.Scene {
         });
     }
 
-    bringTokenToFront(token) {
-        if (!token) return;
-        this.camadaTokens.bringToTop(token);
-    }
-
-    sendTokenToBack(token) {
-        if (!token) return;
-        this.camadaTokens.sendToBack(token);
-    }
-
-    enterResizeMode(token) {
-        if (!token || this.resizingToken) return;
-        
-        this.resizingToken = token;
-        this.mudarFerramenta('select');
-        this.input.setDraggable(token, false);
-        
-        // PAUSA A RESPIRAÇÃO PARA DESTRAVAR A ESCALA
-        if (token.breathTween) token.breathTween.stop();
-        
-        this.resizeBox = this.add.graphics();
-        this.camadaUI.add(this.resizeBox);
-        
-        this.resizeHandle = this.add.rectangle(
-            token.x + (token.displayWidth / 2), 
-            token.y + (token.displayHeight / 2), 
-            16, 16, 0xfbbf24
-        ).setInteractive({ cursor: 'nwse-resize' });
-        this.camadaUI.add(this.resizeHandle);
-        
-        this.input.setDraggable(this.resizeHandle, true);
-        
-        const updateBox = () => {
-            this.resizeBox.clear();
-            this.resizeBox.lineStyle(2, 0xfbbf24, 1);
-            this.resizeBox.strokeRect(
-                token.x - (token.displayWidth / 2), 
-                token.y - (token.displayHeight / 2), 
-                token.displayWidth, 
-                token.displayHeight
-            );
-        };
-        updateBox();
-
-        this.resizeHandle.on('drag', (pointer, dragX, dragY) => {
-            let newWidth = (dragX - token.x) * 2;
-            if (newWidth < PIXELS_POR_UNIDADE / 2) newWidth = PIXELS_POR_UNIDADE / 2;
-            
-            token.displayWidth = newWidth;
-            token.scaleY = token.scaleX;
-            token.baseScale = token.scaleX; // SALVA A NOVA ESCALA BASE
-            token.gridSize = Math.max(1, Math.round(newWidth / PIXELS_POR_UNIDADE)); // ATUALIZA O GRIDSIZE PARA O SNAP FUNCIONAR NO DRAG
-            
-            this.resizeHandle.setPosition(
-                token.x + (token.displayWidth / 2), 
-                token.y + (token.displayHeight / 2)
-            );
-            updateBox();
-            
-            token.auraGraphics.setPosition(token.x, token.y);
-            token.auraGraphics.clear();
-            if (token.statusText) {
-                token.statusText.setPosition(token.x + 20, token.y - 20);
-                if (window.phaserScene) window.phaserScene.setTokenAura(token, '#fbbf24', token.statusText.text);
-            }
-            token.hpGraphics.setPosition(token.x, token.y);
-            if (token.hpAtual !== undefined && token.hpMax !== undefined) this.updateTokenHP(token.tokenId, token.hpAtual, token.hpMax);
-            token.elevText.setPosition(token.x, token.y - (token.displayHeight / 2) - 10);
-        });
-
-        this.resizeEnterListener = (e) => {
-            if (e.key === 'Enter') this.exitResizeMode();
-        };
-        window.addEventListener('keydown', this.resizeEnterListener);
-    }
-
-   exitResizeMode() {
-        if (!this.resizingToken) return;
-        const token = this.resizingToken;
-        
-        this.input.setDraggable(token, true);
-        this.resizeBox.destroy();
-        this.resizeHandle.destroy();
-        window.removeEventListener('keydown', this.resizeEnterListener);
-        
-        // RECRIAR A ANIMAÇÃO DE RESPIRAÇÃO COM O NOVO TAMANHO
-        if (token.breathTween) {
-            token.breathTween = this.tweens.add({
-                targets: token,
-                scaleX: token.baseScale * 1.03, 
-                scaleY: token.baseScale * 0.97, 
-                duration: 1500 + Math.random() * 500,
-                yoyo: true,
-                repeat: -1,
-                ease: 'Sine.easeInOut'
-            });
-        }
-        
-        this.resizingToken = null;
-    }
-
     removeToken(token) {
         if (!token) return;
         if (window.combatState?.participants) {
-            window.combatState.participants = window.combatState.participants.filter(p => p.id !== token.tokenId);
+            window.combatState.participants = window.combatState.participants.filter(p => p.id !== token.tokenId && p.tokenId !== token.tokenId);
             window.combatState.currentTurnIndex = Math.min(window.combatState.currentTurnIndex || 0, Math.max(0, window.combatState.participants.length - 1));
         }
         if (window.selectedToken === token) {
@@ -1999,6 +1947,62 @@ class MainScene extends Phaser.Scene {
         this.redoHistory = [];
     }
 }
+
+function syncSceneSettingsControls() {
+    const settings = window.sceneSettings || getDefaultSceneSettingsVtt();
+    const gridEnabled = document.getElementById('scene-grid-enabled');
+    const snap = document.getElementById('scene-grid-snap');
+    const gridSize = document.getElementById('scene-grid-size');
+    const distance = document.getElementById('scene-distance-cell');
+    const unit = document.getElementById('scene-distance-unit');
+    if (gridEnabled) gridEnabled.checked = settings.gridEnabled !== false;
+    if (snap) snap.checked = settings.snapToGrid !== false;
+    if (gridSize) gridSize.value = settings.gridSize || PIXELS_POR_UNIDADE;
+    if (distance) distance.value = settings.distancePerCell || METROS_POR_QUADRADO;
+    if (unit) unit.value = settings.distanceUnit || 'm';
+}
+
+function toggleGrid() {
+    window.phaserScene?.toggleGrid?.();
+    syncSceneSettingsControls();
+}
+
+function setGridSize(size) {
+    window.phaserScene?.setGridSize?.(size);
+    syncSceneSettingsControls();
+}
+
+function toggleSnapToGrid() {
+    window.phaserScene?.toggleSnapToGrid?.();
+    syncSceneSettingsControls();
+}
+
+function setSceneDistancePerCell(value) {
+    window.sceneSettings = {
+        ...(window.sceneSettings || getDefaultSceneSettingsVtt()),
+        distancePerCell: Math.max(0.1, parseFloat(value) || 1)
+    };
+    if (window.phaserScene) window.phaserScene.sceneSettings = window.sceneSettings;
+}
+
+function setSceneDistanceUnit(value) {
+    window.sceneSettings = {
+        ...(window.sceneSettings || getDefaultSceneSettingsVtt()),
+        distanceUnit: value || 'm'
+    };
+    if (window.phaserScene) window.phaserScene.sceneSettings = window.sceneSettings;
+}
+
+Object.assign(window, {
+    syncSceneSettingsControls,
+    toggleGrid,
+    setGridSize,
+    toggleSnapToGrid,
+    setSceneDistancePerCell,
+    setSceneDistanceUnit
+});
+
+document.addEventListener('DOMContentLoaded', syncSceneSettingsControls);
 
 
 

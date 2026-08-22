@@ -56,7 +56,9 @@
             document.getElementById('play-pause-icon').className = 'fas fa-pause';
             isPaused = false;
 
-            currentAudio.play().catch(e => console.error("Erro:", e));
+            currentAudio.play().catch(error => {
+                if (error?.name !== 'AbortError') console.error('Erro ao tocar audio:', error);
+            });
             addChatMessage("Sistema", `Tocando: 🎵 ${nome.replace(/\.[^/.]+$/, "")}`, "#60a5fa");
 
             currentAudio.addEventListener('timeupdate', updateProgressUI);
@@ -105,7 +107,9 @@ function updateVolume(val) {
             const bgm = new Audio(`file://${caminhoAbsoluto}`);
             bgm.loop = true;
             bgm.volume = getMasterVolume() * 0.5;
-            bgm.play().catch(e => console.error("Erro:", e));
+            bgm.play().catch(error => {
+                if (error?.name !== 'AbortError') console.error('Erro ao tocar audio ambiente:', error);
+            });
             ambientAudios[name] = bgm;
             
             addChatMessage("Sistema", `Som adicionado à mesa: 🎵 ${name}`, "#60a5fa");

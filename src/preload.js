@@ -1,8 +1,11 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
+  // Legacy asset readers with active consumers (Phase 1):
+  // getMaps/getImages/getVideos/getAudio -> renderer libraries;
+  // getAudio -> token sound menu. Character art, the asset-library and Scene
+  // Director screens consume getAssetsLibrary instead.
   getMaps: () => ipcRenderer.invoke('get-maps'),
-  getTokens: () => ipcRenderer.invoke('get-tokens'),
   loadNote: () => ipcRenderer.invoke('load-note'),
   saveNote: (content) => ipcRenderer.send('save-note', content),
   saveScene: (name, stateJSON) => ipcRenderer.invoke('save-scene', name, stateJSON),
@@ -25,6 +28,5 @@ contextBridge.exposeInMainWorld('api', {
   validateAssetsLibrary: () => ipcRenderer.invoke('validate-assets-library'),
   getAudio: () => ipcRenderer.invoke('get-audio'),
   getImages: () => ipcRenderer.invoke('get-images'),
-  getVideos: () => ipcRenderer.invoke('get-videos'),
-  getPortraits: (tipo) => ipcRenderer.invoke('get-portraits', tipo)
+  getVideos: () => ipcRenderer.invoke('get-videos')
 });
