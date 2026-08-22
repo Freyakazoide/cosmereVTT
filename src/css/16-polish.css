@@ -238,7 +238,31 @@ body::after {
     linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.025)),
     rgba(0, 0, 0, 0.34);
   color: var(--text-main);
+  font-size: 12px;
+  line-height: 1.2;
   transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
+}
+
+.vtt-select,
+.vtt-flyout select,
+.sidebar-select,
+#char-sheet-modal select,
+.director-field select {
+  max-width: 100%;
+  min-width: 0;
+  height: 38px;
+  padding: 7px 32px 7px 10px !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vtt-select option,
+.vtt-flyout select option,
+.sidebar-select option,
+#char-sheet-modal select option,
+.director-field select option {
+  font-size: 12px;
 }
 
 .vtt-input:focus,

@@ -18,6 +18,7 @@
         }
 
         function openFlyoutPanel(targetId, title) {
+            hideVttTooltip();
             const panel = document.getElementById('sidebar');
             const titleEl = document.getElementById('vtt-flyout-title');
             const target = document.getElementById(targetId);
@@ -78,6 +79,7 @@
             const wrapper = submenu?.closest('.tool-group-wrapper');
             if (!submenu || !wrapper) return;
 
+            hideVttTooltip();
             wrapper.classList.remove('is-hover-open');
             const shouldOpen = !submenu.classList.contains('is-open');
             submenu.classList.toggle('is-open', shouldOpen);
@@ -91,7 +93,7 @@
             if (!wrapper || !submenu || wrapper.dataset.hoverDelayReady === 'true') return;
 
             let hoverTimer = null;
-            const openDelay = 350;
+            const openDelay = 180;
 
             wrapper.addEventListener('mouseenter', () => {
                 if (wrapper.classList.contains('is-click-open')) return;
@@ -140,7 +142,7 @@
     const tooltipDesc = tooltip.querySelector('.vtt-tooltip-desc');
     const tooltipKicker = tooltip.querySelector('.vtt-tooltip-kicker');
 
-    document.querySelectorAll('.tool-btn, .tab-btn, .master-tool-btn').forEach(btn => {
+    document.querySelectorAll('.tool-btn, .tab-btn, .master-tool-btn, .nav-btn').forEach(btn => {
         const nativeTitle = btn.getAttribute('title');
         const dataTitle = btn.dataset.title;
         const label = btn.dataset.vttTooltip || btn.dataset.tooltip || dataTitle || nativeTitle || btn.getAttribute('aria-label');
@@ -174,16 +176,25 @@
 
             tooltipTimer = window.setTimeout(() => {
                 tooltip.classList.add('is-visible');
-            }, 450);
+            }, 180);
         });
 
         btn.addEventListener('mouseleave', () => {
             window.clearTimeout(tooltipTimer);
-            tooltip.classList.remove('is-visible');
+            hideVttTooltip();
+        });
+
+        btn.addEventListener('click', () => {
+            window.clearTimeout(tooltipTimer);
+            hideVttTooltip();
         });
 
         btn.dataset.vttTooltipReady = 'true';
     });
+}
+
+function hideVttTooltip() {
+    document.getElementById('vtt-custom-tooltip')?.classList.remove('is-visible');
 }
 
 function getVttTooltipDescription(label) {

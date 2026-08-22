@@ -445,11 +445,17 @@
   width: auto !important;
   max-width: 100%;
   min-height: 40px;
-  padding: 9px 12px !important;
+  height: 40px;
+  padding: 7px 32px 7px 10px !important;
   border: 1px solid rgba(237, 191, 101, 0.22) !important;
   border-radius: 12px !important;
   color: #ffe9ba !important;
   background: rgba(6, 8, 13, 0.68) !important;
+  font-size: 12px;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .status-row {
@@ -503,22 +509,29 @@
 
 .nav-btn {
   flex: 0 0 auto;
-  min-width: 122px;
+  min-width: 108px;
   height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 9px;
-  padding: 0 14px;
+  gap: 7px;
+  padding: 0 10px;
   border: 1px solid rgba(237, 191, 101, 0.18) !important;
   border-radius: 14px !important;
   color: #cdbf9f !important;
   background: rgba(7, 9, 15, 0.66) !important;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 850;
   line-height: 1;
   transition: transform var(--sheet-ease), color var(--sheet-ease), border-color var(--sheet-ease), background var(--sheet-ease), box-shadow var(--sheet-ease);
+}
+
+.nav-btn span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .nav-btn:hover,
