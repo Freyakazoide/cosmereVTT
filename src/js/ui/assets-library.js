@@ -370,7 +370,7 @@
         document.addEventListener('dragover', event => {
             const payload = getDraggedAssetPayload(event);
             if (!payload) return;
-            if (event.target.closest('#director-content, #char-sheet-modal, #playlists-content')) event.preventDefault();
+            if (event.target.closest('#scenes-content, #char-sheet-modal, #playlists-content')) event.preventDefault();
         });
 
         document.addEventListener('drop', event => {
@@ -379,9 +379,17 @@
             const asset = getAssetById(payload.assetId);
             if (!asset) return;
 
-            if (event.target.closest('#director-content') && ['image', 'video', 'handout'].includes(asset.type)) {
+            if (event.target.closest('[data-scene-editor-section="map"]') && asset.type === 'map') {
                 event.preventDefault();
-                applyAssetToDirector(asset);
+                window.openSceneAssetPicker?.('map').then(() => window.selectSceneAsset?.(asset.id));
+            }
+            if (event.target.closest('[data-scene-editor-section="environment"]') && asset.type === 'audio') {
+                event.preventDefault();
+                window.openSceneAssetPicker?.('audio').then(() => window.selectSceneAsset?.(asset.id));
+            }
+            if (event.target.closest('[data-scene-editor-section="presentation"]') && ['image', 'video', 'handout'].includes(asset.type)) {
+                event.preventDefault();
+                window.openSceneAssetPicker?.('handout').then(() => window.selectSceneAsset?.(asset.id));
             }
             if (event.target.closest('#char-sheet-modal') && asset.type === 'portrait') {
                 event.preventDefault();
@@ -392,18 +400,6 @@
                 if (typeof playMusic === 'function') playMusic(asset.path, asset.name);
             }
         });
-    }
-
-    function applyAssetToDirector(asset) {
-        const handout = document.getElementById('director-handout');
-        if (!handout) return;
-        if (![...handout.options].some(option => option.value === asset.path)) {
-            handout.insertAdjacentHTML('beforeend', `<option value="${escapeAssetAttr(asset.path)}">${escapeAssetHtml(asset.name)}</option>`);
-        }
-        handout.value = asset.path;
-        if (typeof window.addSessionEvent === 'function') {
-            window.addSessionEvent('handout_revealed', 'Pergaminho vinculado ao Orquestrador', asset.name, { assetId: asset.id });
-        }
     }
 
     function applyAssetAsPortrait(asset) {

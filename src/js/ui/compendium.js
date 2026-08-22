@@ -618,7 +618,7 @@ document.addEventListener('dblclick', (e) => {
     function getDropZoneForEvent(event, entry) {
         if (event.target.closest('#equipment-container') && ['item', 'weapon', 'armor'].includes(entry.type)) return 'equipment';
         if (event.target.closest('#talents-container, #tab-magic') && ['power', 'talent'].includes(entry.type)) return 'powers';
-        if (event.target.closest('#director-content') && ['handout', 'scene'].includes(entry.type)) return 'scene';
+        if (event.target.closest('#scenes-content') && ['handout', 'scene'].includes(entry.type)) return 'scene';
         if (event.target.closest('#game-container, canvas') && ['creature', 'npc', 'condition'].includes(entry.type)) return 'map';
         return null;
     }
@@ -702,27 +702,32 @@ document.addEventListener('dblclick', (e) => {
     }
 
     function applyCompendiumEntryToScene(entry) {
+        const state = window.currentSceneState;
+        if (!state) return;
         if (entry.type === 'handout') {
             const path = entry.mechanics?.path || entry.image;
-            const handout = document.getElementById('director-handout');
-            if (handout && path) {
-                if (![...handout.options].some(option => option.value === path)) {
-                    handout.insertAdjacentHTML('beforeend', `<option value="${escapeAttr(path)}">${escapeHtml(entry.name)}</option>`);
-                }
-                handout.value = path;
+            const asset = window.findSceneAssetVtt?.(null, path, ['image', 'video', 'handout']);
+            if (asset) {
+                state.presentation = {
+                    ...(state.presentation || {}),
+                    handout: { assetId: asset.id, pathFallback: asset.path, missing: !!asset.missing, type: asset.type === 'video' ? 'video' : 'image' }
+                };
             }
         }
 
-        if (entry.type === 'scene' && typeof window.restoreDirectedSceneFromState === 'function') {
-            window.restoreDirectedSceneFromState({
-                sceneName: entry.name,
-                introText: entry.description,
-                mapPath: entry.mechanics?.mapPath || '',
-                audioPath: entry.mechanics?.audioPath || '',
-                weather: entry.mechanics?.weather || 'none',
-                handoutPath: entry.mechanics?.handoutPath || ''
-            });
+        if (entry.type === 'scene') {
+            state.presentation = { ...(state.presentation || {}), introText: entry.description || state.presentation?.introText || '' };
+            if (entry.mechanics?.weather) window.updateSceneWeather?.(entry.mechanics.weather);
+            const mapAsset = window.findSceneAssetVtt?.(null, entry.mechanics?.mapPath, ['map']);
+            const audioAsset = window.findSceneAssetVtt?.(null, entry.mechanics?.audioPath, ['audio']);
+            const handoutAsset = window.findSceneAssetVtt?.(null, entry.mechanics?.handoutPath, ['image', 'video', 'handout']);
+            if (mapAsset && !mapAsset.missing) window.openSceneAssetPicker?.('map').then(() => window.selectSceneAsset?.(mapAsset.id));
+            if (audioAsset) state.audio = { ...(state.audio || {}), assetId: audioAsset.id, pathFallback: audioAsset.path, missing: !!audioAsset.missing };
+            if (handoutAsset) state.presentation.handout = { assetId: handoutAsset.id, pathFallback: handoutAsset.path, missing: !!handoutAsset.missing, type: handoutAsset.type === 'video' ? 'video' : 'image' };
         }
+
+        window.applySceneStateToEditor?.(state);
+        window.markSceneDirty?.('compendium-scene-entry');
 
         if (typeof window.addSessionEvent === 'function') {
             window.addSessionEvent('scene_prepared', 'Registro aplicado a cena', entry.name, { compendiumId: entry.id, type: entry.type });

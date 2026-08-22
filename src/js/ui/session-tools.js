@@ -13,13 +13,10 @@ function sendPing(x, y) {
     addChatMessage('Sistema', `Ping enviado em (${Math.round(worldPoint.x)}, ${Math.round(worldPoint.y)})`, '#fbbf24');
 }
 
-// Local storage is only the default for a new/unsaved board. A loaded scene
-// restores its own lock state through restoreMapLockState.
-let mapLocked = localStorage.getItem('cosmere-map-locked') === 'true';
+let mapLocked = true;
 
-function applyMapLockState(locked, { persistPreference = false } = {}) {
+function applyMapLockState(locked) {
     mapLocked = Boolean(locked);
-    if (persistPreference) localStorage.setItem('cosmere-map-locked', mapLocked);
     const btn = document.getElementById('btn-map-lock');
     if (btn) {
         btn.innerHTML = mapLocked ? '<i class="fas fa-lock"></i>' : '<i class="fas fa-lock-open"></i>';
@@ -27,16 +24,18 @@ function applyMapLockState(locked, { persistPreference = false } = {}) {
     }
     if (window.phaserScene) {
         window.phaserScene.mapLocked = mapLocked;
+        window.phaserScene.mudarFerramenta?.(window.phaserScene.ferramentaAtual || 'select');
     }
 }
 
 function toggleMapLock() {
-    applyMapLockState(!mapLocked, { persistPreference: true });
+    applyMapLockState(!mapLocked);
+    window.markSceneDirty?.('map-lock');
     addChatMessage('Sistema', mapLocked ? 'Mapa travado.' : 'Mapa destravado.', '#60a5fa');
 }
 
 function restoreMapLockState(locked) {
-    applyMapLockState(locked, { persistPreference: false });
+    applyMapLockState(locked);
 }
 
 window.restoreMapLockState = restoreMapLockState;

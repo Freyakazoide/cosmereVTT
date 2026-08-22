@@ -73,10 +73,13 @@
             if (!submenu || !wrapper) return;
 
             hideVttTooltip();
-            const shouldOpen = !submenu.classList.contains('is-open');
+            const shouldOpen = submenu.dataset.pinned !== 'true';
             submenu.classList.toggle('is-open', shouldOpen);
             submenu.dataset.pinned = String(shouldOpen);
-            document.getElementById('master-tool-btn')?.setAttribute('aria-expanded', String(shouldOpen));
+            const masterButton = document.getElementById('master-tool-btn');
+            masterButton?.setAttribute('aria-expanded', String(shouldOpen));
+            masterButton?.setAttribute('aria-pressed', String(shouldOpen));
+            masterButton?.classList.toggle('is-pinned', shouldOpen);
         }
 
         function setupToolSubmenuHoverDelay() {
@@ -109,7 +112,10 @@
                 if (event.target.closest('.tool-group-wrapper')) return;
                 submenu.classList.remove('is-open');
                 submenu.dataset.pinned = 'false';
-                document.getElementById('master-tool-btn')?.setAttribute('aria-expanded', 'false');
+                const masterButton = document.getElementById('master-tool-btn');
+                masterButton?.setAttribute('aria-expanded', 'false');
+                masterButton?.setAttribute('aria-pressed', 'false');
+                masterButton?.classList.remove('is-pinned');
             });
 
             wrapper.dataset.hoverDelayReady = 'true';
@@ -160,9 +166,18 @@
             tooltipKicker.textContent = btn.closest('.tool-submenu') ? 'Ferramenta' : 'Painel';
 
             const rect = btn.getBoundingClientRect();
-            const top = rect.top + rect.height / 2;
+            const tooltipRect = tooltip.getBoundingClientRect();
+            const margin = 10;
+            const gap = 14;
+            const useLeft = rect.right + gap + tooltipRect.width > window.innerWidth - margin;
+            const left = useLeft
+                ? Math.max(margin, rect.left - gap - tooltipRect.width)
+                : Math.min(window.innerWidth - tooltipRect.width - margin, rect.right + gap);
+            const halfHeight = tooltipRect.height / 2;
+            const top = Math.max(margin + halfHeight, Math.min(window.innerHeight - margin - halfHeight, rect.top + rect.height / 2));
 
-            tooltip.style.left = `${rect.right + 14}px`;
+            tooltip.classList.toggle('is-left', useLeft);
+            tooltip.style.left = `${left}px`;
             tooltip.style.top = `${top}px`;
 
             tooltipTimer = window.setTimeout(() => {
@@ -357,7 +372,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (submenu) {
                 submenu.classList.remove('is-open');
                 submenu.dataset.pinned = 'false';
-                document.getElementById('master-tool-btn')?.setAttribute('aria-expanded', 'false');
+                const masterButton = document.getElementById('master-tool-btn');
+                masterButton?.setAttribute('aria-expanded', 'false');
+                masterButton?.setAttribute('aria-pressed', 'false');
+                masterButton?.classList.remove('is-pinned');
             }
             
             const optionsPanel = document.getElementById('tool-options');
@@ -706,7 +724,8 @@ function clearContextAuras() {
             const menu = document.getElementById('token-sound-menu');
             const ctxMenu = document.getElementById('context-menu');
             
-            window.api.getAudio().then(audios => {
+            window.api.getAssetsLibrary().then(assets => {
+                const audios = (assets || []).filter(asset => asset.type === 'audio' && !asset.missing);
                 const sonsDoToken = audios.filter(a => a.name.toLowerCase().startsWith(charName.toLowerCase() + "_"));
                 
                 if (sonsDoToken.length === 0) {

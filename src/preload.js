@@ -1,16 +1,17 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
-  // Legacy asset readers with active consumers (Phase 1):
-  // getMaps/getImages/getVideos/getAudio -> renderer libraries;
-  // getAudio -> token sound menu. Character art, the asset-library and Scene
-  // Director screens consume getAssetsLibrary instead.
-  getMaps: () => ipcRenderer.invoke('get-maps'),
   loadNote: () => ipcRenderer.invoke('load-note'),
   saveNote: (content) => ipcRenderer.send('save-note', content),
-  saveScene: (name, stateJSON) => ipcRenderer.invoke('save-scene', name, stateJSON),
-  loadScenes: () => ipcRenderer.invoke('load-scenes'),
-  loadSceneData: (name) => ipcRenderer.invoke('load-scene-data', name),
+  listScenes: () => ipcRenderer.invoke('list-scenes'),
+  getScene: (sceneId) => ipcRenderer.invoke('get-scene', sceneId),
+  createScene: (payloadJSON) => ipcRenderer.invoke('create-scene', payloadJSON),
+  saveScene: (payloadJSON) => ipcRenderer.invoke('save-scene-v4', payloadJSON),
+  renameScene: (payloadJSON) => ipcRenderer.invoke('rename-scene', payloadJSON),
+  duplicateScene: (payloadJSON) => ipcRenderer.invoke('duplicate-scene', payloadJSON),
+  deleteScene: (sceneId) => ipcRenderer.invoke('delete-scene', sceneId),
+  loadSessionState: () => ipcRenderer.invoke('load-session-state'),
+  saveSessionState: (stateJSON) => ipcRenderer.invoke('save-session-state', stateJSON),
   saveCharacter: (id, dataJSON) => ipcRenderer.send('save-character', id, dataJSON),
   deleteCharacter: (id) => ipcRenderer.send('delete-character', id),
   deleteFile: (filePath) => ipcRenderer.send('delete-file', filePath),
@@ -25,8 +26,5 @@ contextBridge.exposeInMainWorld('api', {
   deleteAsset: (assetId) => ipcRenderer.invoke('delete-asset', assetId),
   renameAsset: (payloadJSON) => ipcRenderer.invoke('rename-asset', payloadJSON),
   scanAssetsFolders: () => ipcRenderer.invoke('scan-assets-folders'),
-  validateAssetsLibrary: () => ipcRenderer.invoke('validate-assets-library'),
-  getAudio: () => ipcRenderer.invoke('get-audio'),
-  getImages: () => ipcRenderer.invoke('get-images'),
-  getVideos: () => ipcRenderer.invoke('get-videos')
+  validateAssetsLibrary: () => ipcRenderer.invoke('validate-assets-library')
 });

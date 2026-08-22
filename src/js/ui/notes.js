@@ -19,6 +19,9 @@ function normalizeNote(note) {
         ? note.tags
         : String(note.tags || '').split(',').map(tag => tag.trim()).filter(Boolean);
     const sceneId = note.sceneId || (note.sceneName ? createSceneId(note.sceneName) : null);
+    const sceneIds = Array.isArray(note.sceneIds)
+        ? [...new Set(note.sceneIds.filter(Boolean))]
+        : (sceneId ? [sceneId] : []);
 
     return {
         id: note.id || createNoteId(),
@@ -28,6 +31,7 @@ function normalizeNote(note) {
         type: note.type || note.category || 'Cena',
         tags,
         sceneId,
+        sceneIds,
         sceneName: note.sceneName || null,
         characterId: note.characterId || null,
         isPinned: Boolean(note.isPinned),
@@ -50,10 +54,7 @@ function createSceneId(name) {
 }
 
 function getCurrentSceneName() {
-    return window.currentSceneName
-        || window.directedSceneDraft?.sceneName
-        || document.getElementById('director-scene-name')?.value
-        || '';
+    return window.currentSceneName || '';
 }
 
 function getCurrentSceneId() {
@@ -63,8 +64,8 @@ function getCurrentSceneId() {
 }
 
 function noteBelongsToScene(note, sceneId = getCurrentSceneId()) {
-    const noteSceneId = note?.sceneId || UNASSIGNED_SCENE_ID;
-    return noteSceneId === UNASSIGNED_SCENE_ID || noteSceneId === sceneId || sceneId === UNASSIGNED_SCENE_ID;
+    const noteSceneIds = Array.isArray(note?.sceneIds) ? note.sceneIds : (note?.sceneId ? [note.sceneId] : []);
+    return noteSceneIds.length === 0 || noteSceneIds.includes(sceneId) || sceneId === UNASSIGNED_SCENE_ID;
 }
 
 function getScenePinnedNotes(sceneId = getCurrentSceneId()) {
@@ -82,6 +83,7 @@ function buildNotePayload(note) {
         type: note.type,
         tags: note.tags || [],
         sceneId: note.sceneId || null,
+        sceneIds: note.sceneIds || [],
         sceneName: note.sceneName || null,
         characterId: note.characterId || null,
         isPinned: Boolean(note.isPinned),
@@ -92,17 +94,8 @@ function buildNotePayload(note) {
     };
 }
 
-function getSceneAwareNotesState(sceneId = getCurrentSceneId()) {
-    return {
-        sceneId,
-        sceneName: getCurrentSceneName(),
-        sceneNotes: getSceneNotes(sceneId).map(buildNotePayload)
-    };
-}
-
 function syncNotesGlobals() {
     campaignNotes = campaignNotes.map(normalizeNote);
-    window.getSceneAwareNotesState = getSceneAwareNotesState;
 }
 
 function persistNotes() {
@@ -135,6 +128,9 @@ function getEditorNoteDraft(existing = {}) {
         type: typeEl ? typeEl.value : existing.type,
         tags: tagsEl ? tagsEl.value : existing.tags,
         sceneId: sceneId || null,
+        sceneIds: sceneId
+            ? (sceneId === existing.sceneId ? [...new Set([...(existing.sceneIds || []), sceneId])] : [sceneId])
+            : [],
         sceneName: sceneName || null,
         characterId: characterEl ? characterEl.value.trim() || null : existing.characterId,
         content,
@@ -369,7 +365,7 @@ function togglePinNote(index) {
     note.updatedAt = new Date().toISOString();
     persistNotes();
     renderNotesList();
-    if (typeof renderDirectorPinnedNotes === 'function') renderDirectorPinnedNotes();
+    if (typeof window.renderSceneEditorNotes === 'function') window.renderSceneEditorNotes();
 }
 
 function pinCurrentEditorDraft() {
@@ -506,6 +502,17 @@ function restoreSceneNotesFromBoardState(state) {
     persistNotes();
 }
 
+function linkNotesToDuplicatedScene(sourceSceneId, targetSceneId) {
+    if (!sourceSceneId || !targetSceneId) return;
+    let changed = false;
+    campaignNotes.forEach(note => {
+        if (!noteBelongsToScene(note, sourceSceneId) || (note.sceneIds || []).length === 0) return;
+        note.sceneIds = [...new Set([...(note.sceneIds || []), targetSceneId])];
+        changed = true;
+    });
+    if (changed) persistNotes();
+}
+
 function revealNoteById(noteId) {
     const index = campaignNotes.findIndex(note => note.id === noteId);
     if (index >= 0) shareNote(index);
@@ -518,5 +525,7 @@ function unpinNoteById(noteId) {
     note.updatedAt = new Date().toISOString();
     persistNotes();
     renderNotesList();
-    if (typeof renderDirectorPinnedNotes === 'function') renderDirectorPinnedNotes();
+    if (typeof window.renderSceneEditorNotes === 'function') window.renderSceneEditorNotes();
 }
+
+window.linkNotesToDuplicatedScene = linkNotesToDuplicatedScene;

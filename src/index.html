@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="css/09-notes.css">
     <link rel="stylesheet" href="css/10-dice.css">
     <link rel="stylesheet" href="css/12-effects.css">
-    <link rel="stylesheet" href="css/13-scene-director.css">
+    <link rel="stylesheet" href="css/13-scenes.css">
     <link rel="stylesheet" href="css/14-dock-flyout.css">
     <link rel="stylesheet" href="css/15-combat.css">
     <link rel="stylesheet" href="css/16-session-timeline.css">
@@ -36,11 +36,12 @@
     <div id="dice-box-container" class="dice-box-layer"></div>
     
 <aside id="global-actions" aria-label="Acoes globais da mesa">
-    <button class="tool-btn tool-btn--accent" onclick="saveBoard()" title="Registrar cena no tomo"><i class="fas fa-book-bookmark"></i></button>
-    <button class="tool-btn" onclick="loadBoard()" title="Abrir arquivo de cenas"><i class="fas fa-book-atlas"></i></button>
-    <button class="tool-btn tool-btn--success" onclick="exportBoard()" title="Exportar campanha"><i class="fas fa-scroll"></i></button>
-    <button class="tool-btn tool-btn--info" onclick="importBoard()" title="Importar campanha"><i class="fas fa-file-import"></i></button>
-    <button class="tool-btn tool-btn--accent" onclick="abrirPuzzle1()" title="Enigma: O Primeiro Ideal"><i class="fas fa-dungeon"></i></button>
+    <span id="app-mode-label" class="app-mode-label">JOGAR</span>
+    <button class="tool-btn" data-app-mode-button="prepare" onclick="setAppMode('prepare'); openSceneSwitcher()" title="Preparar cenas"><i class="fas fa-pen-ruler"></i></button>
+    <button class="tool-btn active" data-app-mode-button="play" onclick="setAppMode('play')" title="Jogar na mesa"><i class="fas fa-dice-d20"></i></button>
+    <button class="tool-btn tool-btn--accent" onclick="openSceneSwitcher()" title="Trocar cena"><i class="fas fa-shuffle"></i></button>
+    <button class="tool-btn tool-btn--info" onclick="presentCurrentScene()" title="Apresentar cena"><i class="fas fa-person-rays"></i></button>
+    <span id="scene-save-status" class="scene-save-status" data-status="clean">Nenhuma cena ativa</span>
 </aside>
 
 <aside id="vtt-dock-shell" class="vtt-dock-shell">
@@ -64,17 +65,17 @@
         <div class="tool-separator"></div>
 
         <div class="dock-section" aria-label="Paineis">
-            <button class="tool-btn tab-btn" data-target-id="director-content" data-title="Orquestrador" title="Orquestrador de cenas"><i class="fas fa-hat-wizard"></i></button>
-            <button class="tool-btn tab-btn" data-target-id="assets-library-content" data-title="Assets" title="Biblioteca de assets"><i class="fas fa-box-open"></i></button>
-            <button class="tool-btn tab-btn" data-target-id="maps-content" data-title="Regioes" title="Mapas e regioes"><i class="fas fa-map-location-dot"></i></button>
+            <button class="tool-btn tab-btn" data-target-id="scenes-content" data-title="Cenas" title="Gerenciar cenas"><i class="fas fa-clapperboard"></i></button>
+            <button class="tool-btn tab-btn dock-prepare-secondary" data-target-id="assets-library-content" data-title="Assets" title="Biblioteca de assets"><i class="fas fa-box-open"></i></button>
+            <button class="tool-btn tab-btn dock-prepare-secondary" data-target-id="maps-content" data-title="Regioes" title="Mapas e regioes"><i class="fas fa-map-location-dot"></i></button>
             <button class="tool-btn tab-btn" data-target-id="tokens-content" data-title="Elenco" title="Herois, aliados e ameacas"><i class="fas fa-users"></i></button>
             <button class="tool-btn tab-btn" data-target-id="combat-content" data-title="Encontro" title="Encontro de combate"><i class="fas fa-shield-halved"></i></button>
             <button class="tool-btn tab-btn" data-target-id="session-content" data-title="Cronica" title="Cronica da sessao"><i class="fas fa-scroll"></i></button>
             <button class="tool-btn tab-btn" data-target-id="chat-content" data-title="Sussurros" title="Mensagens da mesa"><i class="fas fa-comments"></i></button>
             <button class="tool-btn tab-btn" data-target-id="notes-content" data-title="Diario" title="Diario do mestre"><i class="fas fa-book-journal-whills"></i></button>
-            <button class="tool-btn tab-btn" data-target-id="items-content" data-title="Compendio" title="Bestiario e tesouros"><i class="fas fa-book-open"></i></button>
-            <button class="tool-btn tab-btn" data-target-id="images-content" data-title="Pergaminhos" title="Pergaminhos e revelacoes"><i class="fas fa-scroll"></i></button>
-            <button class="tool-btn tab-btn" data-target-id="videos-content" data-title="Visoes" title="Cenas e visoes"><i class="fas fa-eye"></i></button>
+            <button class="tool-btn tab-btn dock-prepare-secondary" data-target-id="items-content" data-title="Compendio" title="Bestiario e tesouros"><i class="fas fa-book-open"></i></button>
+            <button class="tool-btn tab-btn dock-prepare-secondary" data-target-id="images-content" data-title="Pergaminhos" title="Pergaminhos e revelacoes"><i class="fas fa-scroll"></i></button>
+            <button class="tool-btn tab-btn dock-prepare-secondary" data-target-id="videos-content" data-title="Visoes" title="Cenas e visoes"><i class="fas fa-eye"></i></button>
             <button class="tool-btn tab-btn" data-target-id="playlists-content" data-title="Bardos" title="Trilhas e ambiencias"><i class="fas fa-drum"></i></button>
         </div>
 
@@ -104,7 +105,7 @@
         <div class="assets-library-panel">
             <div class="assets-library-header">
                 <div>
-                    <div class="director-kicker">Inventario</div>
+                    <div class="vtt-section-kicker">Inventario</div>
                     <h2>Biblioteca de Assets</h2>
                 </div>
                 <span id="assets-library-count" class="combat-round-pill">0 reliquias</span>
@@ -186,7 +187,7 @@
         <div class="combat-panel">
             <div class="combat-panel__header">
                 <div>
-                    <div class="director-kicker">Iniciativa</div>
+                    <div class="vtt-section-kicker">Iniciativa</div>
                     <h2>Encontro</h2>
                 </div>
                 <span id="combat-round-value" class="combat-round-pill">Inativo</span>
@@ -212,7 +213,7 @@
         <div class="session-panel">
             <div class="session-panel__header">
                 <div>
-                    <div class="director-kicker">Registro</div>
+                    <div class="vtt-section-kicker">Registro</div>
                     <h2>Cronica</h2>
                 </div>
                 <span id="session-status-pill" class="combat-round-pill">Inativa</span>
@@ -235,95 +236,81 @@
         <div class="category-header">Grimorio da Campanha</div>
     </div>
 
-    <div id="director-content" class="content-area scene-director">
-        <div class="director-header">
-            <div>
-                <div class="director-kicker">Mestre</div>
-                <h2>Orquestrador de Cenas</h2>
+    <div id="scenes-content" class="content-area scenes-panel">
+        <section id="scene-manager-browser">
+            <div class="scenes-header">
+                <div><div class="vtt-section-kicker">Preparar e jogar</div><h2>Cenas</h2></div>
+                <button class="ui-btn ui-btn--primary" type="button" onclick="newScene()"><i class="fas fa-plus"></i> Criar cena</button>
             </div>
-            <button class="ui-icon-btn" onclick="refreshSceneDirector()" title="Atualizar reliquias"><i class="fas fa-rotate"></i></button>
-        </div>
+            <div id="scene-manager-list" class="scene-manager-list"></div>
+        </section>
 
-        <details class="director-tutorial">
-            <summary><i class="fas fa-circle-question"></i> Roteiro rapido</summary>
-            <ol>
-                <li>Defina titulo, mapa, trilha, clima e pergaminho da cena.</li>
-                <li>Fixe pistas no Diario para elas surgirem aqui.</li>
-                <li>Clique em Preparar para montar terreno e pressagios do mestre.</li>
-                <li>Clique em Iniciar para tocar a trilha e abrir a introducao na mesa.</li>
-                <li>Use Registrar cena no tomo para guardar tambem este roteiro.</li>
-                <li>Ao carregar ou importar a cena, este orquestrador volta ao estado salvo.</li>
-            </ol>
-        </details>
+        <section id="scene-editor" class="scene-editor hidden">
+            <div class="scenes-header">
+                <button class="ui-icon-btn" type="button" onclick="showSceneBrowser()" title="Voltar para cenas"><i class="fas fa-arrow-left"></i></button>
+                <div><div class="vtt-section-kicker">Editor de cena</div><h2>Preparacao</h2></div>
+                <button class="ui-btn ui-btn--primary" type="button" onclick="saveCurrentScene()"><i class="fas fa-save"></i> Salvar</button>
+            </div>
+            <div id="scene-missing-assets" class="scene-missing-assets hidden"></div>
+            <nav class="scene-editor-tabs" aria-label="Secoes do editor">
+                <button class="scene-editor-tab active is-selected" data-scene-editor-tab="general" onclick="setSceneEditorTab('general', this)">Geral</button>
+                <button class="scene-editor-tab" data-scene-editor-tab="map" onclick="setSceneEditorTab('map', this)">Mapa e Grid</button>
+                <button class="scene-editor-tab" data-scene-editor-tab="environment" onclick="setSceneEditorTab('environment', this)">Ambiente</button>
+                <button class="scene-editor-tab" data-scene-editor-tab="presentation" onclick="setSceneEditorTab('presentation', this)">Apresentacao</button>
+                <button class="scene-editor-tab" data-scene-editor-tab="cast" onclick="setSceneEditorTab('cast', this)">Elenco e Pistas</button>
+            </nav>
 
-        <label class="director-field">
-            <span>Titulo da cena</span>
-            <input id="director-scene-name" type="text" placeholder="Ex: Emboscada na ponte">
-        </label>
+            <div class="scene-editor-section active" data-scene-editor-section="general">
+                <label class="scene-field"><span>Nome</span><input id="scene-editor-name" oninput="updateSceneEditorField('root','sceneName',this.value)"></label>
+                <label class="scene-field"><span>Segredos do mestre</span><textarea id="scene-editor-gm-text" oninput="updateSceneEditorField('metadata','gmText',this.value)"></textarea></label>
+                <div class="scene-field-grid">
+                    <label class="scene-field"><span>Objetivo</span><textarea id="scene-editor-objective" oninput="updateSceneEditorField('metadata','objective',this.value)"></textarea></label>
+                    <label class="scene-field"><span>Vitoria</span><textarea id="scene-editor-victory" oninput="updateSceneEditorField('metadata','victory',this.value)"></textarea></label>
+                    <label class="scene-field"><span>Falha</span><textarea id="scene-editor-failure" oninput="updateSceneEditorField('metadata','failure',this.value)"></textarea></label>
+                </div>
+            </div>
 
-        <label class="director-field">
-            <span>Segredos do mestre</span>
-            <textarea id="director-gm-text" placeholder="Notas privadas, ameacas ocultas, gatilhos..."></textarea>
-        </label>
+            <div class="scene-editor-section" data-scene-editor-section="map">
+                <div class="scene-asset-field"><span><strong>Mapa principal</strong><small id="scene-map-asset-label">Nenhum recurso selecionado</small></span><button class="ui-btn" onclick="openSceneAssetPicker('map')">Escolher</button><button class="ui-icon-btn" onclick="removeSceneAsset('map')" title="Remover mapa"><i class="fas fa-times"></i></button></div>
+                <div class="scene-map-actions">
+                    <button class="ui-btn" onclick="adjustSceneMap('scale-down')"><i class="fas fa-minus"></i> Escala</button>
+                    <button class="ui-btn" onclick="adjustSceneMap('scale-up')"><i class="fas fa-plus"></i> Escala</button>
+                    <button class="ui-btn" onclick="adjustSceneMap('center')"><i class="fas fa-crosshairs"></i> Centralizar</button>
+                    <button class="ui-btn" onclick="adjustSceneMap('reset')"><i class="fas fa-rotate-left"></i> Resetar</button>
+                    <button class="ui-btn" onclick="adjustSceneMap('lock')"><i class="fas fa-lock"></i> Travar</button>
+                </div>
+                <div class="scene-field-grid scene-grid-controls">
+                    <label class="scene-field"><span>Tamanho do grid</span><input id="scene-grid-size-editor" type="number" min="20" max="240" oninput="updateEditorGridSetting('gridSize',this.value)"></label>
+                    <label class="scene-field"><span>Offset X</span><input id="scene-grid-offset-x" type="number" oninput="updateEditorGridSetting('gridOffsetX',this.value)"></label>
+                    <label class="scene-field"><span>Offset Y</span><input id="scene-grid-offset-y" type="number" oninput="updateEditorGridSetting('gridOffsetY',this.value)"></label>
+                    <label class="scene-field scene-check"><span>Grid visivel</span><input id="scene-grid-enabled-editor" type="checkbox" onchange="updateEditorGridSetting('gridEnabled',this.checked)"></label>
+                    <label class="scene-field scene-check"><span>Snap</span><input id="scene-grid-snap-editor" type="checkbox" onchange="updateEditorGridSetting('snapToGrid',this.checked)"></label>
+                    <label class="scene-field"><span>Distancia/celula</span><input id="scene-distance-cell-editor" type="number" min="0.1" step="0.1" oninput="updateEditorGridSetting('distancePerCell',this.value)"></label>
+                    <label class="scene-field"><span>Unidade</span><select id="scene-distance-unit-editor" onchange="updateEditorGridSetting('distanceUnit',this.value)"><option value="m">m</option><option value="ft">ft</option><option value="q">q</option></select></label>
+                </div>
+            </div>
 
-        <label class="director-field">
-            <span>Narracao da cena</span>
-            <textarea id="director-intro-text" placeholder="Texto revelado quando a cena comecar..."></textarea>
-        </label>
+            <div class="scene-editor-section" data-scene-editor-section="environment">
+                <label class="scene-field"><span>Clima</span><select id="scene-editor-weather" onchange="updateSceneWeather(this.value)"><option value="none">Ceu limpo</option><option value="rain">Chuva</option><option value="ash">Cinzas</option><option value="sun">Sol</option><option value="storm">Tempestade</option></select></label>
+                <div class="scene-asset-field"><span><strong>Trilha preparada</strong><small id="scene-audio-asset-label">Nenhum recurso selecionado</small></span><button class="ui-btn" onclick="openSceneAssetPicker('audio')">Escolher</button><button class="ui-icon-btn" onclick="removeSceneAsset('audio')" title="Remover trilha"><i class="fas fa-times"></i></button></div>
+                <div class="scene-field-grid">
+                    <label class="scene-field"><span>Ao entrar</span><select id="scene-editor-audio-behavior" onchange="updateSceneEditorField('audio','behavior',this.value)"><option value="keep">Manter trilha anterior</option><option value="play">Tocar trilha da cena</option><option value="stop">Parar musica</option></select></label>
+                    <label class="scene-field"><span>Volume inicial</span><input id="scene-editor-audio-volume" type="range" min="0" max="1" step="0.05" oninput="updateSceneEditorField('audio','volume',Number(this.value))"></label>
+                </div>
+            </div>
 
-        <div class="director-grid">
-            <label class="director-field">
-                <span>Terreno principal</span>
-                <select id="director-map"></select>
-            </label>
-            <label class="director-field">
-                <span>Trilha</span>
-                <select id="director-audio"></select>
-            </label>
-            <label class="director-field">
-                <span>Pressagio</span>
-                <select id="director-weather">
-                    <option value="none">Ceu limpo</option>
-                    <option value="rain">Chuva de pressagio</option>
-                    <option value="ash">Cinzas no ar</option>
-                    <option value="sun">Sol inclemente</option>
-                    <option value="storm">Tempestade arcana</option>
-                </select>
-            </label>
-            <label class="director-field">
-                <span>Pergaminho</span>
-                <select id="director-handout"></select>
-            </label>
-        </div>
+            <div class="scene-editor-section" data-scene-editor-section="presentation">
+                <label class="scene-field"><span>Introducao</span><textarea id="scene-editor-intro" oninput="updateSceneEditorField('presentation','introText',this.value)"></textarea></label>
+                <div class="scene-asset-field"><span><strong>Handout</strong><small id="scene-handout-asset-label">Nenhum recurso selecionado</small></span><button class="ui-btn" onclick="openSceneAssetPicker('handout')">Escolher</button><button class="ui-icon-btn" onclick="removeSceneAsset('handout')" title="Remover handout"><i class="fas fa-times"></i></button></div>
+                <button class="ui-btn ui-btn--primary" type="button" onclick="presentCurrentScene()"><i class="fas fa-person-rays"></i> Apresentar cena</button>
+            </div>
 
-        <div class="director-section">
-            <div class="director-section__title">Pistas fixadas</div>
-            <div id="director-pinned-notes" class="director-note-list"></div>
-        </div>
-
-        <div class="director-grid">
-            <label class="director-field">
-                <span>Missao</span>
-                <input id="director-objective" type="text" placeholder="O que os aventureiros precisam resolver">
-            </label>
-            <label class="director-field">
-                <span>Triunfo</span>
-                <input id="director-victory" type="text" placeholder="Como a mesa vence a cena">
-            </label>
-            <label class="director-field">
-                <span>Complicacao</span>
-                <input id="director-failure" type="text" placeholder="O que desperta se falharem">
-            </label>
-        </div>
-
-        <div class="director-actions">
-            <button class="ui-btn ui-btn--primary" onclick="prepareDirectedScene()"><i class="fas fa-wand-sparkles"></i> Preparar cena</button>
-            <button class="ui-btn" onclick="startDirectedScene()"><i class="fas fa-play"></i> Abrir cena</button>
-            <button class="ui-btn" onclick="showDirectorIntroLocally()"><i class="fas fa-scroll"></i> Abrir prologo</button>
-            <button class="ui-btn" onclick="playDirectorMusic()"><i class="fas fa-drum"></i> Tocar trilha</button>
-            <button class="ui-btn" onclick="closeDirectorHandoutLocally()"><i class="fas fa-eye-slash"></i> Ocultar pergaminho</button>
-            <button class="ui-btn ui-btn--danger" onclick="endDirectedScene()"><i class="fas fa-flag-checkered"></i> Fechar cena</button>
-        </div>
+            <div class="scene-editor-section" data-scene-editor-section="cast">
+                <p class="scene-editor-hint">Arraste personagens e tokens para o canvas; a instancia e sua posicao pertencem a esta cena.</p>
+                <div class="vtt-section-kicker">Pistas fixadas</div>
+                <div id="scene-editor-notes" class="scene-editor-notes"></div>
+            </div>
+        </section>
     </div>
 
     <div id="playlists-content" class="content-area">
@@ -464,6 +451,12 @@
         <div class="vtt-help-text vtt-help-text--compact">
             Ajusta a opacidade da neblina na mesa.
         </div>
+    </div>
+
+    <div class="category-header">Backup</div>
+    <div class="vtt-control-panel sidebar-action-row">
+        <button class="ui-btn" type="button" onclick="exportBoardBackup()"><i class="fas fa-file-export"></i> Exportar cena JSON</button>
+        <button class="ui-btn" type="button" onclick="importBoardBackup()"><i class="fas fa-file-import"></i> Importar cena JSON</button>
     </div>
 
 </div>
@@ -815,24 +808,27 @@
         <div class="viewer-close-hint">Clique fora para fechar</div>
     </div>
 
-    <div id="save-scene-modal" class="vtt-modal-backdrop hidden">
-        <div class="vtt-modal vtt-modal--compact">
-            <h3 class="vtt-modal-title">Titulo da Cena</h3>
-            <input class="vtt-input scene-name-input" type="text" id="scene-name-input" placeholder="Ex: Acampamento Skaa">
-            <div class="modal-actions-end">
-                <button class="glass-btn danger" onclick="document.getElementById('save-scene-modal').classList.add('hidden')">Cancelar</button>
-                <button class="glass-btn success" onclick="confirmSaveScene()">Registrar no tomo</button>
+    <div id="scene-asset-picker" class="vtt-modal-backdrop hidden">
+        <div class="vtt-modal vtt-modal--scene scene-asset-picker-modal">
+            <div class="vtt-modal-header">
+                <h3 class="vtt-modal-title">Escolher asset da biblioteca</h3>
+                <button class="ui-icon-btn" onclick="closeSceneAssetPicker()" title="Fechar"><i class="fas fa-times"></i></button>
             </div>
+            <input id="scene-asset-picker-search" class="vtt-input" type="search" placeholder="Pesquisar por nome, categoria ou tag..." oninput="renderSceneAssetPicker()">
+            <div id="scene-asset-picker-grid" class="scene-asset-picker-grid"></div>
         </div>
     </div>
 
-    <div id="load-scene-modal" class="vtt-modal-backdrop hidden">
-        <div class="vtt-modal vtt-modal--scene">
+    <div id="scene-confirm-modal" class="vtt-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="scene-confirm-title">
+        <div class="vtt-modal vtt-modal--scene scene-confirm-modal">
             <div class="vtt-modal-header">
-                <h3 class="vtt-modal-title">Abrir Cena Arquivada</h3>
-                <button class="ui-icon-btn" onclick="document.getElementById('load-scene-modal').classList.add('hidden')"><i class="fas fa-times"></i></button>
+                <h3 id="scene-confirm-title" class="vtt-modal-title">Confirmar ação</h3>
             </div>
-            <div id="scene-list-container" class="vtt-modal-body scene-list-container"></div>
+            <p id="scene-confirm-message" class="scene-confirm-message"></p>
+            <div class="vtt-modal-footer">
+                <button class="ui-btn" onclick="resolveSceneConfirmation(false)">Cancelar</button>
+                <button id="scene-confirm-accept" class="ui-btn ui-btn--danger" onclick="resolveSceneConfirmation(true)">Confirmar</button>
+            </div>
         </div>
     </div>
 
@@ -1030,9 +1026,9 @@
     <script src="js/ui/compendium.js"></script>
     <script src="js/ui/assets-library.js"></script>
     <script src="js/ui/handouts.js"></script>
-    <script src="js/ui/scene-director.js"></script>
+    <script src="js/ui/scene-manager.js"></script>
+    <script src="js/ui/scene-editor.js"></script>
     <script src="js/ui/session-tools.js"></script>
-    <script src="js/systems/scenes.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html> 

@@ -1,0 +1,384 @@
+.scenes-panel,
+.scene-editor {
+  display: grid;
+  gap: 14px;
+}
+
+.scenes-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.scenes-header > div {
+  min-width: 0;
+  flex: 1;
+}
+
+.scenes-header h2 {
+  margin: 2px 0 0;
+  color: var(--color-text);
+  font-family: Georgia, serif;
+  font-size: 22px;
+}
+
+.vtt-section-kicker,
+.scene-field > span {
+  color: var(--color-accent);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.scene-manager-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.scene-card {
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.04);
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.scene-card:hover,
+.scene-card.is-active {
+  transform: translateY(-2px);
+  border-color: rgba(216, 167, 57, 0.48);
+}
+
+.scene-card__preview {
+  position: relative;
+  min-height: 112px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.32);
+  color: var(--mistborn-gold);
+  font-size: 25px;
+}
+
+.scene-card__preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.scene-card__preview span {
+  position: absolute;
+  left: 7px;
+  bottom: 7px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(5, 7, 11, 0.88);
+  color: var(--mistborn-amber);
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.scene-card__body {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  padding: 12px;
+}
+
+.scene-card__body strong {
+  overflow: hidden;
+  color: var(--text-main);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scene-card__body small {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.scene-card__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 9px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.scene-card__actions .ui-btn {
+  flex: 1;
+}
+
+.scene-editor-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 3px;
+}
+
+.scene-editor-tab {
+  flex: 0 0 auto;
+  padding: 8px 11px;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.24);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.scene-editor-tab.active,
+.scene-editor-tab.is-selected {
+  border-color: rgba(216, 167, 57, 0.52);
+  background: rgba(216, 167, 57, 0.14);
+  color: var(--mistborn-amber);
+}
+
+.scene-editor-section {
+  display: none;
+  gap: 12px;
+}
+
+.scene-editor-section.active {
+  display: grid;
+}
+
+.scene-field,
+.scene-asset-field {
+  display: grid;
+  gap: 6px;
+}
+
+.scene-field input,
+.scene-field select,
+.scene-field textarea {
+  width: 100%;
+  padding: 10px 11px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.32);
+  color: var(--color-text);
+}
+
+.scene-field textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+
+.scene-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.scene-check {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.scene-check input {
+  width: auto;
+}
+
+.scene-asset-field {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  padding: 11px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.scene-asset-field > span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.scene-asset-field strong {
+  color: var(--text-main);
+  font-size: 12px;
+}
+
+.scene-asset-field small {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scene-map-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.scene-editor-hint {
+  margin: 0;
+  padding: 11px;
+  border-left: 3px solid var(--mistborn-gold);
+  background: rgba(216, 167, 57, 0.08);
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.scene-editor-notes {
+  display: grid;
+  gap: 8px;
+}
+
+.scene-note-link {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.scene-note-link > i {
+  color: var(--mistborn-gold);
+}
+
+.scene-note-link span {
+  display: grid;
+}
+
+.scene-note-link strong {
+  color: var(--text-main);
+  font-size: 12px;
+}
+
+.scene-note-link small {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.scene-missing-assets {
+  display: grid;
+  gap: 7px;
+}
+
+.scene-missing-asset {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.38);
+  border-radius: var(--radius-sm);
+  background: rgba(127, 29, 29, 0.2);
+  color: #fecaca;
+  font-size: 11px;
+}
+
+.scene-asset-picker-modal {
+  display: grid;
+  gap: 12px;
+  max-height: min(760px, 86vh);
+}
+
+.scene-confirm-modal {
+  display: grid;
+  gap: 14px;
+  width: min(430px, calc(100vw - 32px));
+}
+
+.scene-confirm-message {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.scene-asset-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  overflow-y: auto;
+}
+
+.scene-asset-choice {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-main);
+  text-align: left;
+  cursor: pointer;
+}
+
+.scene-asset-choice:hover {
+  border-color: rgba(216, 167, 57, 0.5);
+}
+
+.scene-asset-choice.is-missing {
+  border-color: rgba(239, 68, 68, 0.4);
+  opacity: 0.72;
+}
+
+.scene-asset-choice__preview {
+  height: 90px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.34);
+  color: var(--mistborn-gold);
+  font-size: 22px;
+}
+
+.scene-asset-choice img,
+.scene-asset-choice video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.scene-asset-choice strong,
+.scene-asset-choice small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scene-asset-choice strong {
+  font-size: 12px;
+}
+
+.scene-asset-choice small {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+@media (max-width: 900px) {
+  .scene-manager-list,
+  .scene-field-grid,
+  .scene-asset-picker-grid {
+    grid-template-columns: 1fr;
+  }
+}

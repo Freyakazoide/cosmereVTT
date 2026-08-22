@@ -216,6 +216,7 @@
             if (Number.isFinite(nextHp)) participant.hpAtual = nextHp;
             if (Number.isFinite(nextMax)) participant.hpMax = nextMax;
             syncParticipantMirrors(participant);
+            window.markSceneDirty?.('combat-vitals');
             return participant;
         }
         const token = findTokenById(entityId);
@@ -231,6 +232,7 @@
             window.api?.saveCharacter?.(entityId, JSON.stringify(character));
         }
         if (typeof window.renderizarListaTokens === 'function') window.renderizarListaTokens();
+        window.markSceneDirty?.('entity-vitals');
         return null;
     }
 
@@ -240,6 +242,7 @@
         if (participant) {
             participant.conditions = normalized;
             syncParticipantMirrors(participant);
+            window.markSceneDirty?.('combat-conditions');
             return participant;
         }
         const token = findTokenById(entityId);
@@ -253,6 +256,7 @@
             window.api?.saveCharacter?.(entityId, JSON.stringify(character));
         }
         if (typeof window.renderizarListaTokens === 'function') window.renderizarListaTokens();
+        window.markSceneDirty?.('entity-conditions');
         return null;
     }
 
@@ -269,6 +273,7 @@
         highlightCurrentTurnToken();
         window.addSessionEvent?.('combat_started', 'Encontro iniciado', `${state.participants.length} participante(s)`);
         window.addChatMessage?.('Sistema', 'Encontro iniciado.', '#fbbf24');
+        window.markSceneDirty?.('combat-start');
     }
 
     function addSelectedTokenToCombat() {
@@ -283,6 +288,7 @@
         else window.combatState.participants.push(participant);
         renderCombatTracker();
         highlightCurrentTurnToken();
+        window.markSceneDirty?.('combat-participants');
     }
 
     function addManualCombatParticipant() {
@@ -314,6 +320,7 @@
         window.combatState.currentTurnIndex = nextIndex < 0 ? 0 : nextIndex;
         renderCombatTracker();
         highlightCurrentTurnToken();
+        window.markSceneDirty?.('combat-order');
     }
 
     function rollInitiativeForCombat() {
@@ -372,6 +379,7 @@
         highlightCurrentTurnToken();
         window.addSessionEvent?.('turn_changed', 'Turno avancado', participant?.name || 'Participante');
         if (participant) window.addChatMessage?.('Sistema', `Turno de <strong>${escapeCombatHtml(participant.name)}</strong>.`, '#fbbf24');
+        window.markSceneDirty?.('combat-turn');
     }
 
     function endCombat() {
@@ -381,6 +389,7 @@
         window.phaserScene?.clearCurrentTurnHighlight?.();
         renderCombatTracker();
         window.addSessionEvent?.('combat_ended', 'Encontro encerrado', `Rodada ${endedRound}`);
+        window.markSceneDirty?.('combat-end');
     }
 
     function getConditionLabel(condition) {
@@ -428,6 +437,7 @@
         window.combatState.active = true;
         renderCombatTracker();
         highlightCurrentTurnToken();
+        window.markSceneDirty?.('combat-turn');
     }
 
     function removeParticipantFromCombat(id) {
@@ -438,6 +448,7 @@
         if (!window.combatState.participants.length) window.combatState.active = false;
         renderCombatTracker();
         highlightCurrentTurnToken();
+        window.markSceneDirty?.('combat-participants');
     }
 
     function highlightCurrentTurnToken() {

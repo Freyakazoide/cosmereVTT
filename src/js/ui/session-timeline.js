@@ -52,7 +52,11 @@
     }
 
     function persistSessionState() {
-        return ensureSessionState();
+        const state = ensureSessionState();
+        window.api?.saveSessionState?.(JSON.stringify(state)).catch(error => {
+            console.error('Nao foi possivel salvar a cronica da sessao.', error);
+        });
+        return state;
     }
 
     function restoreSessionState(state, options = {}) {
@@ -68,6 +72,23 @@
 
     function getSessionStateSnapshot() {
         return JSON.parse(JSON.stringify(ensureSessionState()));
+    }
+
+    async function loadPersistedSessionState() {
+        try {
+            const saved = await window.api?.loadSessionState?.();
+            if (saved) window.sessionState = normalizeSessionState(JSON.parse(saved));
+            else persistSessionState();
+        } catch (error) {
+            console.error('Nao foi possivel carregar a cronica da sessao.', error);
+        }
+        renderSessionTimeline();
+    }
+
+    function importLegacySessionStateOnce(state) {
+        if (!state || ensureSessionState().events.length) return false;
+        restoreSessionState(state);
+        return true;
     }
 
     window.SESSION_EVENT_TYPES = window.SESSION_EVENT_TYPES || SESSION_EVENT_TYPES;
@@ -139,7 +160,7 @@
 
     function startSession() {
         const state = ensureSessionState();
-        const name = window.currentSceneName || window.directedSceneDraft?.sceneName || 'Cronica sem nome';
+        const name = window.currentSceneName || 'Cronica sem nome';
 
         state.active = true;
         state.sessionName = name;
@@ -231,6 +252,7 @@
     window.getSessionStateSnapshot = getSessionStateSnapshot;
     window.restoreSessionState = restoreSessionState;
     window.persistSessionState = persistSessionState;
+    window.importLegacySessionStateOnce = importLegacySessionStateOnce;
 
-    document.addEventListener('DOMContentLoaded', renderSessionTimeline);
+    document.addEventListener('DOMContentLoaded', loadPersistedSessionState);
 })();

@@ -141,6 +141,7 @@
 
 .vtt-dock .tool-btn.active,
 .vtt-dock .tab-btn.active,
+.vtt-dock .master-tool-btn.is-pinned,
 #global-actions .tool-btn:active {
   border-color: rgba(216, 167, 57, 0.62);
   background:
@@ -192,6 +193,11 @@
   transform: translateY(-2px);
   background: rgba(63, 52, 29, 0.96);
   border-color: rgba(240, 199, 102, 0.68);
+}
+
+.master-tool-btn.is-pinned {
+  outline: 2px solid rgba(240, 199, 102, 0.28);
+  outline-offset: 2px;
 }
 
 .tool-submenu {
@@ -401,7 +407,7 @@
   display: flex;
 }
 
-.vtt-flyout .scene-director.active {
+.vtt-flyout .scenes-panel.active {
   display: grid;
 }
 
@@ -490,8 +496,7 @@
 }
 
 .vtt-library-stack,
-.note-folder-items,
-.director-note-list {
+.note-folder-items {
   display: grid;
   gap: 10px;
 }
@@ -591,8 +596,7 @@
 .vtt-flyout .list-item,
 .vtt-library-card,
 .vtt-flyout .note-card,
-.vtt-flyout .folder-card,
-.vtt-flyout .director-note-item {
+.vtt-flyout .folder-card {
   position: relative;
   border: 1px solid rgba(154, 163, 173, 0.14);
   border-left: 3px solid rgba(216, 167, 57, 0.28);
@@ -614,8 +618,7 @@
 .vtt-flyout .list-item:hover,
 .vtt-library-card:hover,
 .vtt-flyout .note-card:hover,
-.vtt-flyout .folder-card:hover,
-.vtt-flyout .director-note-item:hover {
+.vtt-flyout .folder-card:hover {
   transform: translateX(3px);
   border-color: rgba(216, 167, 57, 0.36);
   border-left-color: var(--mistborn-gold);
@@ -1078,6 +1081,38 @@
   backdrop-filter: blur(14px);
 }
 
+.app-mode-label,
+.scene-save-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 9px;
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.app-mode-label {
+  color: var(--mistborn-amber);
+}
+
+.scene-save-status {
+  border-left: 1px solid rgba(216, 167, 57, 0.18);
+  letter-spacing: 0.03em;
+  text-transform: none;
+}
+
+.scene-save-status[data-status="dirty"] { color: #fbbf24; }
+.scene-save-status[data-status="saving"] { color: #60a5fa; }
+.scene-save-status[data-status="error"] { color: #f87171; }
+.scene-save-status[data-status="clean"] { color: #86efac; }
+
+body[data-app-mode="play"] .dock-prepare-secondary {
+  display: none;
+}
+
 .tool-options-panel {
   position: absolute;
   left: 50%;
@@ -1122,6 +1157,14 @@
   transform: translateY(-50%) translateX(0) scale(1);
 }
 
+#vtt-custom-tooltip.is-left {
+  transform: translateY(-50%) translateX(6px) scale(0.97);
+}
+
+#vtt-custom-tooltip.is-left.is-visible {
+  transform: translateY(-50%) translateX(0) scale(1);
+}
+
 #vtt-custom-tooltip::before {
   content: "";
   position: absolute;
@@ -1133,6 +1176,12 @@
   border-bottom: 1px solid rgba(216, 167, 57, 0.24);
   border-left: 1px solid rgba(216, 167, 57, 0.24);
   background: rgba(22, 27, 35, 0.98);
+}
+
+#vtt-custom-tooltip.is-left::before {
+  right: -6px;
+  left: auto;
+  transform: translateY(-50%) rotate(225deg);
 }
 
 .vtt-tooltip-kicker {

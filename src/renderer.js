@@ -1,6 +1,6 @@
 const PIXELS_POR_UNIDADE = 70;
 const METROS_POR_QUADRADO = 2;
-const BOARD_STATE_VERSION = 3;
+const BOARD_STATE_VERSION = 4;
 
 function normalizarCaminhoVtt(path) {
     return String(path || '').replace(/\\/g, '/');
@@ -195,24 +195,69 @@ function getDefaultCombatStateVtt() {
     };
 }
 
-function getDefaultSessionStateVtt() {
-    return {
-        active: false,
-        sessionName: '',
-        startedAt: null,
-        endedAt: null,
-        events: []
-    };
-}
-
 function getDefaultSceneSettingsVtt() {
     return {
         gridEnabled: true,
         gridSize: PIXELS_POR_UNIDADE,
+        gridOffsetX: 0,
+        gridOffsetY: 0,
         snapToGrid: true,
         distancePerCell: METROS_POR_QUADRADO,
         distanceUnit: 'm'
     };
+}
+
+function createSceneUidVtt() {
+    if (window.crypto?.randomUUID) return `scene_${window.crypto.randomUUID()}`;
+    return `scene_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function getSceneAssetsVtt() {
+    return Array.isArray(window.assetsLibraryState?.assets) ? window.assetsLibraryState.assets : [];
+}
+
+function normalizeAssetPathVtt(value) {
+    return normalizarCaminhoVtt(value).toLowerCase();
+}
+
+function findSceneAssetVtt(assetId, pathFallback, allowedTypes = null) {
+    const assets = getSceneAssetsVtt();
+    const typeAllowed = asset => !allowedTypes || allowedTypes.includes(asset?.type);
+    if (assetId) {
+        const byId = assets.find(asset => asset.id === assetId && typeAllowed(asset));
+        if (byId) return byId;
+    }
+    const normalizedPath = normalizeAssetPathVtt(pathFallback);
+    if (!normalizedPath) return null;
+    return assets.find(asset => typeAllowed(asset) && normalizeAssetPathVtt(asset.path) === normalizedPath) || null;
+}
+
+function normalizeSceneAssetRefVtt(value, allowedTypes = null) {
+    const source = value && typeof value === 'object' ? value : {};
+    const pathFallback = source.pathFallback || source.path || source.caminhoAbsoluto || '';
+    const asset = findSceneAssetVtt(source.assetId, pathFallback, allowedTypes);
+    const reference = {
+        assetId: asset?.id || source.assetId || null,
+        pathFallback: pathFallback || asset?.path || '',
+        missing: asset ? Boolean(asset.missing) : Boolean(pathFallback || source.assetId)
+    };
+    Object.defineProperty(reference, 'path', {
+        enumerable: false,
+        configurable: true,
+        writable: true,
+        value: asset && !asset.missing ? asset.path : pathFallback
+    });
+    return reference;
+}
+
+function withRuntimeAssetPathVtt(value, reference) {
+    Object.defineProperty(value, 'path', {
+        enumerable: false,
+        configurable: true,
+        writable: true,
+        value: reference.path
+    });
+    return value;
 }
 
 function normalizeBoardAssetListVtt(primary, fallback) {
@@ -224,37 +269,47 @@ function normalizeBoardAssetListVtt(primary, fallback) {
 function normalizeBoardState(state, options = {}) {
     const source = state && typeof state === 'object' ? state : {};
     const sceneName = source.sceneName || source.sceneDirector?.sceneName || options.sceneName || '';
-    const sceneId = source.sceneId || (sceneName ? criarSceneIdVtt(sceneName) : '');
-    const maps = normalizeBoardAssetListVtt(source.maps, source.mapas).map(map => ({
-        textureKey: map?.textureKey || map?.key || '',
-        path: map?.path || map?.caminhoAbsoluto || '',
-        x: Number(map?.x) || 0,
-        y: Number(map?.y) || 0,
-        scaleX: Number(map?.scaleX) || 1,
-        scaleY: Number(map?.scaleY ?? map?.scaleX) || 1,
-        width: Number(map?.width) || null,
-        height: Number(map?.height) || null,
-        locked: Boolean(map?.locked)
-    }));
-    const tokens = normalizeBoardAssetListVtt(source.tokens, []).map(token => ({
-        textureKey: token?.textureKey || token?.key || '',
-        path: token?.path || token?.caminhoAbsoluto || '',
-        x: Number(token?.x) || 0,
-        y: Number(token?.y) || 0,
-        scaleX: Number(token?.scaleX) || 1,
-        scaleY: Number(token?.scaleY ?? token?.scaleX) || 1,
-        tokenId: token?.tokenId || token?.characterId || token?.id || '',
-        charName: token?.charName || token?.name || '',
-        elevation: token?.elevation ?? token?.elev ?? '',
-        gridSize: token?.gridSize || 1,
-        locked: !!token?.locked,
-        notes: token?.notes || '',
-        hpAtual: token?.hpAtual ?? token?.hp ?? null,
-        hpMax: token?.hpMax ?? null,
-        aura: token?.aura || null,
-        auraEmoji: token?.auraEmoji || token?.status || null,
-        conditions: Array.isArray(token?.conditions) ? token.conditions : []
-    }));
+    const sceneId = source.sceneId || options.sceneId || createSceneUidVtt();
+    const legacyDirector = source.sceneDirector && typeof source.sceneDirector === 'object' ? source.sceneDirector : {};
+    const mapsSource = normalizeBoardAssetListVtt(source.maps, source.mapas);
+    if (!mapsSource.length && legacyDirector.mapPath) mapsSource.push({ pathFallback: legacyDirector.mapPath });
+    const maps = mapsSource.map(map => {
+        const reference = normalizeSceneAssetRefVtt(map, ['map']);
+        return withRuntimeAssetPathVtt({
+            ...reference,
+            textureKey: map?.textureKey || map?.key || `map_${reference.assetId || criarSceneIdVtt(reference.pathFallback || 'asset')}`,
+            x: Number(map?.x) || 0,
+            y: Number(map?.y) || 0,
+            scaleX: Number(map?.scaleX) || 1,
+            scaleY: Number(map?.scaleY ?? map?.scaleX) || 1,
+            width: Number(map?.width) || null,
+            height: Number(map?.height) || null,
+            locked: map?.locked !== false
+        }, reference);
+    });
+    const tokens = normalizeBoardAssetListVtt(source.tokens, []).map(token => {
+        const reference = normalizeSceneAssetRefVtt(token, ['token', 'portrait', 'image', 'handout']);
+        return withRuntimeAssetPathVtt({
+            ...reference,
+            textureKey: token?.textureKey || token?.key || '',
+            x: Number(token?.x) || 0,
+            y: Number(token?.y) || 0,
+            scaleX: Number(token?.scaleX) || 1,
+            scaleY: Number(token?.scaleY ?? token?.scaleX) || 1,
+            tokenId: token?.tokenId || token?.characterId || token?.id || '',
+            characterId: token?.characterId || token?.tokenId || null,
+            charName: token?.charName || token?.name || '',
+            elevation: token?.elevation ?? token?.elev ?? '',
+            gridSize: token?.gridSize || 1,
+            locked: !!token?.locked,
+            notes: token?.notes || '',
+            hpAtual: token?.hpAtual ?? token?.hp ?? null,
+            hpMax: token?.hpMax ?? null,
+            aura: token?.aura || null,
+            auraEmoji: token?.auraEmoji || token?.status || null,
+            conditions: Array.isArray(token?.conditions) ? token.conditions : []
+        }, reference);
+    });
     const legacyGrid = source.grid || {};
     const sceneSettings = {
         ...getDefaultSceneSettingsVtt(),
@@ -270,6 +325,8 @@ function normalizeBoardState(state, options = {}) {
     const normalizedSceneSettings = {
         gridEnabled: sceneSettings.gridEnabled !== false,
         gridSize: sceneSettings.gridSize,
+        gridOffsetX: Number(sceneSettings.gridOffsetX) || 0,
+        gridOffsetY: Number(sceneSettings.gridOffsetY) || 0,
         snapToGrid: sceneSettings.snapToGrid !== false,
         distancePerCell: sceneSettings.distancePerCell,
         distanceUnit: sceneSettings.distanceUnit
@@ -306,35 +363,50 @@ function normalizeBoardState(state, options = {}) {
             round: Math.max(1, Number(rawCombatState.round) || 1),
             participants: Array.isArray(rawCombatState.participants) ? rawCombatState.participants : []
         };
-    const sessionState = {
-        ...getDefaultSessionStateVtt(),
-        ...(source.sessionState || {}),
-        events: Array.isArray(source.sessionState?.events) ? source.sessionState.events : []
+    const now = new Date().toISOString();
+    const metadata = {
+        gmText: source.metadata?.gmText ?? legacyDirector.gmText ?? '',
+        objective: source.metadata?.objective ?? legacyDirector.objective ?? '',
+        victory: source.metadata?.victory ?? legacyDirector.victory ?? '',
+        failure: source.metadata?.failure ?? legacyDirector.failure ?? '',
+        createdAt: source.metadata?.createdAt || options.createdAt || now,
+        updatedAt: source.metadata?.updatedAt || options.updatedAt || now
     };
-    const pinnedNotes = Array.isArray(source.pinnedNotes) ? source.pinnedNotes.map(note => ({ ...note, isPinned: true })) : [];
-    const revealedNotes = Array.isArray(source.revealedNotes) ? source.revealedNotes.map(note => ({ ...note, isRevealed: true })) : [];
-    const rawSceneNotes = Array.isArray(source.sceneNotes)
-        ? source.sceneNotes
-        : [
-            ...pinnedNotes,
-            ...revealedNotes.filter(note => !pinnedNotes.some(pinned => pinned?.id && pinned.id === note?.id))
-        ];
-    const sceneNotes = rawSceneNotes.map(note => {
-        const { body, ...canonicalNote } = note || {};
-        return {
-            ...canonicalNote,
-            content: canonicalNote.content ?? body ?? ''
+    const rawWeather = source.weather ?? legacyDirector.weather ?? null;
+    const weather = rawWeather && typeof rawWeather === 'object' && ('preset' in rawWeather || 'config' in rawWeather)
+        ? { preset: rawWeather.preset || 'custom', config: rawWeather.config || null }
+        : {
+            preset: typeof rawWeather === 'string' ? rawWeather : 'custom',
+            config: rawWeather && typeof rawWeather === 'object' ? rawWeather : null
         };
-    });
-    const sceneDirector = source.sceneDirector && typeof source.sceneDirector === 'object'
-        ? { ...source.sceneDirector }
-        : null;
-    if (sceneDirector) delete sceneDirector.sceneName;
+    const rawAudio = source.audio || {};
+    const audioRef = normalizeSceneAssetRefVtt({
+        assetId: rawAudio.assetId,
+        pathFallback: rawAudio.pathFallback || rawAudio.currentTrack || legacyDirector.audioPath
+    }, ['audio']);
+    const audio = {
+        ...audioRef,
+        behavior: rawAudio.behavior || 'keep',
+        volume: Number(rawAudio.volume ?? 0.5)
+    };
+    const rawPresentation = source.presentation || {};
+    const handoutRef = normalizeSceneAssetRefVtt({
+        assetId: rawPresentation.handout?.assetId || rawPresentation.handoutAssetId,
+        pathFallback: rawPresentation.handout?.pathFallback || rawPresentation.handoutPath || legacyDirector.handoutPath
+    }, ['image', 'video', 'handout']);
+    const presentation = {
+        introText: rawPresentation.introText ?? legacyDirector.introText ?? '',
+        handout: {
+            ...handoutRef,
+            type: rawPresentation.handout?.type || rawPresentation.handoutType || (/\.(mp4|webm|ogg)$/i.test(handoutRef.pathFallback) ? 'video' : 'image')
+        }
+    };
 
     return {
         version: BOARD_STATE_VERSION,
         sceneName,
         sceneId,
+        metadata,
         camera: {
             x: Number(source.camera?.x) || 0,
             y: Number(source.camera?.y) || 0,
@@ -342,23 +414,20 @@ function normalizeBoardState(state, options = {}) {
         },
         sceneSettings: normalizedSceneSettings,
         combatState,
-        sessionState,
-        weather: source.weather || null,
+        weather,
         fog,
         maps,
         tokens,
         drawings: Array.isArray(source.drawings) ? source.drawings : [],
-        audio: {
-            currentTrack: source.audio?.currentTrack || null,
-            volume: Number(source.audio?.volume ?? 0.5)
-        },
-        sceneNotes,
+        audio,
+        presentation,
         revealedHandouts: Array.isArray(source.revealedHandouts) ? source.revealedHandouts : [],
-        sceneDirector
     };
 }
 
 window.normalizeBoardState = normalizeBoardState;
+window.createSceneUidVtt = createSceneUidVtt;
+window.findSceneAssetVtt = findSceneAssetVtt;
 
 function getDrawingBoundsVtt(meta, padding = 8) {
     if (!meta) return null;
@@ -631,6 +700,8 @@ class MainScene extends Phaser.Scene {
             this.previewGraphics.clear();
             this.isDrawing = false;
             this.isMeasuring = false;
+            if (['draw', 'eraser', 'fog', 'aoe'].includes(this.ferramentaAtual)) window.markSceneDirty?.(this.ferramentaAtual);
+            if (pointer.button === 2) window.markSceneDirty?.('camera-pan');
         });
         
        // Adiciona evento global de duplo clique para Tokens abrirem a Ficha
@@ -656,6 +727,7 @@ class MainScene extends Phaser.Scene {
             let zoomFactor = deltaY > 0 ? 0.85 : 1.15; 
             let newZoom = Phaser.Math.Clamp(this.cameras.main.zoom * zoomFactor, 0.02, 10);
             this.cameras.main.setZoom(newZoom);
+            window.markSceneDirty?.('camera-zoom');
         });
 
         window.phaserScene = this;
@@ -881,7 +953,7 @@ class MainScene extends Phaser.Scene {
         // Trava ou Destrava Mapas para montagem
         if (this.mapasAtivos) {
             this.mapasAtivos.forEach(mapa => {
-                this.input.setDraggable(mapa, nome === 'map-edit');
+                this.input.setDraggable(mapa, nome === 'map-edit' && !this.mapLocked);
             });
         }
     }
@@ -902,6 +974,8 @@ class MainScene extends Phaser.Scene {
         this.sceneSettings = {
             gridEnabled: true,
             gridSize: PIXELS_POR_UNIDADE,
+            gridOffsetX: 0,
+            gridOffsetY: 0,
             snapToGrid: true,
             distancePerCell: METROS_POR_QUADRADO,
             distanceUnit: 'm',
@@ -929,7 +1003,11 @@ class MainScene extends Phaser.Scene {
         if (this.grid) this.grid.destroy();
         if (this.sceneSettings.gridEnabled !== false) {
             const gridSize = this.getSceneGridSize();
-            this.grid = this.add.grid(0, 0, 30000, 30000, gridSize, gridSize, 0, 0, 0x888888, 0.3);
+            this.grid = this.add.grid(
+                Number(this.sceneSettings.gridOffsetX) || 0,
+                Number(this.sceneSettings.gridOffsetY) || 0,
+                30000, 30000, gridSize, gridSize, 0, 0, 0x888888, 0.3
+            );
             this.camadaGrid.add(this.grid);
         } else {
             this.grid = null;
@@ -954,9 +1032,11 @@ class MainScene extends Phaser.Scene {
     snapTokenToGrid(token) {
         if (!token || this.getSceneSettings().snapToGrid === false) return;
         const gridSize = this.getSceneGridSize();
-        const offset = (token.gridSize % 2 === 0) ? 0 : (gridSize / 2);
-        token.x = Math.round(token.x / gridSize) * gridSize + offset;
-        token.y = Math.round(token.y / gridSize) * gridSize + offset;
+        const centerOffset = (token.gridSize % 2 === 0) ? 0 : (gridSize / 2);
+        const gridOffsetX = Number(this.getSceneSettings().gridOffsetX) || 0;
+        const gridOffsetY = Number(this.getSceneSettings().gridOffsetY) || 0;
+        token.x = gridOffsetX + Math.round((token.x - gridOffsetX - centerOffset) / gridSize) * gridSize + centerOffset;
+        token.y = gridOffsetY + Math.round((token.y - gridOffsetY - centerOffset) / gridSize) * gridSize + centerOffset;
     }
 
     saveSceneGridSettings() {
@@ -1009,13 +1089,12 @@ class MainScene extends Phaser.Scene {
     // --- SISTEMA DE TABULEIRO (SAVE/LOAD) ---
     getBoardState() {
         const camera = this.cameras.main;
-        const notesState = typeof window.getSceneAwareNotesState === 'function'
-            ? window.getSceneAwareNotesState()
-            : { sceneNotes: [] };
+        const currentState = window.currentSceneState || {};
         const state = {
             version: BOARD_STATE_VERSION,
-            sceneName: window.currentSceneName || window.directedSceneDraft?.sceneName || '',
-            sceneId: window.currentSceneId || notesState.sceneId || '',
+            sceneName: window.currentSceneName || currentState.sceneName || '',
+            sceneId: window.currentSceneId || currentState.sceneId || createSceneUidVtt(),
+            metadata: { ...(currentState.metadata || {}) },
             camera: {
                 x: camera.scrollX,
                 y: camera.scrollY,
@@ -1026,16 +1105,10 @@ class MainScene extends Phaser.Scene {
                 ...(window.combatState || { active: false, round: 1, currentTurnIndex: 0, participants: [] }),
                 participants: (window.combatState?.participants || []).map(({ tokenRef, ...participant }) => participant)
             },
-            sessionState: typeof window.getSessionStateSnapshot === 'function'
-                ? window.getSessionStateSnapshot()
-                : (window.sessionState || {
-                    active: false,
-                    sessionName: '',
-                    startedAt: null,
-                    endedAt: null,
-                    events: []
-                }),
-            weather: this.currentWeather || null,
+            weather: {
+                preset: currentState.weather?.preset || 'custom',
+                config: this.currentWeather || currentState.weather?.config || null
+            },
             fog: {
                 alpha: this.fogRT ? this.fogRT.alpha : 0.9,
                 mode: window.toolConfig ? window.toolConfig.fogMode : 'reveal',
@@ -1045,18 +1118,18 @@ class MainScene extends Phaser.Scene {
             tokens: [],
             drawings: [],
             audio: {
-                currentTrack: window.currentAudioTrack || null,
-                volume: document.getElementById('audio-volume') ? parseFloat(document.getElementById('audio-volume').value) : 0.5
+                ...(currentState.audio || {}),
+                volume: Number(currentState.audio?.volume ?? document.getElementById('audio-volume')?.value ?? 0.5)
             },
-            sceneNotes: notesState.sceneNotes || [],
-            revealedHandouts: window.revealedHandouts || [],
-            sceneDirector: window.directedSceneDraft || null
+            presentation: { ...(currentState.presentation || {}) },
+            revealedHandouts: window.revealedHandouts || []
         };
         if (this.mapasAtivos) {
             this.mapasAtivos.forEach(m => {
                 const mapState = {
                     textureKey: m.texture.key,
-                    path: m.caminhoAbsoluto,
+                    assetId: m.assetId || null,
+                    pathFallback: m.pathFallback || m.caminhoAbsoluto,
                     x: m.x,
                     y: m.y,
                     scaleX: m.scaleX,
@@ -1074,11 +1147,12 @@ class MainScene extends Phaser.Scene {
                 const participant = window.combatState?.participants?.find(item => item.id === t.tokenId || item.tokenId === t.tokenId);
                 state.tokens.push({
                     textureKey: t.texture.key,
-                    path: t.caminhoAbsoluto,
+                    assetId: t.assetId || null,
+                    pathFallback: t.pathFallback || t.caminhoAbsoluto,
                     x: t.x,
                     y: t.y,
-                    scaleX: t.scaleX,
-                    scaleY: t.scaleY,
+                    scaleX: t.baseScale ?? t.scaleX,
+                    scaleY: t.baseScale ?? t.scaleY,
                     gridSize: t.gridSize || 1,
                     elevation: t.elevText ? t.elevText.text : '',
                     tokenId: t.tokenId,
@@ -1100,7 +1174,18 @@ class MainScene extends Phaser.Scene {
                 .filter(obj => obj.drawingMeta && obj.visible !== false && obj.active !== false)
                 .map(obj => obj.drawingMeta);
         }
-        return normalizeBoardState(state);
+        if (!state.maps.length && Array.isArray(currentState.maps)) {
+            state.maps = currentState.maps.filter(map => map.missing).map(map => ({ ...map }));
+        }
+        const missingTokenIds = new Set(state.tokens.map(token => token.tokenId));
+        if (Array.isArray(currentState.tokens)) {
+            state.tokens.push(...currentState.tokens
+                .filter(token => token.missing && !missingTokenIds.has(token.tokenId))
+                .map(token => ({ ...token })));
+        }
+        const normalized = normalizeBoardState(state);
+        window.currentSceneState = normalized;
+        return normalized;
     }
 
     loadBoardState(state) {
@@ -1126,33 +1211,14 @@ class MainScene extends Phaser.Scene {
             this.fogRT.setAlpha(state.fog.alpha);
             if (window.toolConfig && state.fog?.mode) window.toolConfig.fogMode = state.fog.mode;
         }
-        if (state.weather && this.setAdvancedWeather) {
-            this.setAdvancedWeather(state.weather);
-        }
-        if (state.sceneDirector && typeof restoreDirectedSceneFromState === 'function') {
-            restoreDirectedSceneFromState({ ...state.sceneDirector, sceneName: state.sceneName });
-        } else if (state.sceneDirector) {
-            window.directedSceneDraft = state.sceneDirector;
-        }
-        if (state.sessionState) {
-            if (typeof window.restoreSessionState === 'function') {
-                window.restoreSessionState(state.sessionState, { persist: false });
-            } else {
-                window.sessionState = state.sessionState;
-                if (typeof window.renderSessionTimeline === 'function') {
-                    window.renderSessionTimeline();
-                }
-                if (typeof window.persistSessionState === 'function') {
-                    window.persistSessionState();
-                }
-            }
-        }
-        if (typeof restoreSceneNotesFromBoardState === 'function') {
-            restoreSceneNotesFromBoardState(state);
-        } else {
+        window.currentSceneState = state;
+        if (state.weather?.config && this.setAdvancedWeather) this.setAdvancedWeather(state.weather.config);
+        if (typeof setCurrentSceneContext === 'function') setCurrentSceneContext(state.sceneName || '', state.sceneId);
+        else {
             window.currentSceneName = state.sceneName || '';
             window.currentSceneId = state.sceneId || '';
         }
+        if (typeof window.applySceneStateToEditor === 'function') window.applySceneStateToEditor(state);
         if (Array.isArray(state.revealedHandouts)) {
             window.revealedHandouts = state.revealedHandouts;
         }
@@ -1169,6 +1235,10 @@ class MainScene extends Phaser.Scene {
         const queueAsset = asset => {
             const key = asset.textureKey;
             const isVideo = isVideoAsset(asset);
+            if (asset.missing) {
+                window.reportMissingSceneAsset?.(asset);
+                return;
+            }
             if (!key || !asset.path || hasAssetTexture(key, isVideo)) return;
             if (isVideo) this.load.video(key, `file://${asset.path}`);
             else this.load.image(key, `file://${asset.path}`);
@@ -1183,6 +1253,7 @@ class MainScene extends Phaser.Scene {
                 const isVideo = isVideoAsset(mapState);
                 if (!hasAssetTexture(mapState.textureKey, isVideo)) {
                     console.warn(`Mapa ignorado porque nao foi carregado: ${mapState.path}`);
+                    window.reportMissingSceneAsset?.(mapState);
                     return;
                 }
                 const map = isVideo
@@ -1190,14 +1261,19 @@ class MainScene extends Phaser.Scene {
                     : this.add.image(mapState.x, mapState.y, mapState.textureKey).setInteractive();
                 if (isVideo) map.play(true);
                 map.caminhoAbsoluto = mapState.path;
-                this.input.setDraggable(map, this.ferramentaAtual === 'map-edit');
+                map.pathFallback = mapState.pathFallback;
+                map.assetId = mapState.assetId || null;
+                this.input.setDraggable(map, this.ferramentaAtual === 'map-edit' && !this.mapLocked);
                 map.on('drag', (pointer, dragX, dragY) => {
                     if (this.ferramentaAtual === 'map-edit') map.setPosition(dragX, dragY);
                 });
                 map.on('dragend', () => {
                     const gridSize = this.getSceneGridSize();
-                    map.x = Math.round(map.x / gridSize) * gridSize;
-                    map.y = Math.round(map.y / gridSize) * gridSize;
+                    const offsetX = Number(this.getSceneSettings().gridOffsetX) || 0;
+                    const offsetY = Number(this.getSceneSettings().gridOffsetY) || 0;
+                    map.x = offsetX + Math.round((map.x - offsetX) / gridSize) * gridSize;
+                    map.y = offsetY + Math.round((map.y - offsetY) / gridSize) * gridSize;
+                    window.markSceneDirty?.('map-position');
                 });
                 map.setScale(mapState.scaleX || 1, mapState.scaleY || mapState.scaleX || 1);
                 this.mapasAtivos.push(map);
@@ -1208,6 +1284,7 @@ class MainScene extends Phaser.Scene {
                 const isVideo = isVideoAsset(tokenState);
                 if (!hasAssetTexture(tokenState.textureKey, isVideo)) {
                     console.warn(`Token ignorado porque nao foi carregado: ${tokenState.path}`);
+                    window.reportMissingSceneAsset?.(tokenState);
                     return;
                 }
                 this.spawnTokenAt(
@@ -1287,8 +1364,13 @@ class MainScene extends Phaser.Scene {
     }
 
     async refreshLibrary() {
-        const maps = await window.api.getMaps();
-        const audios = await window.api.getAudio();
+        const assets = window.api?.getAssetsLibrary ? await window.api.getAssetsLibrary() : [];
+        if (window.assetsLibraryState) window.assetsLibraryState.assets = assets;
+        const availableAssets = assets.filter(asset => !asset.missing);
+        const maps = availableAssets.filter(asset => asset.type === 'map');
+        const audios = availableAssets.filter(asset => asset.type === 'audio');
+        const videos = availableAssets.filter(asset => asset.type === 'video');
+        const imagens = availableAssets.filter(asset => ['image', 'handout'].includes(asset.type));
 
         // Puxa as fichas do banco ANTES de desenhar a interface
         if (window.api && window.api.getCharacters) {
@@ -1326,16 +1408,16 @@ class MainScene extends Phaser.Scene {
         };
 
         // Renderizar Vídeos Dinâmicos com preview + nome exato do arquivo
-        if (videoList && window.api.getVideos) {
-            const videos = ordenarPorNome(await window.api.getVideos());
-            const videosByCat = agruparPorCategoria(videos);
+        if (videoList) {
+            const sortedVideos = ordenarPorNome(videos);
+            const videosByCat = agruparPorCategoria(sortedVideos);
 
             videoList.innerHTML = `
                 ${renderVttLibraryOverview({
                     icon: 'fa-solid fa-film',
                     title: 'Cenas e videos',
                     subtitle: 'Cinematicas, loops e referencias visuais',
-                    count: videos.length
+                    count: sortedVideos.length
                 })}
                 ${renderVttGroupedLibrary(videosByCat, v => {
                         const path = normalizarCaminhoVtt(v.path);
@@ -1366,16 +1448,16 @@ class MainScene extends Phaser.Scene {
         }
 
         // Renderizar Imagens Dinâmicas com preview + nome exato do arquivo
-        if (imgList && window.api.getImages) {
-            const imagens = ordenarPorNome(await window.api.getImages());
-            const imagensByCat = agruparPorCategoria(imagens);
+        if (imgList) {
+            const sortedImages = ordenarPorNome(imagens);
+            const imagensByCat = agruparPorCategoria(sortedImages);
 
             imgList.innerHTML = `
                 ${renderVttLibraryOverview({
                     icon: 'fa-solid fa-image',
                     title: 'Handouts visuais',
                     subtitle: 'Pistas, retratos, props e imagens para revelar',
-                    count: imagens.length
+                    count: sortedImages.length
                 })}
                 ${renderVttGroupedLibrary(imagensByCat, i => {
                         const path = normalizarCaminhoVtt(i.path);
@@ -1479,7 +1561,7 @@ class MainScene extends Phaser.Scene {
                                 preview: path,
                                 previewType: isVideo ? 'video' : 'image',
                                 variant: 'map',
-                                onClick: `phaserScene.carregarMapa('${jsPath}', '${jsFileName}')`
+                                onClick: `phaserScene.carregarMapa('${jsPath}', '${jsFileName}', '${escaparJsVtt(m.id || '')}')`
                             });
                         }, 'Nenhum mapa cadastrado.')}
             `;
@@ -1499,7 +1581,23 @@ class MainScene extends Phaser.Scene {
 
 
 
-    carregarMapa(caminhoAbsoluto, nome) {
+    clearSceneMaps() {
+        (this.mapasAtivos || []).forEach(map => {
+            this.camadaMapa?.remove(map);
+            map?.destroy?.();
+        });
+        this.mapasAtivos = [];
+        this.resetFogArea(this.isFogCovered);
+    }
+
+    replaceSceneMapAsset(asset) {
+        if (!asset || asset.missing) return;
+        this.clearSceneMaps();
+        this.carregarMapa(asset.path, asset.fileName || asset.name, asset.id);
+        window.restoreMapLockState?.(true);
+    }
+
+    carregarMapa(caminhoAbsoluto, nome, assetId = null) {
         const ext = caminhoAbsoluto.split('.').pop().toLowerCase();
         const isVideo = ['webm', 'mp4'].includes(ext);
         const key = `map_${nome}_${Date.now()}`; 
@@ -1510,7 +1608,11 @@ class MainScene extends Phaser.Scene {
         this.load.once('complete', () => {
             if (!this.grid) {
                 const gridSize = this.getSceneGridSize();
-                this.grid = this.add.grid(0, 0, 30000, 30000, gridSize, gridSize, 0, 0, 0x888888, 0.3);
+                this.grid = this.add.grid(
+                    Number(this.getSceneSettings().gridOffsetX) || 0,
+                    Number(this.getSceneSettings().gridOffsetY) || 0,
+                    30000, 30000, gridSize, gridSize, 0, 0, 0x888888, 0.3
+                );
                 this.camadaGrid.add(this.grid);
             }
             const mapView = this.cameras.main.worldView;
@@ -1524,18 +1626,24 @@ class MainScene extends Phaser.Scene {
             }
             
             novoMapa.caminhoAbsoluto = caminhoAbsoluto;
-            this.input.setDraggable(novoMapa, this.ferramentaAtual === 'map-edit');
+            novoMapa.pathFallback = caminhoAbsoluto;
+            novoMapa.assetId = assetId;
+            this.input.setDraggable(novoMapa, this.ferramentaAtual === 'map-edit' && !this.mapLocked);
             novoMapa.on('drag', (pointer, dragX, dragY) => { if (this.ferramentaAtual !== 'map-edit') return; novoMapa.x = dragX; novoMapa.y = dragY; });
             novoMapa.on('dragend', () => {
                 const gridSize = this.getSceneGridSize();
-                novoMapa.x = Math.round(novoMapa.x / gridSize) * gridSize;
-                novoMapa.y = Math.round(novoMapa.y / gridSize) * gridSize;
+                const offsetX = Number(this.getSceneSettings().gridOffsetX) || 0;
+                const offsetY = Number(this.getSceneSettings().gridOffsetY) || 0;
+                novoMapa.x = offsetX + Math.round((novoMapa.x - offsetX) / gridSize) * gridSize;
+                novoMapa.y = offsetY + Math.round((novoMapa.y - offsetY) / gridSize) * gridSize;
+                window.markSceneDirty?.('map-position');
             });
             
             if (!this.mapasAtivos) this.mapasAtivos = [];
             this.mapasAtivos.push(novoMapa);
             this.camadaMapa.add(novoMapa);
             this.resetFogArea(this.isFogCovered);
+            window.markSceneDirty?.('map-added');
         });
         this.load.start();
     }
@@ -1553,10 +1661,14 @@ class MainScene extends Phaser.Scene {
             if (isVideo) this.load.video(key, `file://${path}`);
             else this.load.image(key, `file://${path}`);
             
-            this.load.once('complete', () => this.spawnTokenAt(key, path, this.cameras.main.worldView.centerX, this.cameras.main.worldView.centerY, '', characterId, isVideo, nome));
+            this.load.once('complete', () => {
+                this.spawnTokenAt(key, path, this.cameras.main.worldView.centerX, this.cameras.main.worldView.centerY, '', characterId, isVideo, nome);
+                window.markSceneDirty?.('token-added');
+            });
             this.load.start();
         } else {
             this.spawnTokenAt(key, path, this.cameras.main.worldView.centerX, this.cameras.main.worldView.centerY, '', characterId, isVideo, nome);
+            window.markSceneDirty?.('token-added');
         }
     }
 
@@ -1565,7 +1677,7 @@ class MainScene extends Phaser.Scene {
         if (!asset || asset.missing) return;
 
         if (asset.type === 'map') {
-            this.carregarMapa(asset.path, asset.fileName || asset.name);
+            this.carregarMapa(asset.path, asset.fileName || asset.name, asset.id);
             return;
         }
 
@@ -1585,12 +1697,16 @@ class MainScene extends Phaser.Scene {
         if (!this.textures.exists(key) && !this.cache.video.has(key)) {
             if (isVideo) this.load.video(key, `file://${asset.path}`);
             else this.load.image(key, `file://${asset.path}`);
-            this.load.once('complete', () => this.spawnTokenAt(key, asset.path, x, y, '', null, isVideo, asset.name));
+            this.load.once('complete', () => {
+                this.spawnTokenAt(key, asset.path, x, y, '', null, isVideo, asset.name, { assetId: asset.id, pathFallback: asset.path });
+                window.markSceneDirty?.('token-added');
+            });
             this.load.start();
             return;
         }
 
-        this.spawnTokenAt(key, asset.path, x, y, '', null, isVideo, asset.name);
+        this.spawnTokenAt(key, asset.path, x, y, '', null, isVideo, asset.name, { assetId: asset.id, pathFallback: asset.path });
+        window.markSceneDirty?.('token-added');
     }
 
     spawnTokenAt(key, path, x, y, elev, savedTokenId, isVideo = false, charName = null, savedState = null) {
@@ -1609,6 +1725,8 @@ class MainScene extends Phaser.Scene {
         }
         
         token.caminhoAbsoluto = path;
+        token.pathFallback = savedState?.pathFallback || path;
+        token.assetId = savedState?.assetId || null;
         // Salva o nome real do personagem no próprio Token para não dependermos da chave do cache:
         token.charName = charName || key.replace('tk_', '').split('_')[0];
         token.tokenId = targetTokenId || ('tk_' + Date.now() + '_' + Math.floor(Math.random() * 1000));
@@ -1699,9 +1817,11 @@ class MainScene extends Phaser.Scene {
 
         token.on('dragend', () => {
             const gridSize = this.getSceneGridSize();
-            let offset = (token.gridSize % 2 === 0) ? 0 : (gridSize / 2);
-            let targetX = Math.round(token.x / gridSize) * gridSize + offset;
-            let targetY = Math.round(token.y / gridSize) * gridSize + offset;
+            const centerOffset = (token.gridSize % 2 === 0) ? 0 : (gridSize / 2);
+            const offsetX = Number(this.getSceneSettings().gridOffsetX) || 0;
+            const offsetY = Number(this.getSceneSettings().gridOffsetY) || 0;
+            let targetX = offsetX + Math.round((token.x - offsetX - centerOffset) / gridSize) * gridSize + centerOffset;
+            let targetY = offsetY + Math.round((token.y - offsetY - centerOffset) / gridSize) * gridSize + centerOffset;
             if (this.getSceneSettings().snapToGrid === false) {
                 targetX = token.x;
                 targetY = token.y;
@@ -1717,6 +1837,7 @@ class MainScene extends Phaser.Scene {
                 onUpdate: () => syncExtras(), // Atualiza a barra de HP/Aura acompanhando o movimento
                 onComplete: () => {
                     syncExtras();
+                    window.markSceneDirty?.('token-position');
                 }
             });
         });
@@ -1894,6 +2015,7 @@ class MainScene extends Phaser.Scene {
         if(token.statusText) token.statusText.destroy();
         if(token.conditionGroup) token.conditionGroup.destroy(true);
         token.destroy();
+        window.markSceneDirty?.('token-removed');
     }
 
     setFogOpacity(value) {
@@ -1902,6 +2024,7 @@ class MainScene extends Phaser.Scene {
         }
         const display = document.getElementById('fog-opacity-display');
         if (display) display.textContent = Math.round(value * 100) + '%';
+        window.markSceneDirty?.('fog-opacity');
     }
 
     undoLastDrawing() {
@@ -1923,10 +2046,12 @@ class MainScene extends Phaser.Scene {
     clearFog() {
         if (this.fogRT) this.fogRT.clear();
         this.isFogCovered = false;
+        window.markSceneDirty?.('fog-clear');
     }
 
     coverFog() {
         this.resetFogArea(true);
+        window.markSceneDirty?.('fog-cover');
     }
 
     handleAltClickPing(pointer) {
@@ -1945,6 +2070,7 @@ class MainScene extends Phaser.Scene {
         this.previewGraphics.clear();
         this.drawingHistory = [];
         this.redoHistory = [];
+        window.markSceneDirty?.('drawings-clear');
     }
 }
 

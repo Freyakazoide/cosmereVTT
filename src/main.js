@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const sqlite3 = require('sqlite3').verbose();
 
 // Configuração do Banco de Dados
@@ -53,7 +54,8 @@ ipcMain.on('save-note', (event, content) => {
   db.run("UPDATE notes SET content = ? WHERE id = 1", [content]);
 });
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  await initializeSceneStorage();
   runCharacterEquipmentCompendiumMigration().catch(error => {
     console.error('Erro ao importar equipamentos das fichas para o compendio:', error);
   });
@@ -69,31 +71,6 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
-});
-
-// Handler para ler mapas (Agora com suporte a sub-pastas)
-ipcMain.handle('get-maps', async () => {
-  const mapsDir = path.join(__dirname, '../assets/cenarios');
-  if (!fs.existsSync(mapsDir)) return [];
-
-  const discover = (dir, list = []) => {
-    const files = fs.readdirSync(dir);
-    files.forEach(file => {
-      const fullPath = path.join(dir, file);
-      if (fs.statSync(fullPath).isDirectory()) {
-        discover(fullPath, list);
-      } else if (/\.(png|jpg|jpeg|webp)$/i.test(file)) {
-        const category = path.relative(mapsDir, dir) || "Raiz";
-        list.push({
-          name: file.replace(/\.[^/.]+$/, ""),
-          path: fullPath,
-          category: category
-        });
-      }
-    });
-    return list;
-  };
-  return discover(mapsDir);
 });
 
 // --- SISTEMA DE CENAS E FICHAS (SQLITE PRO) ---
@@ -137,8 +114,14 @@ db.serialize(() => {
       updated_at TEXT
     )
   `);
+  db.run(`
+    CREATE TABLE IF NOT EXISTS app_state (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `);
 });
-
 function runDb(sql, params = []) {
   return new Promise((resolve, reject) => {
     db.run(sql, params, function(err) {
@@ -164,6 +147,59 @@ function getDb(sql, params = []) {
       else resolve(row || null);
     });
   });
+}
+
+function createSceneUid() {
+  return `scene_${crypto.randomUUID()}`;
+}
+
+async function initializeSceneStorage() {
+  await runDb(`
+    CREATE TABLE IF NOT EXISTS app_state (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `);
+
+  const migrationId = '2026-08-scene-state-v4';
+  const applied = await getDb('SELECT id FROM app_migrations WHERE id = ?', [migrationId]);
+  const columns = await allDb('PRAGMA table_info(scenes)');
+  const columnNames = new Set(columns.map(column => column.name));
+  if (!columnNames.has('scene_uid')) await runDb('ALTER TABLE scenes ADD COLUMN scene_uid TEXT');
+  if (!columnNames.has('created_at')) await runDb('ALTER TABLE scenes ADD COLUMN created_at TEXT');
+  if (!columnNames.has('updated_at')) await runDb('ALTER TABLE scenes ADD COLUMN updated_at TEXT');
+
+  const rows = await allDb('SELECT id, name, state, scene_uid, created_at, updated_at FROM scenes ORDER BY id ASC');
+  const claimedIds = new Set();
+  for (const row of rows) {
+    let state = {};
+    try {
+      state = JSON.parse(row.state || '{}');
+    } catch (error) {
+      console.warn(`Cena ${row.name} possui JSON invalido; identidade foi preservada no banco.`);
+    }
+
+    let sceneId = row.scene_uid || state.sceneId || createSceneUid();
+    if (claimedIds.has(sceneId)) sceneId = createSceneUid();
+    claimedIds.add(sceneId);
+    const now = new Date().toISOString();
+    const createdAt = row.created_at || state.metadata?.createdAt || now;
+    const updatedAt = row.updated_at || state.metadata?.updatedAt || createdAt;
+    if (!state.sceneId) {
+      state.sceneId = sceneId;
+      state.sceneName = state.sceneName || row.name;
+    }
+    await runDb(
+      'UPDATE scenes SET scene_uid = ?, state = ?, created_at = ?, updated_at = ? WHERE id = ?',
+      [sceneId, JSON.stringify(state), createdAt, updatedAt, row.id]
+    );
+  }
+
+  await runDb('CREATE UNIQUE INDEX IF NOT EXISTS idx_scenes_scene_uid ON scenes(scene_uid)');
+  if (!applied) {
+    await runDb('INSERT INTO app_migrations (id, applied_at) VALUES (?, ?)', [migrationId, new Date().toISOString()]);
+  }
 }
 
 function safeFileName(name) {
@@ -543,31 +579,142 @@ function discoverAssetFiles(dir, type, list = []) {
   return list;
 }
 
-// Salvar Cena Nomeada
-ipcMain.handle('save-scene', async (event, name, stateJSON) => {
-  return new Promise((resolve, reject) => {
-    db.run("INSERT OR REPLACE INTO scenes (name, state) VALUES (?, ?)", [name, stateJSON], function(err) {
-      if (err) reject(err); else resolve(true);
-    });
+function getScenePreviewFromState(state) {
+  const map = Array.isArray(state?.maps) ? state.maps[0] : Array.isArray(state?.mapas) ? state.mapas[0] : null;
+  return map ? {
+    assetId: map.assetId || null,
+    pathFallback: map.pathFallback || map.path || map.caminhoAbsoluto || null,
+    missing: Boolean(map.missing)
+  } : null;
+}
+
+function parseSceneRow(row) {
+  if (!row) return null;
+  let state = {};
+  try {
+    state = JSON.parse(row.state || '{}');
+  } catch (error) {
+    state = {};
+  }
+  return {
+    sceneId: row.scene_uid,
+    name: row.name,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    mapPreview: getScenePreviewFromState(state),
+    state
+  };
+}
+
+ipcMain.handle('list-scenes', async () => {
+  const rows = await allDb('SELECT scene_uid, name, state, created_at, updated_at FROM scenes ORDER BY updated_at DESC, name ASC');
+  return rows.map(row => {
+    const scene = parseSceneRow(row);
+    delete scene.state;
+    return scene;
   });
 });
 
-// Listar todas as Cenas
-ipcMain.handle('load-scenes', async () => {
-  return new Promise((resolve, reject) => {
-    db.all("SELECT name FROM scenes ORDER BY name ASC", (err, rows) => {
-      if (err) reject(err); else resolve(rows.map(r => r.name));
-    });
-  });
+ipcMain.handle('get-scene', async (event, sceneId) => {
+  const row = await getDb(
+    'SELECT scene_uid, name, state, created_at, updated_at FROM scenes WHERE scene_uid = ?',
+    [sceneId]
+  );
+  return parseSceneRow(row);
 });
 
-// Carregar Dados de uma Cena
-ipcMain.handle('load-scene-data', async (event, name) => {
-  return new Promise((resolve, reject) => {
-    db.get("SELECT state FROM scenes WHERE name = ?", [name], (err, row) => {
-      if (err) reject(err); else resolve(row ? row.state : "{}");
-    });
-  });
+ipcMain.handle('create-scene', async (event, payloadJSON) => {
+  const payload = JSON.parse(payloadJSON || '{}');
+  const sceneId = payload.sceneId || createSceneUid();
+  const name = String(payload.name || 'Nova cena').trim();
+  const now = new Date().toISOString();
+  const state = {
+    ...(payload.state || {}),
+    sceneId,
+    sceneName: name
+  };
+  await runDb(
+    'INSERT INTO scenes (scene_uid, name, state, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
+    [sceneId, name, JSON.stringify(state), now, now]
+  );
+  return { sceneId, name, createdAt: now, updatedAt: now, state };
+});
+
+ipcMain.handle('save-scene-v4', async (event, payloadJSON) => {
+  const payload = JSON.parse(payloadJSON || '{}');
+  const state = payload.state || {};
+  const sceneId = payload.sceneId || state.sceneId;
+  const name = String(payload.name || state.sceneName || 'Cena sem nome').trim();
+  if (!sceneId) throw new Error('sceneId obrigatorio para salvar cena');
+  const now = new Date().toISOString();
+  const existing = await getDb('SELECT created_at FROM scenes WHERE scene_uid = ?', [sceneId]);
+  if (existing) {
+    await runDb(
+      'UPDATE scenes SET name = ?, state = ?, updated_at = ? WHERE scene_uid = ?',
+      [name, JSON.stringify({ ...state, sceneId, sceneName: name }), now, sceneId]
+    );
+  } else {
+    await runDb(
+      'INSERT INTO scenes (scene_uid, name, state, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
+      [sceneId, name, JSON.stringify({ ...state, sceneId, sceneName: name }), now, now]
+    );
+  }
+  return { sceneId, name, createdAt: existing?.created_at || now, updatedAt: now };
+});
+
+ipcMain.handle('rename-scene', async (event, payloadJSON) => {
+  const payload = JSON.parse(payloadJSON || '{}');
+  const row = await getDb('SELECT state FROM scenes WHERE scene_uid = ?', [payload.sceneId]);
+  if (!row) return null;
+  const state = JSON.parse(row.state || '{}');
+  const name = String(payload.name || '').trim();
+  if (!name) throw new Error('Nome da cena obrigatorio');
+  const now = new Date().toISOString();
+  state.sceneName = name;
+  state.sceneId = payload.sceneId;
+  state.metadata = { ...(state.metadata || {}), updatedAt: now };
+  await runDb('UPDATE scenes SET name = ?, state = ?, updated_at = ? WHERE scene_uid = ?', [name, JSON.stringify(state), now, payload.sceneId]);
+  return { sceneId: payload.sceneId, name, updatedAt: now };
+});
+
+ipcMain.handle('duplicate-scene', async (event, payloadJSON) => {
+  const payload = JSON.parse(payloadJSON || '{}');
+  const source = await getDb('SELECT name, state FROM scenes WHERE scene_uid = ?', [payload.sceneId]);
+  if (!source) return null;
+  const sceneId = createSceneUid();
+  const name = String(payload.name || `${source.name} - Copia`).trim();
+  const now = new Date().toISOString();
+  const state = JSON.parse(source.state || '{}');
+  state.sceneId = sceneId;
+  state.sceneName = name;
+  state.metadata = { ...(state.metadata || {}), createdAt: now, updatedAt: now };
+  state.combatState = { active: false, round: 1, currentTurnIndex: 0, participants: [] };
+  state.revealedHandouts = [];
+  await runDb(
+    'INSERT INTO scenes (scene_uid, name, state, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
+    [sceneId, name, JSON.stringify(state), now, now]
+  );
+  return { sceneId, name, createdAt: now, updatedAt: now };
+});
+
+ipcMain.handle('delete-scene', async (event, sceneId) => {
+  const result = await runDb('DELETE FROM scenes WHERE scene_uid = ?', [sceneId]);
+  return result.changes > 0;
+});
+
+ipcMain.handle('load-session-state', async () => {
+  const row = await getDb('SELECT value FROM app_state WHERE key = ?', ['session_state']);
+  return row?.value || null;
+});
+
+ipcMain.handle('save-session-state', async (event, stateJSON) => {
+  const now = new Date().toISOString();
+  await runDb(
+    `INSERT INTO app_state (key, value, updated_at) VALUES (?, ?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+    ['session_state', stateJSON || '{}', now]
+  );
+  return true;
 });
 
 // Salvar/Carregar Fichas
@@ -794,51 +941,3 @@ ipcMain.handle('validate-assets-library', async () => {
   }
   return updated;
 });
-
-// Handler para ler imagens (Handouts)
-ipcMain.handle('get-images', async () => {
-  const imgDir = path.join(__dirname, '../assets/imagens');
-  if (!fs.existsSync(imgDir)) return [];
-  const files = fs.readdirSync(imgDir);
-  return files.filter(file => /\.(png|jpg|jpeg|webp|gif)$/i.test(file)).map(file => ({
-    name: file,
-    path: path.join(imgDir, file)
-  }));
-});
-
-// Handler para ler vídeos
-ipcMain.handle('get-videos', async () => {
-  const videoDir = path.join(__dirname, '../assets/videos');
-  if (!fs.existsSync(videoDir)) return [];
-  const files = fs.readdirSync(videoDir);
-  return files.filter(file => /\.(mp4|webm|ogg)$/i.test(file)).map(file => ({
-    name: file,
-    path: path.join(videoDir, file)
-  }));
-});
-
-// Handler para ler arquivos de áudio recursivamente (suporta subpastas)
-ipcMain.handle('get-audio', async () => {
-  const audioDir = path.join(__dirname, '../assets/audio');
-  if (!fs.existsSync(audioDir)) return [];
-
-  const discover = (dir, list = []) => {
-    const files = fs.readdirSync(dir);
-    files.forEach(file => {
-      const fullPath = path.join(dir, file);
-      if (fs.statSync(fullPath).isDirectory()) {
-        discover(fullPath, list);
-      } else if (/\.(mp3|wav|ogg|m4a)$/i.test(file)) {
-        const category = path.relative(audioDir, dir) || "Raiz";
-        list.push({
-          name: file,
-          path: fullPath,
-          category: category
-        });
-      }
-    });
-    return list;
-  };
-  return discover(audioDir);
-});
-
