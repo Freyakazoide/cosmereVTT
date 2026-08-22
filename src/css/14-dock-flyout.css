@@ -1,5 +1,14 @@
 /* Mistborn sidebar and dock overhaul. Keep JS-facing IDs/classes intact. */
 
+#investidura-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 500;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
 #vtt-dock-shell.vtt-dock-shell,
 .vtt-dock-shell {
   position: fixed;
@@ -179,8 +188,6 @@
   transition: transform var(--motion-med), background var(--transition-fast), border-color var(--transition-fast);
 }
 
-.tool-group-wrapper.is-hover-open .master-tool-btn::after,
-.tool-group-wrapper.is-click-open .master-tool-btn::after,
 .tool-group-wrapper:has(.tool-submenu.is-open) .master-tool-btn::after {
   transform: translateY(-2px);
   background: rgba(63, 52, 29, 0.96);
@@ -219,8 +226,6 @@
   display: none;
 }
 
-.tool-group-wrapper.is-hover-open .tool-submenu,
-.tool-group-wrapper.is-click-open .tool-submenu,
 .tool-submenu.is-open {
   opacity: 1;
   pointer-events: auto;
@@ -381,7 +386,6 @@
     linear-gradient(180deg, rgba(255, 255, 255, 0.015), rgba(0, 0, 0, 0.18));
 }
 
-.vtt-flyout .content-area.hidden,
 .vtt-flyout .content-area:not(.active) {
   display: none;
 }
@@ -1198,8 +1202,6 @@
     transform: translateY(12px) scale(0.98);
   }
 
-  .tool-group-wrapper.is-hover-open .tool-submenu,
-  .tool-group-wrapper.is-click-open .tool-submenu,
   .tool-submenu.is-open {
     transform: translateY(0) scale(1);
   }

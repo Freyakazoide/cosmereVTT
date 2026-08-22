@@ -4,6 +4,33 @@
   box-sizing: border-box;
 }
 
+*,
+body,
+button,
+.list-item,
+.tool-btn,
+.tab-btn,
+.nav-btn,
+.glass-btn,
+.color-swatch,
+i,
+img,
+select {
+  cursor: url('../../assets/ponteiro.png'), auto !important;
+}
+
+input,
+textarea,
+[contenteditable="true"] {
+  cursor: text !important;
+}
+
+.hidden {
+  display: none !important;
+  opacity: 0;
+  pointer-events: none;
+}
+
 html,
 body {
   margin: 0;

@@ -118,6 +118,54 @@
   font-style: italic;
 }
 
+.notes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+.notes-list-mode { display: flex; flex-direction: column; gap: 8px; }
+
+.folder-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 15px;
+  border: 1px solid var(--border-color);
+  border-top: 3px solid var(--accent);
+  border-radius: 6px;
+  color: var(--color-text);
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9));
+  text-align: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  transition: transform 0.2s, border-color 0.2s, background 0.2s;
+}
+
+.folder-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+  background: linear-gradient(135deg, rgb(30, 41, 59), rgb(15, 23, 42));
+}
+
+.folder-icon { margin-bottom: 8px; color: var(--accent); font-size: 28px; }
+.notes-list-mode .folder-card { flex-direction: row; padding: 10px 15px; border-top-width: 1px; border-left: 3px solid var(--accent); text-align: left; }
+.notes-list-mode .folder-icon { margin: 0 15px 0 0; font-size: 18px; }
+
+.view-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 4px;
+  color: var(--accent);
+  background: rgba(0, 0, 0, 0.4);
+  font-size: 12px;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.view-toggle-btn:hover { border-color: var(--accent); background: rgba(251, 191, 36, 0.15); }
+
 .note-folder-card {
   width: 100%;
   text-align: left;

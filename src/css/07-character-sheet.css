@@ -629,6 +629,13 @@
   padding: 16px;
 }
 
+.char-card.long-text input {
+  color: var(--sheet-amber);
+  font-family: "Segoe UI", sans-serif;
+  font-size: 16px;
+  letter-spacing: 0.06em;
+}
+
 .card-vida,
 .card-fisico,
 .attr-forca {
@@ -926,12 +933,38 @@
 }
 
 .skill-name .rollable {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
   cursor: pointer;
-  transition: color var(--sheet-ease);
+  transition: color var(--sheet-ease), border-color var(--sheet-ease), background var(--sheet-ease), transform var(--sheet-ease);
 }
 
 .skill-name .rollable:hover {
   color: #ffe1a1;
+  border-color: var(--sheet-amber);
+  background: rgba(237, 191, 101, 0.1);
+}
+
+.skill-name .rollable::after {
+  content: '⚄';
+  font-size: 11px;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity var(--sheet-ease), transform var(--sheet-ease);
+}
+
+.skill-name .rollable:hover::after {
+  opacity: 0.8;
+  transform: scale(1);
+}
+
+.skill-name .rollable:active {
+  transform: scale(0.95);
 }
 
 .skill-delete-btn {
@@ -1150,6 +1183,11 @@ input.item-weight,
   align-items: center;
   gap: 12px;
   padding: 16px;
+}
+
+.lore-banner.flaw-banner {
+  --card-a: #7b2c2c;
+  --card-b: var(--sheet-red);
 }
 
 .banner-content {

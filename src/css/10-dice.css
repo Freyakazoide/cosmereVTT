@@ -51,6 +51,28 @@
   background: var(--color-overlay-mid);
 }
 
+@keyframes rollDiceAnim {
+  0% { transform: scale(0.1) translateY(-200px) rotate(0deg); opacity: 0; }
+  50% { transform: scale(1.2) translateY(20px) rotate(360deg); opacity: 1; }
+  100% { transform: scale(1) translateY(0) rotate(720deg); opacity: 1; }
+}
+
+.dice-visual {
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: url('../../assets/dados/dado_base.png') center/contain no-repeat;
+  font-family: Georgia, serif;
+  font-size: 42px;
+  font-weight: 900;
+  text-shadow: -2px -2px #000, 2px -2px #000, -2px 2px #000, 2px 2px #000, 0 4px 10px rgba(0, 0, 0, 0.9);
+  filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.6));
+  animation: rollDiceAnim 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
 @media (max-width: 768px) {
   #dice-panel {
     bottom: 10px;
